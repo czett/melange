@@ -4,9 +4,14 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 seed:
     ./scripts/seed_dev.sh
 
-# Run melange-shell in --dev mode (seeds dev/ automatically if missing)
+# Build SolidJS glassmorphism UI into ui/dist
+ui-build:
+    cd ui && npm install && npm run build
+
+# Run melange-shell in --dev mode (seeds dev/ and builds ui/dist automatically if missing)
 dev:
     @if [ ! -d dev ]; then ./scripts/seed_dev.sh; fi
+    @if [ ! -d ui/dist ]; then cd ui && npm install && npm run build; fi
     cargo run -p melange-shell -- --dev
 
 # Run all workspace unit and integration tests
@@ -15,4 +20,4 @@ test:
 
 # Run clippy across all workspace targets
 check:
-    cargo clippy --workspace --all-targets
+    cargo clippy --workspace --all-targets -- -D warnings
