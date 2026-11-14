@@ -1,6 +1,6 @@
 import { Show, createEffect, onCleanup } from "solid-js";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
 
 function formatTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -66,37 +66,48 @@ export function PlayerOsd() {
 
   return (
     <Show when={visible()}>
-      <div class="fixed inset-x-0 bottom-0 z-30 p-8 pointer-events-none">
-        <div class="glass-panel max-w-4xl mx-auto rounded-3xl px-7 py-5 pointer-events-auto flex flex-col gap-4">
+      <div class="pointer-events-none fixed inset-x-0 bottom-0 z-30 p-8">
+        <div class="fluted-surface pointer-events-auto mx-auto flex max-w-4xl flex-col gap-4 rounded-3xl px-8 py-5">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <div class="text-xs uppercase tracking-[0.2em] text-white/55 truncate">
-                {playback().subtitle ?? "On Demand"}
+              <div class="flex items-center gap-2 truncate text-xs uppercase tracking-[0.22em] text-white/60">
+                <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+                <span>{playback().subtitle ?? "On Demand"}</span>
               </div>
-              <div class="text-xl font-semibold text-white truncate">
+              <div class="mt-0.5 truncate text-2xl font-light tracking-editorial text-white">
                 {playback().title ?? "Playing"}
               </div>
             </div>
 
-            <div class="flex items-center gap-2.5 shrink-0">
+            <div class="flex shrink-0 items-center gap-2.5">
               <button
                 ref={(el) => onCleanup(registerFocusable("osd-seek-back", el, () => seek(-15)))}
+                type="button"
+                data-focus-radius="9999px"
                 onClick={() => seek(-15)}
-                class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white"
+                class={`rounded-full px-4 py-2 text-sm font-medium tabular-nums transition ${
+                  isFocused("osd-seek-back") ? "pill-cta-white" : "fluted-pill text-white"
+                }`}
               >
                 -15s
               </button>
               <button
                 ref={(el) => onCleanup(registerFocusable("osd-toggle-pause", el, togglePause))}
+                type="button"
+                data-focus-radius="9999px"
                 onClick={togglePause}
-                class="px-5 py-2 rounded-full text-sm font-semibold bg-white text-black"
+                class="pill-cta-white rounded-full px-6 py-2 text-sm font-semibold"
               >
                 {playback().paused ? "Play" : "Pause"}
               </button>
               <button
                 ref={(el) => onCleanup(registerFocusable("osd-seek-fwd", el, () => seek(30)))}
+                type="button"
+                data-focus-radius="9999px"
                 onClick={() => seek(30)}
-                class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white"
+                class={`rounded-full px-4 py-2 text-sm font-medium tabular-nums transition ${
+                  isFocused("osd-seek-fwd") ? "pill-cta-white" : "fluted-pill text-white"
+                }`}
               >
                 +30s
               </button>
@@ -108,8 +119,12 @@ export function PlayerOsd() {
                     )
                   )
                 }
+                type="button"
+                data-focus-radius="9999px"
                 onClick={() => sendCommand({ type: "SetMode", mode: "Home" })}
-                class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white/85"
+                class={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                  isFocused("osd-back") ? "pill-cta-white" : "fluted-pill text-white/85"
+                }`}
               >
                 ← Back
               </button>
@@ -117,16 +132,16 @@ export function PlayerOsd() {
           </div>
 
           <div class="flex items-center gap-4">
-            <span class="text-xs font-mono text-white/75 w-14 text-right">
+            <span class="w-14 text-right text-xs font-medium tabular-nums text-white/75">
               {formatTime(playback().position_sec)}
             </span>
-            <div class="flex-1 h-2 rounded-full bg-white/15 overflow-hidden">
+            <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-white/15">
               <div
-                class="h-full bg-white rounded-full transition-all duration-300"
+                class="crimson-progress-fill h-full rounded-full transition-all duration-300"
                 style={{ width: `${progressPct()}%` }}
               />
             </div>
-            <span class="text-xs font-mono text-white/55 w-14">
+            <span class="w-14 text-xs font-medium tabular-nums text-white/55">
               {formatTime(playback().duration_sec)}
             </span>
           </div>
