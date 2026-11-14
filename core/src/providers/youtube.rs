@@ -2,26 +2,58 @@ use std::time::Duration;
 
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::warn;
+use tokio::process::Command;
+use tokio::time::timeout;
+use tracing::{debug, warn};
 
 use crate::error::MelangeError;
 use crate::providers::{BoxFuture, MediaItem, OnDemandProvider};
 
+const FALLBACK_PIPED_INSTANCES: &[&str] = &[
+    "https://api.piped.private.coffee",
+    "https://pipedapi.kavin.rocks",
+];
+
+const DEFAULT_YTDLP_FEED_QUERY: &str = "Doku Arte ZDF Tagesschau Wissenschaft";
+const PIPED_TIMEOUT: Duration = Duration::from_secs(4);
+const YTDLP_TIMEOUT: Duration = Duration::from_secs(15);
+
 pub struct YouTubeProvider {
     client: Client,
-    piped_url: String,
+    piped_urls: Vec<String>,
+    enable_ytdlp_fallback: bool,
 }
 
 impl YouTubeProvider {
     pub fn new(piped_url: impl Into<String>) -> Self {
+        let primary = piped_url.into().trim().trim_end_matches('/').to_string();
+        let mut urls = Vec::new();
+        if !primary.is_empty() {
+            urls.push(primary);
+        }
+        for &fallback in FALLBACK_PIPED_INSTANCES {
+            if !urls.iter().any(|u| u == fallback) {
+                urls.push(fallback.to_string());
+            }
+        }
+        Self::with_piped_urls(urls, true)
+    }
+
+    pub fn with_piped_urls(piped_urls: Vec<String>, enable_ytdlp_fallback: bool) -> Self {
         let client = Client::builder()
-            .timeout(Duration::from_secs(10))
+            .timeout(PIPED_TIMEOUT)
             .user_agent("melange/0.1")
             .build()
             .unwrap_or_else(|_| Client::new());
+        let cleaned = piped_urls
+            .into_iter()
+            .map(|u| u.trim().trim_end_matches('/').to_string())
+            .filter(|u| !u.is_empty())
+            .collect();
         Self {
             client,
-            piped_url: piped_url.into().trim_end_matches('/').to_string(),
+            piped_urls: cleaned,
+            enable_ytdlp_fallback,
         }
     }
 
@@ -47,6 +79,68 @@ impl YouTubeProvider {
             }
         }
     }
+
+    async fn try_piped_feed(&self) -> Option<Vec<MediaItem>> {
+        for base in &self.piped_urls {
+            let url = format!("{base}/trending?region=DE");
+            let Some(body) = self.fetch_text(&url).await else {
+                continue;
+            };
+            match parse_piped_trending_response(&body) {
+                Ok(items) if !items.is_empty() => return Some(items),
+                Ok(_) => warn!("piped trending returned empty items ({base})"),
+                Err(err) => warn!("piped trending parse failed ({base}): {err}"),
+            }
+        }
+        None
+    }
+
+    async fn try_piped_search(&self, encoded_query: &str) -> Option<Vec<MediaItem>> {
+        for base in &self.piped_urls {
+            let url = format!("{base}/search?q={encoded_query}&filter=videos");
+            let Some(body) = self.fetch_text(&url).await else {
+                continue;
+            };
+            match parse_piped_search_response(&body) {
+                Ok(items) if !items.is_empty() => return Some(items),
+                Ok(_) => warn!("piped search returned empty items ({base})"),
+                Err(err) => warn!("piped search parse failed ({base}): {err}"),
+            }
+        }
+        None
+    }
+
+    async fn ytdlp_search(&self, query: &str) -> Result<Vec<MediaItem>, MelangeError> {
+        let search_arg = format!("ytsearch20:{query}");
+        debug!(query = %search_arg, "running yt-dlp youtube fallback");
+        let output = timeout(
+            YTDLP_TIMEOUT,
+            Command::new("yt-dlp")
+                .args([
+                    "--flat-playlist",
+                    "--dump-single-json",
+                    "--no-warnings",
+                    "--skip-download",
+                    &search_arg,
+                ])
+                .output(),
+        )
+        .await
+        .map_err(|_| MelangeError::Player("yt-dlp search timed out".to_string()))?
+        .map_err(|err| MelangeError::Player(format!("failed to spawn yt-dlp: {err}")))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(MelangeError::Player(format!(
+                "yt-dlp exited with {}: {}",
+                output.status,
+                stderr.trim()
+            )));
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        parse_ytdlp_json_response(&stdout)
+    }
 }
 
 impl OnDemandProvider for YouTubeProvider {
@@ -56,11 +150,15 @@ impl OnDemandProvider for YouTubeProvider {
 
     fn feed(&self) -> BoxFuture<'_, Result<Vec<MediaItem>, MelangeError>> {
         Box::pin(async move {
-            let url = format!("{}/trending?region=DE", self.piped_url);
-            let Some(body) = self.fetch_text(&url).await else {
-                return Ok(Vec::new());
-            };
-            parse_piped_trending_response(&body)
+            if let Some(items) = self.try_piped_feed().await {
+                return Ok(items);
+            }
+            if self.enable_ytdlp_fallback {
+                return self.ytdlp_search(DEFAULT_YTDLP_FEED_QUERY).await;
+            }
+            Err(MelangeError::Config(
+                "all youtube Piped instances failed and yt-dlp fallback is disabled".to_string(),
+            ))
         })
     }
 
@@ -71,11 +169,15 @@ impl OnDemandProvider for YouTubeProvider {
                 return self.feed().await;
             }
             let encoded = urlencoding_simple(trimmed);
-            let url = format!("{}/search?q={}&filter=videos", self.piped_url, encoded);
-            let Some(body) = self.fetch_text(&url).await else {
-                return Ok(Vec::new());
-            };
-            parse_piped_search_response(&body)
+            if let Some(items) = self.try_piped_search(&encoded).await {
+                return Ok(items);
+            }
+            if self.enable_ytdlp_fallback {
+                return self.ytdlp_search(trimmed).await;
+            }
+            Err(MelangeError::Config(
+                "all youtube Piped instances failed and yt-dlp fallback is disabled".to_string(),
+            ))
         })
     }
 }
@@ -132,10 +234,111 @@ fn convert_piped_item(raw: PipedRawItem) -> Option<MediaItem> {
     })
 }
 
-fn extract_video_id(url: &str) -> Option<String> {
+#[derive(Deserialize)]
+struct YtDlpSearchResponse {
+    #[serde(default)]
+    entries: Vec<YtDlpEntry>,
+}
+
+#[derive(Deserialize)]
+struct YtDlpThumbnail {
+    #[serde(default)]
+    url: String,
+}
+
+#[derive(Deserialize)]
+struct YtDlpEntry {
+    #[serde(default)]
+    id: String,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    duration: Option<f64>,
+    #[serde(default)]
+    uploader: Option<String>,
+    #[serde(default)]
+    channel: Option<String>,
+    #[serde(default)]
+    thumbnail: Option<String>,
+    #[serde(default)]
+    thumbnails: Vec<YtDlpThumbnail>,
+    #[serde(default)]
+    upload_date: Option<String>,
+}
+
+pub fn parse_ytdlp_json_response(body: &str) -> Result<Vec<MediaItem>, MelangeError> {
+    let parsed: YtDlpSearchResponse = serde_json::from_str(body)
+        .map_err(|e| MelangeError::Parse(format!("yt-dlp json: {e}")))?;
+
+    let mut items = Vec::with_capacity(parsed.entries.len());
+    for entry in parsed.entries {
+        let video_id = if !entry.id.trim().is_empty() {
+            entry.id.trim().to_string()
+        } else if let Some(ref url) = entry.url
+            && let Some(id) = extract_video_id(url)
+        {
+            id
+        } else {
+            continue;
+        };
+
+        let title = entry
+            .title
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| video_id.clone());
+        let channel_or_author = entry
+            .channel
+            .filter(|s| !s.trim().is_empty())
+            .or_else(|| entry.uploader.filter(|s| !s.trim().is_empty()))
+            .unwrap_or_else(|| "YouTube".to_string());
+        let thumbnail_url = entry
+            .thumbnails
+            .into_iter()
+            .rev()
+            .find(|t| !t.url.is_empty())
+            .map(|t| t.url)
+            .or_else(|| entry.thumbnail.filter(|s| !s.is_empty()))
+            .or_else(|| Some(format!("https://i.ytimg.com/vi/{video_id}/hqdefault.jpg")));
+        let duration_sec = entry.duration.unwrap_or(0.0).max(0.0).round() as u64;
+
+        items.push(MediaItem {
+            id: format!("yt:{video_id}"),
+            provider: "youtube".to_string(),
+            title,
+            subtitle: None,
+            description: entry.description.filter(|s| !s.is_empty()),
+            channel_or_author,
+            duration_sec,
+            thumbnail_url,
+            stream_url: format!("https://www.youtube.com/watch?v={video_id}"),
+            published_at: entry.upload_date.filter(|s| !s.is_empty()),
+        });
+    }
+    Ok(items)
+}
+
+pub fn extract_video_id(url: &str) -> Option<String> {
     if let Some(idx) = url.find("v=") {
         let rest = &url[idx + 2..];
         let id = rest.split('&').next().unwrap_or(rest).trim();
+        if !id.is_empty() {
+            return Some(id.to_string());
+        }
+    }
+    if let Some(idx) = url.find("youtu.be/") {
+        let rest = &url[idx + "youtu.be/".len()..];
+        let id = rest.split(['?', '&', '/']).next().unwrap_or(rest).trim();
+        if !id.is_empty() {
+            return Some(id.to_string());
+        }
+    }
+    if let Some(idx) = url.find("/shorts/") {
+        let rest = &url[idx + "/shorts/".len()..];
+        let id = rest.split(['?', '&', '/']).next().unwrap_or(rest).trim();
         if !id.is_empty() {
             return Some(id.to_string());
         }

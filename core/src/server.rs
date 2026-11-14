@@ -48,6 +48,7 @@ pub enum OverlayKind {
     FullEpg,
     ProfileSwitcher,
     PlayerOsd,
+    SearchKeyboard,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -252,12 +253,33 @@ impl StateManager {
     }
 
     pub fn update_playback_progress(&self, position_sec: f64, duration_sec: f64, paused: bool) {
-        if let Ok(mut guard) = self.state.write() {
+        let mut changed = false;
+        if let Ok(mut guard) = self.state.write()
+            && ((guard.playback.position_sec - position_sec).abs() >= 0.5
+                || (guard.playback.duration_sec - duration_sec).abs() >= 0.5
+                || guard.playback.paused != paused)
+        {
             guard.playback.position_sec = position_sec;
             guard.playback.duration_sec = duration_sec;
             guard.playback.paused = paused;
+            changed = true;
         }
-        self.broadcast_state();
+        if changed {
+            self.broadcast_state();
+        }
+    }
+
+    pub fn clear_zapping(&self) {
+        let mut changed = false;
+        if let Ok(mut guard) = self.state.write()
+            && guard.playback.is_zapping
+        {
+            guard.playback.is_zapping = false;
+            changed = true;
+        }
+        if changed {
+            self.broadcast_state();
+        }
     }
 
     pub fn attach_shell_sender(&self, tx: std::sync::mpsc::Sender<ShellCommand>) {
@@ -328,6 +350,10 @@ impl StateManager {
                     st.overlay = OverlayKind::None;
                     changed = true;
                 }
+                NavEvent::Back if st.mode != AppMode::Home => {
+                    st.mode = AppMode::Home;
+                    changed = true;
+                }
                 _ => {}
             }
         }
@@ -355,6 +381,8 @@ impl StateManager {
                         st.playback.channel_number = Some(ch.number);
                         st.playback.title = Some(ch.name);
                         st.playback.subtitle = subtitle;
+                        st.playback.current_media = None;
+                        st.playback.paused = false;
                         st.playback.state = PlaybackState::Buffering;
                         st.playback.is_zapping = true;
                         found = true;
@@ -415,6 +443,7 @@ impl StateManager {
                 };
                 {
                     let mut st = self.state.write().expect("state lock");
+                    st.mode = AppMode::LiveTv;
                     st.overlay = OverlayKind::PlayerOsd;
                     st.playback.state = PlaybackState::Playing;
                     st.playback.title = Some(item.title.clone());
@@ -659,39 +688,59 @@ struct OnDemandSearchQuery {
 async fn ondemand_feed_handler(
     State(state): State<Arc<StateManager>>,
     Query(params): Query<OnDemandFeedQuery>,
-) -> Json<Vec<MediaItem>> {
-    let items = match params.provider.as_str() {
-        "mediathek" => state.mediathek.feed().await.unwrap_or_default(),
+) -> impl IntoResponse {
+    let result = match params.provider.as_str() {
+        "mediathek" => state.mediathek.feed().await,
         "youtube" => {
             let yt = state.youtube.read().expect("youtube lock").clone();
-            yt.feed().await.unwrap_or_default()
+            yt.feed().await
         }
         "local" => {
             let local = state.local_media.read().expect("local lock").clone();
-            local.feed().await.unwrap_or_default()
+            local.feed().await
         }
-        _ => Vec::new(),
+        _ => Ok(Vec::new()),
     };
-    Json(items)
+    match result {
+        Ok(items) => Json(items).into_response(),
+        Err(err) => {
+            warn!(provider = %params.provider, error = %err, "ondemand feed failed");
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
 }
 
 async fn ondemand_search_handler(
     State(state): State<Arc<StateManager>>,
     Query(params): Query<OnDemandSearchQuery>,
-) -> Json<Vec<MediaItem>> {
-    let items = match params.provider.as_str() {
-        "mediathek" => state.mediathek.search(&params.q).await.unwrap_or_default(),
+) -> impl IntoResponse {
+    let result = match params.provider.as_str() {
+        "mediathek" => state.mediathek.search(&params.q).await,
         "youtube" => {
             let yt = state.youtube.read().expect("youtube lock").clone();
-            yt.search(&params.q).await.unwrap_or_default()
+            yt.search(&params.q).await
         }
         "local" => {
             let local = state.local_media.read().expect("local lock").clone();
-            local.search(&params.q).await.unwrap_or_default()
+            local.search(&params.q).await
         }
-        _ => Vec::new(),
+        _ => Ok(Vec::new()),
     };
-    Json(items)
+    match result {
+        Ok(items) => Json(items).into_response(),
+        Err(err) => {
+            warn!(provider = %params.provider, query = %params.q, error = %err, "ondemand search failed");
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
 }
 
 async fn continue_watching_handler(
