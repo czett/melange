@@ -107,6 +107,7 @@ pub enum ServerMessage {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[allow(clippy::large_enum_variant)]
 pub enum ClientCommand {
     SelectChannel { channel_id: i64 },
     SetMode { mode: AppMode },
@@ -119,6 +120,7 @@ pub enum ClientCommand {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum ShellCommand {
     SelectChannel { channel_id: i64 },
     SetMode { mode: AppMode },

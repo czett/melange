@@ -164,6 +164,7 @@ impl MpvPlayer {
             .map_err(|e| MelangeError::Player(format!("seek failed: {e}")))
     }
 
+    #[allow(dead_code)]
     pub fn playback_progress(&self) -> (f64, f64, bool) {
         let pos: f64 = self.mpv.get_property("time-pos").unwrap_or(0.0);
         let dur: f64 = self.mpv.get_property("duration").unwrap_or(0.0);

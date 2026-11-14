@@ -22,7 +22,7 @@ impl LocalMediaProvider {
                 scan_dir_recursive(dir, &mut items);
             }
         }
-        items.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+        items.sort_by_key(|a| a.title.to_lowercase());
         items
     }
 }
