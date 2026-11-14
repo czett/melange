@@ -11,45 +11,92 @@ use tracing::{debug, error};
 
 const GL_FRAMEBUFFER_BINDING: u32 = 0x8CA6;
 
-type EpoxyGetProcAddressFn = unsafe extern "C" fn(name: *const c_char) -> *mut c_void;
+type GetProcAddressFn = unsafe extern "C" fn(name: *const c_char) -> *mut c_void;
+type GlxGetProcAddressFn = unsafe extern "C" fn(name: *const u8) -> *mut c_void;
 type GlGetIntegervFn = unsafe extern "C" fn(pname: u32, data: *mut c_int);
 
 pub struct GlProcResolver {
-    _lib: Library,
-    get_proc_addr: EpoxyGetProcAddressFn,
+    _egl_lib: Option<Library>,
+    _gl_lib: Option<Library>,
+    egl_get_proc_address: Option<GetProcAddressFn>,
+    glx_get_proc_address: Option<GlxGetProcAddressFn>,
     gl_get_integerv: GlGetIntegervFn,
+}
+
+unsafe fn lookup_dlsym(name: &std::ffi::CStr) -> *mut c_void {
+    unsafe { libc::dlsym(libc::RTLD_DEFAULT, name.as_ptr()) }
 }
 
 impl GlProcResolver {
     pub fn load() -> Result<Self, MelangeError> {
-        let lib = unsafe { Library::new("libepoxy.so.0") }
-            .map_err(|e| MelangeError::Player(format!("failed to load libepoxy.so.0: {e}")))?;
+        let egl_lib = unsafe { Library::new("libEGL.so.1") }.ok();
+        let gl_lib = unsafe { Library::new("libGL.so.1") }.ok();
 
-        let get_proc_addr: EpoxyGetProcAddressFn = unsafe {
-            *lib.get(b"epoxy_get_proc_address\0")
-                .map_err(|e| MelangeError::Player(format!("missing epoxy_get_proc_address: {e}")))?
+        let egl_get_proc_address: Option<GetProcAddressFn> = egl_lib
+            .as_ref()
+            .and_then(|lib| unsafe { lib.get::<GetProcAddressFn>(b"eglGetProcAddress\0").ok() }.map(|s| *s))
+            .or_else(|| {
+                let ptr = unsafe { lookup_dlsym(c"eglGetProcAddress") };
+                (!ptr.is_null()).then(|| unsafe { std::mem::transmute::<*mut c_void, GetProcAddressFn>(ptr) })
+            });
+
+        let glx_get_proc_address: Option<GlxGetProcAddressFn> = gl_lib
+            .as_ref()
+            .and_then(|lib| {
+                unsafe { lib.get::<GlxGetProcAddressFn>(b"glXGetProcAddressARB\0").ok() }
+                    .or_else(|| unsafe { lib.get::<GlxGetProcAddressFn>(b"glXGetProcAddress\0").ok() })
+                    .map(|s| *s)
+            })
+            .or_else(|| {
+                let ptr = unsafe { lookup_dlsym(c"glXGetProcAddressARB") };
+                let ptr = if ptr.is_null() {
+                    unsafe { lookup_dlsym(c"glXGetProcAddress") }
+                } else {
+                    ptr
+                };
+                (!ptr.is_null()).then(|| unsafe { std::mem::transmute::<*mut c_void, GlxGetProcAddressFn>(ptr) })
+            });
+
+        let mut resolver = Self {
+            _egl_lib: egl_lib,
+            _gl_lib: gl_lib,
+            egl_get_proc_address,
+            glx_get_proc_address,
+            gl_get_integerv: dummy_gl_get_integerv,
         };
 
-        let gl_get_integerv_ptr = unsafe { get_proc_addr(c"glGetIntegerv".as_ptr()) };
+        let gl_get_integerv_ptr = resolver.get_proc_address("glGetIntegerv");
         if gl_get_integerv_ptr.is_null() {
             return Err(MelangeError::Player(
-                "epoxy_get_proc_address(\"glGetIntegerv\") returned null".to_string(),
+                "failed to resolve glGetIntegerv via EGL/GLX/dlsym".to_string(),
             ));
         }
-        let gl_get_integerv: GlGetIntegervFn = unsafe { std::mem::transmute(gl_get_integerv_ptr) };
+        resolver.gl_get_integerv =
+            unsafe { std::mem::transmute::<*mut c_void, GlGetIntegervFn>(gl_get_integerv_ptr) };
 
-        Ok(Self {
-            _lib: lib,
-            get_proc_addr,
-            gl_get_integerv,
-        })
+        Ok(resolver)
     }
 
     pub fn get_proc_address(&self, name: &str) -> *mut c_void {
         let Ok(cstr) = std::ffi::CString::new(name) else {
             return std::ptr::null_mut();
         };
-        unsafe { (self.get_proc_addr)(cstr.as_ptr()) }
+
+        if let Some(egl_get_proc) = self.egl_get_proc_address {
+            let ptr = unsafe { egl_get_proc(cstr.as_ptr()) };
+            if !ptr.is_null() {
+                return ptr;
+            }
+        }
+
+        if let Some(glx_get_proc) = self.glx_get_proc_address {
+            let ptr = unsafe { glx_get_proc(cstr.as_ptr().cast::<u8>()) };
+            if !ptr.is_null() {
+                return ptr;
+            }
+        }
+
+        unsafe { lookup_dlsym(&cstr) }
     }
 
     pub fn current_fbo(&self) -> i32 {
@@ -60,6 +107,8 @@ impl GlProcResolver {
         fbo
     }
 }
+
+unsafe extern "C" fn dummy_gl_get_integerv(_pname: u32, _data: *mut c_int) {}
 
 fn get_proc_address_cb(resolver: &Arc<GlProcResolver>, name: &str) -> *mut c_void {
     resolver.get_proc_address(name)

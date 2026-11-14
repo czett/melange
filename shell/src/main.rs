@@ -156,7 +156,12 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
 
     let ctrl_realize = Rc::clone(&controller);
     gl_area.connect_realize(move |area| {
-        if let Err(err) = ctrl_realize.borrow_mut().backend_mut().init_gl(area) {
+        area.make_current();
+        let res = {
+            let mut ctrl = ctrl_realize.borrow_mut();
+            ctrl.backend_mut().init_gl(area)
+        };
+        if let Err(err) = res {
             error!(error = %err, "failed to initialize libmpv OpenGL context");
         }
     });
@@ -164,7 +169,10 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let ctrl_unrealize = Rc::clone(&controller);
     gl_area.connect_unrealize(move |area| {
         area.make_current();
-        ctrl_unrealize.borrow_mut().backend_mut().teardown_gl();
+        {
+            let mut ctrl = ctrl_unrealize.borrow_mut();
+            ctrl.backend_mut().teardown_gl();
+        }
     });
 
     let ctrl_render = Rc::clone(&controller);
@@ -173,12 +181,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
         let scale = area.scale_factor();
         let width = area.width() * scale;
         let height = area.height() * scale;
-        let mut ctrl = ctrl_render.borrow_mut();
-        let was_zapping = ctrl.is_zapping();
-        ctrl.backend().render(width, height);
-        ctrl.mark_frame_rendered();
-        if was_zapping && !ctrl.is_zapping() {
-            sync_controller_to_state(&ctrl, &state_render);
+        let snapshot = {
+            let mut ctrl = ctrl_render.borrow_mut();
+            let was_zapping = ctrl.is_zapping();
+            ctrl.backend().render(width, height);
+            ctrl.mark_frame_rendered();
+            (was_zapping && !ctrl.is_zapping()).then(|| ControllerSnapshot::from_controller(&ctrl))
+        };
+        if let Some(snap) = snapshot {
+            snap.apply(&state_render);
         }
         glib::Propagation::Stop
     });
@@ -228,10 +239,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
 
     // In --dev mode, automatically load channel 1 so live video starts immediately.
     if config.mode == RunMode::Dev {
-        match controller.borrow_mut().load_channel(1) {
-            Ok(Some(ch)) => {
-                info!(number = ch.number, name = %ch.name, "auto-tuned channel 1");
-                sync_controller_to_state(&controller.borrow(), &state_manager);
+        let tune_result = {
+            let mut ctrl = controller.borrow_mut();
+            let loaded = ctrl.load_channel(1).map(|opt| opt.map(|ch| (ch.number, ch.name.clone())));
+            loaded.map(|opt| opt.map(|(number, name)| (number, name, ControllerSnapshot::from_controller(&ctrl))))
+        };
+        match tune_result {
+            Ok(Some((number, name, snap))) => {
+                info!(number = number, name = %name, "auto-tuned channel 1");
+                snap.apply(&state_manager);
             }
             Ok(None) => warn!("channel 1 not found in sqlite"),
             Err(err) => error!(error = %err, "failed to auto-tune channel 1"),
@@ -241,15 +257,33 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     Ok(())
 }
 
-fn sync_controller_to_state(ctrl: &PlayerController<MpvPlayer>, state_manager: &StateManager) {
-    state_manager.sync_player_state(
-        ctrl.current_channel(),
-        ctrl.state(),
-        ctrl.is_zapping(),
-        ctrl.digit_buffer(),
-        0.0,
-        0.0,
-    );
+struct ControllerSnapshot {
+    channel: Option<melange_core::Channel>,
+    state: melange_core::PlaybackState,
+    is_zapping: bool,
+    digit_buffer: String,
+}
+
+impl ControllerSnapshot {
+    fn from_controller(ctrl: &PlayerController<MpvPlayer>) -> Self {
+        Self {
+            channel: ctrl.current_channel().cloned(),
+            state: ctrl.state(),
+            is_zapping: ctrl.is_zapping(),
+            digit_buffer: ctrl.digit_buffer().to_string(),
+        }
+    }
+
+    fn apply(self, state_manager: &StateManager) {
+        state_manager.sync_player_state(
+            self.channel.as_ref(),
+            self.state,
+            self.is_zapping,
+            &self.digit_buffer,
+            0.0,
+            0.0,
+        );
+    }
 }
 
 fn handle_shell_command(
@@ -259,19 +293,24 @@ fn handle_shell_command(
 ) {
     match cmd {
         ShellCommand::SelectChannel { channel_id } => {
-            let mut ctrl = controller.borrow_mut();
-            let target_number = ctrl
-                .channels()
-                .iter()
-                .find(|c| c.id == channel_id)
-                .map(|c| c.number);
-            if let Some(number) = target_number {
-                match ctrl.load_channel(number) {
-                    Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "tuned channel from UI"),
-                    Ok(None) => {}
-                    Err(err) => error!(error = %err, "failed to tune channel from UI"),
-                }
-                sync_controller_to_state(&ctrl, state_manager);
+            let snap = {
+                let mut ctrl = controller.borrow_mut();
+                let target_number = ctrl
+                    .channels()
+                    .iter()
+                    .find(|c| c.id == channel_id)
+                    .map(|c| c.number);
+                target_number.map(|number| {
+                    match ctrl.load_channel(number) {
+                        Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "tuned channel from UI"),
+                        Ok(None) => {}
+                        Err(err) => error!(error = %err, "failed to tune channel from UI"),
+                    }
+                    ControllerSnapshot::from_controller(&ctrl)
+                })
+            };
+            if let Some(snap) = snap {
+                snap.apply(state_manager);
             }
         }
         ShellCommand::SetMode { .. } | ShellCommand::SetOverlay { .. } => {}
@@ -279,20 +318,29 @@ fn handle_shell_command(
             item,
             start_position_sec,
         } => {
-            let mut ctrl = controller.borrow_mut();
-            if let Err(err) = ctrl.backend_mut().play_url_at(&item.stream_url, start_position_sec) {
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                ctrl.backend_mut().play_url_at(&item.stream_url, start_position_sec)
+            };
+            if let Err(err) = res {
                 error!(error = %err, url = %item.stream_url, "failed to play on-demand media");
             }
         }
         ShellCommand::SeekRelative { offset_sec } => {
-            let mut ctrl = controller.borrow_mut();
-            if let Err(err) = ctrl.backend_mut().seek_relative(offset_sec) {
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                ctrl.backend_mut().seek_relative(offset_sec)
+            };
+            if let Err(err) = res {
                 error!(error = %err, "failed to seek");
             }
         }
         ShellCommand::TogglePause => {
-            let mut ctrl = controller.borrow_mut();
-            if let Err(err) = ctrl.toggle_pause() {
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                ctrl.toggle_pause()
+            };
+            if let Err(err) = res {
                 error!(error = %err, "failed to toggle pause");
             }
         }
@@ -305,44 +353,63 @@ fn handle_nav_event(
     win_weak: &glib::WeakRef<ApplicationWindow>,
     event: NavEvent,
 ) {
-    let mut ctrl = controller.borrow_mut();
     match event {
         NavEvent::ChannelUp => {
-            match ctrl.channel_up() {
-                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel up"),
-                Ok(None) => {}
-                Err(err) => error!(error = %err, "channel up failed"),
-            }
-            sync_controller_to_state(&ctrl, state_manager);
+            let snap = {
+                let mut ctrl = controller.borrow_mut();
+                match ctrl.channel_up() {
+                    Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel up"),
+                    Ok(None) => {}
+                    Err(err) => error!(error = %err, "channel up failed"),
+                }
+                ControllerSnapshot::from_controller(&ctrl)
+            };
+            snap.apply(state_manager);
         }
         NavEvent::ChannelDown => {
-            match ctrl.channel_down() {
-                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel down"),
-                Ok(None) => {}
-                Err(err) => error!(error = %err, "channel down failed"),
-            }
-            sync_controller_to_state(&ctrl, state_manager);
+            let snap = {
+                let mut ctrl = controller.borrow_mut();
+                match ctrl.channel_down() {
+                    Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel down"),
+                    Ok(None) => {}
+                    Err(err) => error!(error = %err, "channel down failed"),
+                }
+                ControllerSnapshot::from_controller(&ctrl)
+            };
+            snap.apply(state_manager);
         }
         NavEvent::Digit(d) => {
-            match ctrl.zap_digit(d) {
-                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped via digit"),
-                Ok(None) => {}
-                Err(err) => error!(error = %err, "digit zap failed"),
-            }
-            sync_controller_to_state(&ctrl, state_manager);
+            let snap = {
+                let mut ctrl = controller.borrow_mut();
+                match ctrl.zap_digit(d) {
+                    Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped via digit"),
+                    Ok(None) => {}
+                    Err(err) => error!(error = %err, "digit zap failed"),
+                }
+                ControllerSnapshot::from_controller(&ctrl)
+            };
+            snap.apply(state_manager);
         }
         NavEvent::Select => {
             let snap = state_manager.snapshot();
-            if !ctrl.digit_buffer().is_empty() {
-                if let Err(err) = ctrl.commit_digits() {
-                    error!(error = %err, "commit digits failed");
+            let updated = {
+                let mut ctrl = controller.borrow_mut();
+                if !ctrl.digit_buffer().is_empty() {
+                    if let Err(err) = ctrl.commit_digits() {
+                        error!(error = %err, "commit digits failed");
+                    }
+                    Some(ControllerSnapshot::from_controller(&ctrl))
+                } else if snap.mode == AppMode::LiveTv && snap.overlay == OverlayKind::None {
+                    if let Err(err) = ctrl.toggle_pause() {
+                        error!(error = %err, "toggle pause failed");
+                    }
+                    Some(ControllerSnapshot::from_controller(&ctrl))
+                } else {
+                    None
                 }
-                sync_controller_to_state(&ctrl, state_manager);
-            } else if snap.mode == AppMode::LiveTv && snap.overlay == OverlayKind::None {
-                if let Err(err) = ctrl.toggle_pause() {
-                    error!(error = %err, "toggle pause failed");
-                }
-                sync_controller_to_state(&ctrl, state_manager);
+            };
+            if let Some(s) = updated {
+                s.apply(state_manager);
             }
         }
         NavEvent::Back => {
