@@ -14,9 +14,22 @@ body,
   overflow: hidden;
   background: transparent !important;
   color: var(--text-primary);
-  font-family: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+  font-family:
+    "Plus Jakarta Sans",
+    "Inter",
+    "SF Pro Display",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   user-select: none;
+}
+
+::selection {
+  background: rgba(225, 58, 38, 0.35);
+  color: #ffffff;
 }
 
 *:focus {

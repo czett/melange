@@ -1,61 +1,317 @@
 :root {
-  --glass-blur: blur(22px) saturate(180%);
-  --glass-blur-heavy: blur(32px) saturate(190%);
-  --glass-surface: rgba(18, 22, 32, 0.48);
-  --glass-surface-elevated: rgba(28, 34, 48, 0.62);
-  --glass-surface-hover: rgba(255, 255, 255, 0.14);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --glass-border-strong: rgba(255, 255, 255, 0.28);
+  /* Strict Crimson & Obsidian Garnet Palette */
+  --melange-crimson: #E13A26;
+  --melange-deep-red: #831613;
+  --melange-garnet-void: #120303;
+  --melange-garnet-base: #1D0505;
+  --melange-ink-dark: #140404;
 
-  --accent: #38bdf8;
-  --accent-soft: rgba(56, 189, 248, 0.22);
-  --accent-glow: rgba(56, 189, 248, 0.45);
-  --live-dot: #ef4444;
+  /* Typography & Ink */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.72);
+  --text-muted: rgba(255, 255, 255, 0.45);
 
-  --text-primary: rgba(255, 255, 255, 0.96);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.46);
+  /* Fluted / Reeded Glass Material */
+  --glass-blur: blur(24px) saturate(165%);
+  --glass-blur-heavy: blur(32px) saturate(175%);
+  --fluted-ribs: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0px,
+    rgba(255, 255, 255, 0.01) 3px,
+    rgba(0, 0, 0, 0.18) 6px,
+    rgba(255, 255, 255, 0.04) 9px
+  );
+  --fluted-ribs-fine: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.048) 0px,
+    rgba(255, 255, 255, 0.01) 2px,
+    rgba(0, 0, 0, 0.14) 5px,
+    rgba(255, 255, 255, 0.03) 7px
+  );
+
+  /* Specular Borders & Shadows */
+  --rim-specular: rgba(255, 255, 255, 0.24);
+  --rim-top: rgba(255, 255, 255, 0.34);
+  --rim-subtle: rgba(255, 255, 255, 0.15);
+  --crimson-glow: rgba(225, 58, 38, 0.42);
+  --crimson-soft: rgba(225, 58, 38, 0.20);
+  --shadow-garnet: 0 22px 54px rgba(18, 3, 3, 0.68);
+  --shadow-garnet-heavy: 0 32px 84px rgba(18, 3, 3, 0.84);
+
+  /* Motion */
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.glass-panel {
-  background: var(--glass-surface);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.42);
+@keyframes crimsonBeamDrift {
+  0% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: translate3d(3%, 2%, 0) scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-3%, -2%, 0) scale(1);
+    opacity: 0.88;
+  }
 }
 
-.glass-panel-heavy {
-  background: var(--glass-surface-elevated);
+@keyframes focusBreathe {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(225, 58, 38, 0.45),
+      0 0 26px rgba(225, 58, 38, 0.38),
+      inset 0 0 16px rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(225, 58, 38, 0.72),
+      0 0 36px rgba(225, 58, 38, 0.56),
+      inset 0 0 20px rgba(255, 255, 255, 0.18);
+  }
+}
+
+@keyframes liveBeacon {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.28);
+    opacity: 0.62;
+  }
+}
+
+/* Idle Ambient Crimson Fluted Backdrop */
+.crimson-ambient-bg {
+  background:
+    radial-gradient(1100px circle at 18% 12%, rgba(225, 58, 38, 0.48), transparent 56%),
+    radial-gradient(900px circle at 84% 78%, rgba(131, 22, 19, 0.64), transparent 58%),
+    linear-gradient(135deg, #120303 0%, #2a0707 42%, #831613 78%, #1d0505 100%);
+  overflow: hidden;
+}
+
+.crimson-ambient-bg::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  pointer-events: none;
+  background:
+    radial-gradient(62% 52% at 62% 24%, rgba(225, 58, 38, 0.34), transparent 64%),
+    radial-gradient(45% 65% at 24% 82%, rgba(225, 58, 38, 0.22), transparent 62%);
+  animation: crimsonBeamDrift 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.crimson-ambient-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.032) 0px,
+    rgba(255, 255, 255, 0.005) 5px,
+    rgba(18, 3, 3, 0.24) 11px,
+    rgba(255, 255, 255, 0.02) 16px
+  );
+  mix-blend-mode: overlay;
+}
+
+/* Live Video Passthrough Scrim */
+.video-scrim-active {
+  background: linear-gradient(
+    180deg,
+    rgba(18, 3, 3, 0.72) 0%,
+    rgba(18, 3, 3, 0.14) 36%,
+    rgba(18, 3, 3, 0.18) 64%,
+    rgba(18, 3, 3, 0.82) 100%
+  );
+}
+
+/* Heavy Fluted Surface (Docks, Modals, OSD, Banners, Keyboard Deck) */
+.fluted-surface {
+  position: relative;
+  background:
+    var(--fluted-ribs),
+    radial-gradient(120% 90% at 16% 0%, rgba(225, 58, 38, 0.24), transparent 58%),
+    linear-gradient(175deg, rgba(131, 22, 19, 0.42) 0%, rgba(29, 5, 5, 0.76) 100%);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
-  border: 1px solid var(--glass-border-strong);
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.56);
+  border: 1px solid var(--rim-specular);
+  box-shadow:
+    inset 0 1px 0 var(--rim-top),
+    inset 0 -1px 0 rgba(225, 58, 38, 0.16),
+    var(--shadow-garnet-heavy);
 }
 
-.glass-pill {
-  background: rgba(255, 255, 255, 0.1);
+/* Fluted Interactive Card (Channels, Continue Watching, Media Grid, EPG Cells, Settings) */
+.fluted-card {
+  position: relative;
+  background:
+    var(--fluted-ribs),
+    linear-gradient(160deg, rgba(131, 22, 19, 0.30) 0%, rgba(29, 5, 5, 0.62) 100%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--rim-subtle);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    var(--shadow-garnet);
+  transition:
+    transform 210ms var(--ease-spring),
+    border-color 180ms ease,
+    background 210ms ease,
+    box-shadow 210ms ease;
+}
+
+.fluted-card:hover,
+.fluted-card[data-focused="true"] {
+  background:
+    var(--fluted-ribs),
+    radial-gradient(100% 80% at 50% 0%, rgba(225, 58, 38, 0.30), transparent 70%),
+    linear-gradient(160deg, rgba(131, 22, 19, 0.46) 0%, rgba(29, 5, 5, 0.74) 100%);
+  border-color: rgba(255, 255, 255, 0.64);
+  transform: translate3d(0, -2px, 0) scale(1.018);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    0 0 32px rgba(225, 58, 38, 0.32),
+    var(--shadow-garnet);
+}
+
+.fluted-card[data-pressed="true"],
+.fluted-card:active {
+  transform: translate3d(0, 0, 0) scale(0.975);
+}
+
+/* Fluted Pill Control */
+.fluted-pill {
+  position: relative;
+  background:
+    var(--fluted-ribs-fine),
+    linear-gradient(165deg, rgba(131, 22, 19, 0.28) 0%, rgba(29, 5, 5, 0.54) 100%);
+  backdrop-filter: blur(20px) saturate(165%);
+  -webkit-backdrop-filter: blur(20px) saturate(165%);
+  border: 1px solid var(--rim-subtle);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition:
+    transform 190ms var(--ease-spring),
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.fluted-pill:hover,
+.fluted-pill[data-focused="true"] {
+  background:
+    var(--fluted-ribs-fine),
+    linear-gradient(165deg, rgba(225, 58, 38, 0.38) 0%, rgba(131, 22, 19, 0.62) 100%);
+  border-color: rgba(255, 255, 255, 0.72);
+  transform: scale(1.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 0 24px rgba(225, 58, 38, 0.36);
+}
+
+.fluted-pill[data-pressed="true"],
+.fluted-pill:active {
+  transform: scale(0.965);
+}
+
+/* Fluted Tactile Keycap (On-Screen Keyboard) */
+.fluted-key {
+  position: relative;
+  background:
+    var(--fluted-ribs-fine),
+    linear-gradient(180deg, rgba(131, 22, 19, 0.34) 0%, rgba(29, 5, 5, 0.68) 100%);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 20px rgba(18, 3, 3, 0.45);
+  color: #ffffff;
+  transition:
+    transform 160ms var(--ease-spring),
+    background 140ms ease,
+    color 140ms ease,
+    box-shadow 160ms ease;
 }
 
+.fluted-key:hover,
+.fluted-key[data-focused="true"] {
+  background: #ffffff;
+  color: #140404;
+  border-color: #ffffff;
+  transform: translate3d(0, -1px, 0) scale(1.06);
+  box-shadow:
+    0 0 24px rgba(225, 58, 38, 0.48),
+    0 12px 28px rgba(18, 3, 3, 0.56);
+}
+
+.fluted-key[data-pressed="true"],
+.fluted-key:active {
+  transform: scale(0.93);
+}
+
+/* Crisp Solid White Primary Pill CTA */
+.pill-cta-white {
+  background: #ffffff;
+  color: #140404;
+  border: 1px solid #ffffff;
+  box-shadow:
+    0 10px 28px rgba(18, 3, 3, 0.56),
+    0 0 20px rgba(255, 255, 255, 0.18);
+  transition:
+    transform 190ms var(--ease-spring),
+    box-shadow 180ms ease,
+    background 160ms ease;
+}
+
+.pill-cta-white:hover,
+.pill-cta-white[data-focused="true"] {
+  background: #ffffff;
+  color: #140404;
+  transform: scale(1.03);
+  box-shadow:
+    0 0 0 2px rgba(225, 58, 38, 0.65),
+    0 14px 34px rgba(225, 58, 38, 0.42);
+}
+
+.pill-cta-white[data-pressed="true"],
+.pill-cta-white:active {
+  transform: scale(0.96);
+}
+
+/* Crimson Progress Bar & Live Beacon */
+.crimson-progress-fill {
+  background: linear-gradient(90deg, #831613 0%, #E13A26 72%, #FFFFFF 100%);
+  box-shadow: 0 0 12px rgba(225, 58, 38, 0.55);
+}
+
+.live-beacon {
+  background-color: #E13A26;
+  box-shadow: 0 0 10px rgba(225, 58, 38, 0.85);
+  animation: liveBeacon 2s ease-in-out infinite;
+}
+
+/* Spatial Focus Reticle */
 .focus-ring {
   position: fixed;
   top: 0;
   left: 0;
   pointer-events: none;
   z-index: 60;
-  border-radius: 16px;
-  border: 2.5px solid rgba(255, 255, 255, 0.92);
-  box-shadow:
-    0 0 0 1px rgba(56, 189, 248, 0.4),
-    0 0 28px var(--accent-glow),
-    inset 0 0 18px rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  animation: focusBreathe 2.6s ease-in-out infinite;
   transition:
-    transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
-    width 170ms cubic-bezier(0.22, 1, 0.36, 1),
-    height 170ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 140ms ease;
-  will-change: transform, width, height;
+    transform 170ms var(--ease-spring),
+    width 170ms var(--ease-spring),
+    height 170ms var(--ease-spring),
+    border-radius 170ms var(--ease-spring),
+    opacity 130ms ease;
+  will-change: transform, width, height, border-radius;
 }

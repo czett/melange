@@ -16,8 +16,23 @@ const [focusRect, setFocusRect] = createSignal<{
   y: number;
   width: number;
   height: number;
+  radius: string;
   visible: boolean;
-}>({ x: 0, y: 0, width: 0, height: 0, visible: false });
+}>({ x: 0, y: 0, width: 0, height: 0, radius: "16px", visible: false });
+
+function syncFocusedAttribute(activeId: string | null): void {
+  for (const [id, target] of targets.entries()) {
+    if (id === activeId) {
+      target.el.setAttribute("data-focused", "true");
+    } else {
+      target.el.removeAttribute("data-focused");
+    }
+  }
+}
+
+export function isFocused(id: string): boolean {
+  return focusedId() === id;
+}
 
 export function registerFocusable(
   id: string,
@@ -28,13 +43,17 @@ export function registerFocusable(
   if (!focusedId()) {
     setFocus(id, false);
   } else if (focusedId() === id) {
+    el.setAttribute("data-focused", "true");
     measureFocused();
   }
   return () => {
+    el.removeAttribute("data-focused");
+    el.removeAttribute("data-pressed");
     targets.delete(id);
     if (focusedId() === id) {
       const next = targets.keys().next().value ?? null;
       setFocusedId(next);
+      syncFocusedAttribute(next);
       measureFocused();
     }
   };
@@ -51,6 +70,7 @@ export function setFocus(id: string, pushHistory = true): void {
     }
   }
   setFocusedId(id);
+  syncFocusedAttribute(id);
   target.el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
   requestAnimationFrame(measureFocused);
 }
@@ -62,6 +82,7 @@ export function ensureValidFocus(preferredId?: string): void {
     if (t && t.el.isConnected) {
       const r = t.el.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) {
+        syncFocusedAttribute(current);
         measureFocused();
         return;
       }
@@ -82,6 +103,7 @@ export function ensureValidFocus(preferredId?: string): void {
       return;
     }
   }
+  syncFocusedAttribute(null);
   setFocusRect((r) => ({ ...r, visible: false }));
 }
 
@@ -92,7 +114,7 @@ export function measureFocused(): void {
     return;
   }
   const target = targets.get(id);
-  if (!target) {
+  if (!target || !target.el.isConnected) {
     setFocusRect((r) => ({ ...r, visible: false }));
     return;
   }
@@ -101,11 +123,14 @@ export function measureFocused(): void {
     setFocusRect((r) => ({ ...r, visible: false }));
     return;
   }
+  const computed = window.getComputedStyle(target.el);
+  const radius = target.el.dataset.focusRadius || computed.borderRadius || "16px";
   setFocusRect({
     x: rect.left,
     y: rect.top,
     width: rect.width,
     height: rect.height,
+    radius,
     visible: true
   });
 }
@@ -116,7 +141,12 @@ export function handleSpatialNav(ev: NavEvent): boolean {
     if (id) {
       const target = targets.get(id);
       if (target) {
+        target.el.setAttribute("data-pressed", "true");
+        window.setTimeout(() => {
+          target.el.removeAttribute("data-pressed");
+        }, 140);
         target.onSelect();
+        requestAnimationFrame(measureFocused);
         return true;
       }
     }

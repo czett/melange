@@ -103,6 +103,14 @@ export const App = () => {
     requestAnimationFrame(() => measureFocused());
   });
 
+  const isVideoActive = () => {
+    const s = melangeState().playback.state;
+    return s === "Playing" || s === "Buffering";
+  };
+
+  const showAmbientBackdrop = () =>
+    melangeState().mode !== "LiveTv" && !isVideoActive();
+
   const showFocusRing = () =>
     melangeState().mode !== "LiveTv" ||
     melangeState().overlay === "FullEpg" ||
@@ -113,7 +121,39 @@ export const App = () => {
   const goHome = () => sendCommand({ type: "SetMode", mode: "Home" });
 
   return (
-    <div class="relative h-screen w-screen overflow-hidden bg-transparent">
+    <div class="relative h-screen w-screen overflow-hidden bg-transparent text-white">
+      {/* Ambient crimson fluted backdrop when idle; fades out completely during libmpv playback */}
+      <div
+        class="crimson-ambient-bg pointer-events-none fixed inset-0 -z-20 transition-opacity duration-700 ease-out"
+        style={{ opacity: showAmbientBackdrop() ? "1" : "0" }}
+      />
+
+      {/* Optional profile wallpaper softly glazed into the crimson garnet canvas when idle */}
+      <Show when={showAmbientBackdrop() && melangeState().active_profile?.wallpaper_path}>
+        {(wp) => (
+          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden transition-opacity duration-700">
+            <img
+              src={wp()}
+              alt=""
+              class="h-full w-full object-cover opacity-30 mix-blend-luminosity scale-105"
+            />
+            <div
+              class="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(18,3,3,0.72) 0%, rgba(131,22,19,0.45) 55%, rgba(18,3,3,0.82) 100%)"
+              }}
+            />
+          </div>
+        )}
+      </Show>
+
+      {/* Warm obsidian-garnet edge vignette when live 1080p video shines through */}
+      <div
+        class="video-scrim-active pointer-events-none fixed inset-0 -z-10 transition-opacity duration-700"
+        style={{ opacity: melangeState().mode !== "LiveTv" && isVideoActive() ? "1" : "0" }}
+      />
+
       <Show when={melangeState().mode === "Home"}>
         <HomeView />
       </Show>
