@@ -9,9 +9,9 @@ ui-build:
     cd ui && npm install && npm run build
     cd companion && npm install && npm run build
 
-# Run melange-shell in --dev mode (seeds dev/ and builds ui/dist + companion/dist automatically if missing)
+# Run melange-shell in --dev mode (refreshes dev/ seed fixtures and builds ui/dist + companion/dist if missing)
 dev:
-    @if [ ! -d dev ]; then ./scripts/seed_dev.sh; fi
+    ./scripts/seed_dev.sh
     @if [ ! -d ui/dist ]; then cd ui && npm install && npm run build; fi
     @if [ ! -d companion/dist ]; then cd companion && npm install && npm run build; fi
     cargo run -p melange-shell -- --dev

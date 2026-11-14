@@ -12,11 +12,11 @@ echo "[seed] writing ${DEV_DIR}/channels.m3u"
 cat > "${DEV_DIR}/channels.m3u" <<'EOF'
 #EXTM3U
 #EXTINF:-1 tvg-id="daserste.de" tvg-name="Das Erste" tvg-chno="1" group-title="Public",Das Erste HD
-https://mcdn.daserste.de/daserste/de/master.m3u8
+https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master.m3u8
 #EXTINF:-1 tvg-id="zdf.de" tvg-name="ZDF" tvg-chno="2" group-title="Public",ZDF HD
 https://zdf-hls-15.akamaized.net/hls/live/2016498/de/high/master.m3u8
 #EXTINF:-1 tvg-id="arte.de" tvg-name="ARTE" tvg-chno="3" group-title="Culture",ARTE HD
-https://artesimulcast.akamaized.net/hls/live/2031003/artelive_de/index.m3u8
+https://artesimulcast.akamaized.net/hls/live/2030993/artelive_de/master.m3u8
 #EXTINF:-1 tvg-id="3sat.de" tvg-name="3sat" tvg-chno="4" group-title="Culture",3sat HD
 https://zdf-hls-18.akamaized.net/hls/live/2016501/dach/high/master.m3u8
 EOF
