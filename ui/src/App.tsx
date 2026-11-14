@@ -109,16 +109,13 @@ export const App = () => {
     return s === "Playing" || s === "Buffering";
   };
 
-  // Every mode except LiveTv sits on the luminous crimson fluted-glass backdrop, so the
-  // interface never collapses into a muddy video overlay. While live TV keeps playing behind
-  // Home the glass stays rich (0.92) and lets motion shimmer through the reeds; idle it is
-  // fully opaque. Only LiveTv (ZapBanner / PlayerOsd / FullEpg) reveals the raw video feed.
-  const showBackdrop = () => melangeState().mode !== "LiveTv";
+  // Every mode except LiveTv sits 100% opaquely on the luminous crimson fluted-glass
+  // backdrop (plus ProfileSwitcher if opened over LiveTv), so background TV credits
+  // never bleed through behind hero headlines. Only LiveTv reveals the raw libmpv feed.
+  const showBackdrop = () =>
+    melangeState().mode !== "LiveTv" || melangeState().overlay === "ProfileSwitcher";
 
-  const backdropOpacity = () => {
-    if (!showBackdrop()) return "0";
-    return isVideoActive() ? "0.92" : "1";
-  };
+  const backdropOpacity = () => (showBackdrop() ? "1" : "0");
 
   const showLiveTvScrim = () =>
     melangeState().mode === "LiveTv" && isVideoActive();
@@ -134,9 +131,10 @@ export const App = () => {
 
   return (
     <div class="relative h-screen w-screen overflow-hidden bg-transparent text-white">
-      {/* Optical irregular fluted-glass light field (full-page modes + idle Home) */}
+      {/* Optical irregular fluted-glass light field (100% opaque outside LiveTv) */}
       <FlutedBackdrop
-        class="-z-20 transition-opacity duration-500 ease-out"
+        active={showBackdrop()}
+        class="-z-30 transition-opacity duration-500 ease-out"
         style={{ opacity: backdropOpacity() }}
       />
 

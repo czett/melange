@@ -195,7 +195,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     });
 
     // Transparent WebKit6 overlay layered directly above the libmpv GLArea.
-    let webview = WebView::builder().hexpand(true).vexpand(true).build();
+    let webview_settings = webkit6::Settings::builder()
+        .enable_webgl(true)
+        .hardware_acceleration_policy(webkit6::HardwareAccelerationPolicy::Always)
+        .build();
+    let webview = WebView::builder()
+        .hexpand(true)
+        .vexpand(true)
+        .settings(&webview_settings)
+        .build();
     webview.set_background_color(&RGBA::new(0.0, 0.0, 0.0, 0.0));
     if config.mode == RunMode::Kiosk {
         webview.connect_context_menu(|_, _, _| true);
