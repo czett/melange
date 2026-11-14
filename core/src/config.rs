@@ -19,6 +19,8 @@ pub struct AppConfig {
     pub sounds_dir: PathBuf,
     pub ui_dist_dir: PathBuf,
     pub port: u16,
+    pub piped_url: String,
+    pub media_dirs: Vec<PathBuf>,
 }
 
 impl AppConfig {
@@ -83,6 +85,8 @@ impl AppConfig {
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
                     port: 9000,
+                    piped_url: default_piped_url(),
+                    media_dirs: vec![dev_dir.join("media")],
                 }
             }
             RunMode::Desktop | RunMode::Kiosk => {
@@ -95,6 +99,8 @@ impl AppConfig {
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
                     port: 9000,
+                    piped_url: default_piped_url(),
+                    media_dirs: default_media_dirs(),
                 }
             }
         }
@@ -113,4 +119,21 @@ fn xdg_data_dir() -> PathBuf {
         return PathBuf::from(home).join(".local").join("share");
     }
     PathBuf::from(".")
+}
+
+fn default_piped_url() -> String {
+    env::var("MELANGE_PIPED_URL")
+        .ok()
+        .map(|s| s.trim().trim_end_matches('/').to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "https://pipedapi.kavin.rocks".to_string())
+}
+
+fn default_media_dirs() -> Vec<PathBuf> {
+    if let Ok(home) = env::var("HOME")
+        && !home.is_empty()
+    {
+        return vec![PathBuf::from(home).join("Videos")];
+    }
+    vec![PathBuf::from("dev").join("media")]
 }

@@ -112,8 +112,10 @@ EOF
 fi
 
 pick_video_encoder() {
-  for enc in libx264 libopenh264 mpeg4; do
-    if ffmpeg -hide_banner -encoders 2>/dev/null | grep -qE "^\s*V\S*\s+${enc}\b"; then
+  local encoders
+  encoders="$(ffmpeg -hide_banner -encoders 2>/dev/null || true)"
+  for enc in libx264 libopenh264 mpeg4 libsvtav1; do
+    if printf '%s\n' "${encoders}" | grep -qE "^[[:space:]]*V[^[:space:]]*[[:space:]]+${enc}([[:space:]]|$)"; then
       echo "${enc}"
       return 0
     fi
@@ -140,7 +142,36 @@ if command -v ffmpeg >/dev/null 2>&1; then
         "${MEDIA_DIR}/test_tone.mp4" || echo "[seed] warning: failed to generate test_tone.mp4" >&2
     fi
   else
-    echo "[seed] warning: no suitable mp4 video encoder found in ffmpeg; skipping dev/media/*.mp4" >&2
+    if ffmpeg -hide_banner -encoders 2>/dev/null | grep -qE "^\s*V\S*\s+libvpx-vp9\b"; then
+      if [ ! -f "${MEDIA_DIR}/test_bars.webm" ]; then
+        echo "[seed] generating ${MEDIA_DIR}/test_bars.webm (libvpx-vp9)"
+        ffmpeg -y -loglevel error \
+          -f lavfi -i "smptebars=size=1280x720:rate=30:duration=5" \
+          -f lavfi -i "sine=frequency=440:duration=5" \
+          -c:v libvpx-vp9 -c:a libopus -shortest \
+          "${MEDIA_DIR}/test_bars.webm" || echo "[seed] warning: failed to generate test_bars.webm" >&2
+      fi
+    elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -qE "^\s*V\S*\s+mpeg2video\b"; then
+      if [ ! -f "${MEDIA_DIR}/test_bars.ts" ]; then
+        echo "[seed] generating ${MEDIA_DIR}/test_bars.ts (mpeg2video)"
+        ffmpeg -y -loglevel error \
+          -f lavfi -i "smptebars=size=1280x720:rate=30:duration=5" \
+          -f lavfi -i "sine=frequency=440:duration=5" \
+          -c:v mpeg2video -c:a mp2 -shortest \
+          "${MEDIA_DIR}/test_bars.ts" || echo "[seed] warning: failed to generate test_bars.ts" >&2
+      fi
+    elif ffmpeg -hide_banner -encoders 2>/dev/null | grep -qE "^\s*V\S*\s+mjpeg\b"; then
+      if [ ! -f "${MEDIA_DIR}/test_bars.avi" ]; then
+        echo "[seed] generating ${MEDIA_DIR}/test_bars.avi (mjpeg)"
+        ffmpeg -y -loglevel error \
+          -f lavfi -i "smptebars=size=1280x720:rate=30:duration=5" \
+          -f lavfi -i "sine=frequency=440:duration=5" \
+          -c:v mjpeg -c:a pcm_s16le -shortest \
+          "${MEDIA_DIR}/test_bars.avi" || echo "[seed] warning: failed to generate test_bars.avi" >&2
+      fi
+    else
+      echo "[seed] warning: no suitable video encoder found in ffmpeg; skipping dev/media/* generation" >&2
+    fi
   fi
 else
   echo "[seed] warning: ffmpeg not found; skipping dev/media/*.mp4 generation" >&2
