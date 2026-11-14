@@ -5,15 +5,18 @@ use std::rc::Rc;
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use gtk4::gdk::Key;
+use gtk4::gdk::{Key, RGBA};
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, EventControllerKey, GLArea};
+use gtk4::{Application, ApplicationWindow, EventControllerKey, GLArea, Overlay, PropagationPhase};
 use melange_core::{
-    AppConfig, AudioEngine, Database, GamepadHandle, InputRouter, M3uXmltvProvider, NavEvent,
-    PlayerController, RunMode,
+    AppConfig, AppMode, AudioEngine, Database, GamepadHandle, InputRouter, M3uXmltvProvider,
+    NavEvent, OverlayKind, PlayerController, RunMode, ShellCommand, StateManager,
+    spawn_server_thread,
 };
 use tracing::{error, info, warn};
+use webkit6::WebView;
+use webkit6::prelude::*;
 
 use crate::mpv_gl::MpvPlayer;
 
@@ -63,8 +66,22 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
         warn!(path = %config.channels_path.display(), "channels.m3u not found");
     }
 
+    let profiles = db.list_profiles()?;
     let channels = db.list_channels()?;
+    let epg_entries = db.list_all_epg()?;
+
     let audio = Arc::new(AudioEngine::new(&config.sounds_dir));
+    let state_manager = StateManager::new(profiles, channels.clone(), epg_entries, Arc::clone(&audio));
+
+    let (shell_cmd_tx, shell_cmd_rx) = mpsc::channel::<ShellCommand>();
+    state_manager.attach_shell_sender(shell_cmd_tx);
+
+    let _server_handle = spawn_server_thread(
+        config.port,
+        Arc::clone(&state_manager),
+        config.ui_dist_dir.clone(),
+    )?;
+
     let (nav_tx, nav_rx) = mpsc::channel::<NavEvent>();
     let router = Rc::new(InputRouter::new(Arc::clone(&audio), nav_tx.clone()));
     let _gamepad = GamepadHandle::spawn(nav_tx, Arc::clone(&audio));
@@ -104,17 +121,36 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     });
 
     let ctrl_render = Rc::clone(&controller);
+    let state_render = Arc::clone(&state_manager);
     gl_area.connect_render(move |area, _gl_ctx| {
         let scale = area.scale_factor();
         let width = area.width() * scale;
         let height = area.height() * scale;
         let mut ctrl = ctrl_render.borrow_mut();
+        let was_zapping = ctrl.is_zapping();
         ctrl.backend().render(width, height);
         ctrl.mark_frame_rendered();
+        if was_zapping && !ctrl.is_zapping() {
+            sync_controller_to_state(&ctrl, &state_render);
+        }
         glib::Propagation::Stop
     });
 
+    // Transparent WebKit6 overlay layered directly above the libmpv GLArea.
+    let webview = WebView::builder().hexpand(true).vexpand(true).build();
+    webview.set_background_color(&RGBA::new(0.0, 0.0, 0.0, 0.0));
+    if config.mode == RunMode::Kiosk {
+        webview.connect_context_menu(|_, _, _| true);
+    }
+    let ui_url = format!("http://127.0.0.1:{}", config.port);
+    webview.load_uri(&ui_url);
+
+    let root_overlay = Overlay::builder().hexpand(true).vexpand(true).build();
+    root_overlay.set_child(Some(&gl_area));
+    root_overlay.add_overlay(&webview);
+
     let key_controller = EventControllerKey::new();
+    key_controller.set_propagation_phase(PropagationPhase::Capture);
     let router_keys = Rc::clone(&router);
     key_controller.connect_key_pressed(move |_, key, _, _| {
         if let Some(ev) = map_gtk_key(key) {
@@ -125,15 +161,20 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     });
     window.add_controller(key_controller);
 
-    window.set_child(Some(&gl_area));
+    window.set_child(Some(&root_overlay));
     window.present();
 
-    // Poll NavEvent queue on GTK main loop without blocking.
+    // Poll NavEvent & ShellCommand queues on GTK main loop without blocking.
     let ctrl_nav = Rc::clone(&controller);
+    let state_nav = Arc::clone(&state_manager);
     let win_weak = window.downgrade();
     glib::timeout_add_local(Duration::from_millis(16), move || {
         while let Ok(ev) = nav_rx.try_recv() {
-            handle_nav_event(&ctrl_nav, &win_weak, ev);
+            state_nav.handle_nav_event(ev);
+            handle_nav_event(&ctrl_nav, &state_nav, &win_weak, ev);
+        }
+        while let Ok(cmd) = shell_cmd_rx.try_recv() {
+            handle_shell_command(&ctrl_nav, &state_nav, cmd);
         }
         glib::ControlFlow::Continue
     });
@@ -141,7 +182,10 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     // In --dev mode, automatically load channel 1 so live video starts immediately.
     if config.mode == RunMode::Dev {
         match controller.borrow_mut().load_channel(1) {
-            Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "auto-tuned channel 1"),
+            Ok(Some(ch)) => {
+                info!(number = ch.number, name = %ch.name, "auto-tuned channel 1");
+                sync_controller_to_state(&controller.borrow(), &state_manager);
+            }
             Ok(None) => warn!("channel 1 not found in sqlite"),
             Err(err) => error!(error = %err, "failed to auto-tune channel 1"),
         }
@@ -150,49 +194,105 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     Ok(())
 }
 
+fn sync_controller_to_state(ctrl: &PlayerController<MpvPlayer>, state_manager: &StateManager) {
+    state_manager.sync_player_state(
+        ctrl.current_channel(),
+        ctrl.state(),
+        ctrl.is_zapping(),
+        ctrl.digit_buffer(),
+        0.0,
+        0.0,
+    );
+}
+
+fn handle_shell_command(
+    controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
+    state_manager: &StateManager,
+    cmd: ShellCommand,
+) {
+    match cmd {
+        ShellCommand::SelectChannel { channel_id } => {
+            let mut ctrl = controller.borrow_mut();
+            let target_number = ctrl
+                .channels()
+                .iter()
+                .find(|c| c.id == channel_id)
+                .map(|c| c.number);
+            if let Some(number) = target_number {
+                match ctrl.load_channel(number) {
+                    Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "tuned channel from UI"),
+                    Ok(None) => {}
+                    Err(err) => error!(error = %err, "failed to tune channel from UI"),
+                }
+                sync_controller_to_state(&ctrl, state_manager);
+            }
+        }
+        ShellCommand::SetMode { .. } | ShellCommand::SetOverlay { .. } => {}
+    }
+}
+
 fn handle_nav_event(
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
+    state_manager: &StateManager,
     win_weak: &glib::WeakRef<ApplicationWindow>,
     event: NavEvent,
 ) {
     let mut ctrl = controller.borrow_mut();
     match event {
-        NavEvent::ChannelUp => match ctrl.channel_up() {
-            Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel up"),
-            Ok(None) => {}
-            Err(err) => error!(error = %err, "channel up failed"),
-        },
-        NavEvent::ChannelDown => match ctrl.channel_down() {
-            Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel down"),
-            Ok(None) => {}
-            Err(err) => error!(error = %err, "channel down failed"),
-        },
-        NavEvent::Digit(d) => match ctrl.zap_digit(d) {
-            Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped via digit"),
-            Ok(None) => {}
-            Err(err) => error!(error = %err, "digit zap failed"),
-        },
+        NavEvent::ChannelUp => {
+            match ctrl.channel_up() {
+                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel up"),
+                Ok(None) => {}
+                Err(err) => error!(error = %err, "channel up failed"),
+            }
+            sync_controller_to_state(&ctrl, state_manager);
+        }
+        NavEvent::ChannelDown => {
+            match ctrl.channel_down() {
+                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped channel down"),
+                Ok(None) => {}
+                Err(err) => error!(error = %err, "channel down failed"),
+            }
+            sync_controller_to_state(&ctrl, state_manager);
+        }
+        NavEvent::Digit(d) => {
+            match ctrl.zap_digit(d) {
+                Ok(Some(ch)) => info!(number = ch.number, name = %ch.name, "zapped via digit"),
+                Ok(None) => {}
+                Err(err) => error!(error = %err, "digit zap failed"),
+            }
+            sync_controller_to_state(&ctrl, state_manager);
+        }
         NavEvent::Select => {
+            let snap = state_manager.snapshot();
             if !ctrl.digit_buffer().is_empty() {
                 if let Err(err) = ctrl.commit_digits() {
                     error!(error = %err, "commit digits failed");
                 }
-            } else if let Err(err) = ctrl.toggle_pause() {
-                error!(error = %err, "toggle pause failed");
+                sync_controller_to_state(&ctrl, state_manager);
+            } else if snap.mode == AppMode::LiveTv && snap.overlay == OverlayKind::None {
+                if let Err(err) = ctrl.toggle_pause() {
+                    error!(error = %err, "toggle pause failed");
+                }
+                sync_controller_to_state(&ctrl, state_manager);
             }
         }
         NavEvent::Back => {
-            if let Some(win) = win_weak.upgrade()
+            let snap = state_manager.snapshot();
+            if snap.overlay == OverlayKind::None
+                && snap.mode == AppMode::LiveTv
+                && let Some(win) = win_weak.upgrade()
                 && win.is_fullscreen()
             {
                 win.unfullscreen();
             }
         }
-        NavEvent::Home => info!("home navigation requested"),
-        NavEvent::ToggleEpg => info!("epg overlay toggle requested"),
-        NavEvent::Up | NavEvent::Down | NavEvent::Left | NavEvent::Right => {
-            info!(?event, "directional navigation event");
-        }
+        NavEvent::Home
+        | NavEvent::ToggleEpg
+        | NavEvent::Up
+        | NavEvent::Down
+        | NavEvent::Left
+        | NavEvent::Right => {}
     }
 }
 

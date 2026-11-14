@@ -215,11 +215,9 @@ impl StateManager {
                     st.overlay = OverlayKind::ZapBanner;
                     changed = true;
                 }
-                NavEvent::Back => {
-                    if st.overlay != OverlayKind::None {
-                        st.overlay = OverlayKind::None;
-                        changed = true;
-                    }
+                NavEvent::Back if st.overlay != OverlayKind::None => {
+                    st.overlay = OverlayKind::None;
+                    changed = true;
                 }
                 _ => {}
             }

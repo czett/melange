@@ -11,3 +11,4 @@ libmpv2 = "7.0"
 melange-core = { path = "../core" }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+webkit6 = "0.6"
