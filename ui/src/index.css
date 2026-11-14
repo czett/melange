@@ -17,18 +17,18 @@ body,
   font-family:
     "Plus Jakarta Sans",
     "Inter",
-    "SF Pro Display",
     system-ui,
     -apple-system,
     sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "ss01", "cv11";
+  letter-spacing: -0.005em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
 
 ::selection {
-  background: rgba(225, 58, 38, 0.38);
+  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
 }
 

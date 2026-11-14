@@ -1,6 +1,6 @@
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { sendCommand } from "../bridge/ws";
-import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 
 interface Profile {
   id: number;
@@ -40,14 +40,11 @@ export function SettingsView(props: SettingsViewProps) {
   });
 
   return (
-    <div class="no-scrollbar relative z-20 flex h-full w-full flex-col overflow-y-auto p-10 text-white">
-      <div class="mx-auto mb-6 flex w-full max-w-5xl items-center justify-between">
+    <div class="no-scrollbar relative z-20 flex h-full w-full flex-col overflow-y-auto px-14 py-10 text-white">
+      <div class="mx-auto mb-8 flex w-full max-w-5xl items-end justify-between">
         <div>
-          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.25em] text-white/65">
-            <span class="h-1.5 w-1.5 rounded-full bg-white" />
-            <span>System</span>
-          </div>
-          <h1 class="mt-1.5 text-4xl font-light tracking-editorial text-white">
+          <div class="eyebrow">System</div>
+          <h1 class="mt-2 text-[40px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
             Settings
           </h1>
         </div>
@@ -57,36 +54,33 @@ export function SettingsView(props: SettingsViewProps) {
           data-focus-id="settings-back"
           data-focus-radius="9999px"
           onClick={goBack}
-          class={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-            isFocused("settings-back") ? "pill-cta-white" : "fluted-pill text-white"
-          }`}
+          class="pill pill-secondary"
         >
           ← Back
         </button>
       </div>
 
-      <div class="mx-auto my-auto grid w-full max-w-5xl grid-cols-1 gap-8 md:grid-cols-2">
-        <div class="fluted-card flex flex-col items-center space-y-5 rounded-3xl p-8 text-center">
+      <div class="mx-auto my-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
+        <div class="glass-card flex flex-col items-center gap-6 rounded-[22px] p-8 text-center">
           <div>
-            <h2 class="text-2xl font-light tracking-editorial text-white">
-              Smartphone Companion
-            </h2>
-            <p class="mt-2 text-sm text-white/75">
-              Scan with your phone camera to control Melange, reorder channels, or upload a custom wallpaper.
+            <h2 class="text-xl font-normal tracking-[-0.02em] text-white">Smartphone Companion</h2>
+            <p class="mx-auto mt-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+              Scan with your phone camera to control melange, reorder channels, or upload a custom
+              wallpaper.
             </p>
           </div>
           <Show
             when={info()}
             fallback={
-              <div class="h-52 w-52 animate-pulse rounded-2xl border border-white/20 bg-white/10" />
+              <div class="glass-inner h-52 w-52 animate-pulse rounded-2xl" />
             }
           >
             {(data) => (
               <>
-                <div class="rounded-2xl bg-white p-3.5 shadow-[0_20px_50px_rgba(18,3,3,0.45)] [&>svg]:h-48 [&>svg]:w-48">
+                <div class="rounded-2xl bg-white p-3.5 [&_svg]:block [&_svg]:h-44 [&_svg]:w-44">
                   <div innerHTML={data().qr_svg} />
                 </div>
-                <div class="fluted-pill rounded-full px-5 py-2 font-mono text-sm tabular-nums text-white">
+                <div class="chip h-8 px-4 font-mono text-xs tabular-nums text-white/80">
                   {data().url}
                 </div>
               </>
@@ -95,45 +89,39 @@ export function SettingsView(props: SettingsViewProps) {
         </div>
 
         <div class="space-y-6">
-          <div class="fluted-card space-y-4 rounded-3xl p-6">
-            <h3 class="text-lg font-medium tracking-tight text-white">
-              Active Providers
-            </h3>
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div class="frosted-subcard rounded-2xl p-4">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-white/65">
-                  <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+          <div class="glass-card space-y-4 rounded-[22px] p-6">
+            <h3 class="eyebrow">Active Providers</h3>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="glass-inner rounded-2xl p-4">
+                <div class="flex items-center gap-2 text-[11px] text-white/55">
+                  <span class="live-dot" />
                   <span>Live TV</span>
                 </div>
-                <div class="mt-1.5 font-medium text-white">
-                  M3U / Tvheadend ({props.channelCount} ch)
+                <div class="mt-2 text-[13px] font-medium text-white">
+                  M3U / Tvheadend · {props.channelCount} ch
                 </div>
               </div>
-              <div class="frosted-subcard rounded-2xl p-4">
-                <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-white/65">
-                  <span class="h-1.5 w-1.5 rounded-full bg-white" />
-                  <span>On-Demand</span>
+              <div class="glass-inner rounded-2xl p-4">
+                <div class="flex items-center gap-2 text-[11px] text-white/55">
+                  <span class="nav-dot" />
+                  <span>On Demand</span>
                 </div>
-                <div class="mt-1.5 font-medium text-white">
+                <div class="mt-2 text-[13px] font-medium text-white">
                   Mediathek / YouTube / Local
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="fluted-card space-y-4 rounded-3xl p-6">
+          <div class="glass-card space-y-4 rounded-[22px] p-6">
             <div class="flex items-center justify-between">
-              <h3 class="text-lg font-medium tracking-tight text-white">
-                Profile &amp; Wallpaper
-              </h3>
-              <span class="pill-cta-white rounded-full px-3.5 py-1 text-xs font-semibold">
-                {props.activeProfile?.name ?? "Default"}
-              </span>
+              <h3 class="eyebrow">Profile &amp; Wallpaper</h3>
+              <span class="chip chip-solid">{props.activeProfile?.name ?? "Default"}</span>
             </div>
             <Show
               when={props.activeProfile?.wallpaper_path}
               fallback={
-                <div class="frosted-subcard flex h-36 items-center justify-center rounded-2xl border-dashed px-6 text-center text-xs text-white/65">
+                <div class="glass-inner flex h-36 items-center justify-center rounded-2xl border-dashed px-6 text-center text-xs text-white/55">
                   No custom wallpaper set — upload one from the Companion app
                 </div>
               }
@@ -142,7 +130,7 @@ export function SettingsView(props: SettingsViewProps) {
                 <img
                   src={wp()}
                   alt="Profile Wallpaper"
-                  class="h-40 w-full rounded-2xl border border-white/20 object-cover shadow-lg"
+                  class="h-40 w-full rounded-2xl border border-white/[0.13] object-cover"
                 />
               )}
             </Show>

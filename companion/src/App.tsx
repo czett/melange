@@ -1,4 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
+import { FlutedBackdrop } from './components/FlutedBackdrop';
 
 interface Channel {
   id: number;
@@ -153,156 +154,175 @@ export default function App() {
     flash('Wallpaper updated');
   };
 
+  const pageHeading = () => {
+    switch (tab()) {
+      case 'channels':
+        return { eyebrow: 'Lineup', title: 'Channels' };
+      case 'profiles':
+        return { eyebrow: 'Household', title: 'Profiles' };
+      default:
+        return { eyebrow: 'Control', title: 'Remote' };
+    }
+  };
+
   return (
     <div class="relative mx-auto flex min-h-screen max-w-md flex-col overflow-x-hidden">
-      <div class="pelmatech-canvas pointer-events-none fixed inset-0 -z-10" />
+      <FlutedBackdrop class="-z-10" />
 
-      <header class="sticky top-0 z-20 px-4 pt-3">
-        <div class="fluted-surface flex items-center justify-between rounded-full px-5 py-3">
-          <div class="flex items-center gap-2.5">
+      <header class="sticky top-0 z-20 px-4 pt-3.5">
+        <div class="glass-card flex h-11 items-center justify-between rounded-full px-4">
+          <div class="flex items-center gap-2">
             <svg
               class="h-4 w-4 text-white"
               viewBox="0 0 28 20"
               fill="none"
               stroke="currentColor"
-              stroke-width="2"
+              stroke-width="2.1"
               stroke-linecap="round"
               stroke-linejoin="round"
             >
               <path d="M8.5 15.5c-3 0-5.5-2.4-5.5-5.5S5.5 4.5 8.5 4.5c4.2 0 6.8 11 11 11 3 0 5.5-2.4 5.5-5.5s-2.5-5.5-5.5-5.5c-4.2 0-6.8 11-11 11z" />
             </svg>
-            <span class="text-base font-normal tracking-tight text-white">
-              melange
-            </span>
+            <span class="text-sm font-medium tracking-[-0.02em] text-white">melange</span>
             <span
-              class={`h-2 w-2 rounded-full ${
-                connected() ? 'live-beacon' : 'bg-white/35'
-              }`}
+              class={connected() ? 'live-dot ml-0.5' : 'ml-0.5 h-1.5 w-1.5 rounded-full bg-white/30'}
               title={connected() ? 'Connected' : 'Reconnecting'}
             />
           </div>
+
           <Show
             when={statusMsg()}
-            fallback={
-              <span class="text-[11px] uppercase tracking-[0.2em] text-white/60">
-                Companion
-              </span>
-            }
+            fallback={<span class="eyebrow">Companion</span>}
           >
-            <span class="pill-cta-white rounded-full px-3 py-0.5 text-[11px] font-semibold">
+            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium tracking-[-0.01em] text-[#160303]">
               {statusMsg()}
             </span>
           </Show>
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto px-4 pb-28 pt-5">
+      <main class="flex-1 overflow-y-auto px-4 pb-24 pt-5">
+        <div class="mb-5 px-1">
+          <div class="eyebrow">{pageHeading().eyebrow}</div>
+          <h1 class="mt-1 text-[28px] font-normal leading-[1.08] tracking-[-0.035em] text-white">
+            {pageHeading().title}
+          </h1>
+        </div>
+
         <Show when={tab() === 'remote'}>
-          <div class="space-y-6">
-            {/* Clean Frosted D-Pad */}
-            <div class="fluted-card mx-auto max-w-[264px] rounded-3xl p-4">
-              <div class="grid grid-cols-3 gap-3">
+          <div class="space-y-4">
+            {/* Spatial D-Pad */}
+            <div class="glass-card mx-auto max-w-[264px] rounded-[22px] p-4">
+              <div class="grid grid-cols-3 gap-2.5">
                 <div />
                 <button
                   type="button"
                   onClick={() => void sendNav('Up')}
-                  class="fluted-key flex h-14 items-center justify-center rounded-2xl text-lg font-semibold"
+                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
                   aria-label="Up"
                 >
-                  ▲
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 15l-6-6-6 6" />
+                  </svg>
                 </button>
                 <div />
                 <button
                   type="button"
                   onClick={() => void sendNav('Left')}
-                  class="fluted-key flex h-14 items-center justify-center rounded-2xl text-lg font-semibold"
+                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
                   aria-label="Left"
                 >
-                  ◀
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
                 </button>
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="pill-cta-white flex h-14 items-center justify-center rounded-2xl text-sm font-bold tracking-wider"
+                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-medium tracking-[-0.01em] text-[#160303] transition-transform duration-150 active:scale-95"
                 >
                   OK
                 </button>
                 <button
                   type="button"
                   onClick={() => void sendNav('Right')}
-                  class="fluted-key flex h-14 items-center justify-center rounded-2xl text-lg font-semibold"
+                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
                   aria-label="Right"
                 >
-                  ▶
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
                 </button>
                 <div />
                 <button
                   type="button"
                   onClick={() => void sendNav('Down')}
-                  class="fluted-key flex h-14 items-center justify-center rounded-2xl text-lg font-semibold"
+                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
                   aria-label="Down"
                 >
-                  ▼
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
                 <div />
               </div>
             </div>
 
             {/* Quick Action Pills */}
-            <div class="grid grid-cols-3 gap-2.5">
+            <div class="grid grid-cols-3 gap-2">
               <button
                 type="button"
                 onClick={() => void sendNav('Back')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
-                Back
+                ← Back
               </button>
               <button
                 type="button"
                 onClick={() => void sendNav('Home')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
                 Home
               </button>
               <button
                 type="button"
                 onClick={() => void sendNav('ToggleEpg')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
-                EPG
+                Guide
               </button>
               <button
                 type="button"
                 onClick={() => void sendNav('ChannelDown')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
                 Ch −
               </button>
               <button
                 type="button"
                 onClick={() => void sendNav('PlayPause')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
-                ⏯
+                Play / Pause
               </button>
               <button
                 type="button"
                 onClick={() => void sendNav('ChannelUp')}
-                class="fluted-pill rounded-full py-3.5 text-sm font-medium text-white"
+                class="pill pill-secondary w-full"
               >
                 Ch +
               </button>
             </div>
 
             {/* Numeric Keypad */}
-            <div class="fluted-card mx-auto max-w-[272px] rounded-3xl p-4">
-              <div class="grid grid-cols-3 gap-2.5">
+            <div class="glass-card mx-auto max-w-[264px] rounded-[22px] p-4">
+              <div class="grid grid-cols-3 gap-2">
                 <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9]}>
                   {(d) => (
                     <button
                       type="button"
                       onClick={() => void sendNav({ Digit: d })}
-                      class="fluted-key h-12 rounded-xl text-base font-medium tabular-nums"
+                      class="key h-11 rounded-xl text-[13px] font-medium tabular-nums"
                     >
                       {d}
                     </button>
@@ -312,7 +332,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav({ Digit: 0 })}
-                  class="fluted-key h-12 rounded-xl text-base font-medium tabular-nums"
+                  class="key h-11 rounded-xl text-[13px] font-medium tabular-nums"
                 >
                   0
                 </button>
@@ -323,53 +343,49 @@ export default function App() {
         </Show>
 
         <Show when={tab() === 'channels'}>
-          <div class="space-y-2.5">
+          <div class="space-y-2">
             <For
               each={channels()}
               fallback={
-                <div class="fluted-card rounded-2xl p-5 text-center text-sm text-white/65">
+                <div class="glass-card rounded-[18px] p-6 text-center text-[13px] text-white/55">
                   No channels synced yet.
                 </div>
               }
             >
               {(ch, idx) => (
-                <div class="fluted-card flex items-center justify-between rounded-2xl p-3.5">
+                <div class="glass-card flex items-center justify-between rounded-[16px] px-3.5 py-3">
                   <div class="flex min-w-0 items-center gap-3 pr-2">
-                    <span class="frosted-subcard flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-semibold tabular-nums text-white">
+                    <span class="glass-inner flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums text-white/80">
                       {ch.number}
                     </span>
                     <div class="min-w-0">
-                      <div class="truncate text-sm font-medium text-white">
-                        {ch.name}
-                      </div>
-                      <div class="truncate text-xs text-white/60">
-                        {ch.group_title}
-                      </div>
+                      <div class="truncate text-[13px] font-medium text-white">{ch.name}</div>
+                      <div class="truncate text-[11px] text-white/45">{ch.group_title}</div>
                     </div>
                   </div>
                   <div class="flex shrink-0 items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => void toggleFavorite(ch.id)}
-                      class={`rounded-xl px-2.5 py-1.5 text-sm transition ${
-                        ch.is_favorite
-                          ? 'bg-white text-[#140404] shadow-md'
-                          : 'fluted-pill text-white/65'
-                      }`}
+                      data-active={ch.is_favorite ? 'true' : undefined}
+                      class="pill pill-secondary h-8 w-8 px-0 text-xs"
+                      aria-label="Toggle favorite"
                     >
                       ★
                     </button>
                     <button
                       type="button"
                       onClick={() => void moveChannel(idx(), -1)}
-                      class="fluted-pill rounded-xl px-2.5 py-1.5 text-xs text-white"
+                      class="pill pill-secondary h-8 w-8 px-0 text-xs"
+                      aria-label="Move up"
                     >
                       ↑
                     </button>
                     <button
                       type="button"
                       onClick={() => void moveChannel(idx(), 1)}
-                      class="fluted-pill rounded-xl px-2.5 py-1.5 text-xs text-white"
+                      class="pill pill-secondary h-8 w-8 px-0 text-xs"
+                      aria-label="Move down"
                     >
                       ↓
                     </button>
@@ -381,46 +397,44 @@ export default function App() {
         </Show>
 
         <Show when={tab() === 'profiles'}>
-          <div class="space-y-4">
+          <div class="space-y-3">
             <form
               onSubmit={(e) => void createProfile(e)}
-              class="fluted-card flex gap-2 rounded-full p-2"
+              class="glass-card flex items-center gap-2 rounded-full p-1.5"
             >
               <input
                 type="text"
                 value={newProfileName()}
                 onInput={(e) => setNewProfileName(e.currentTarget.value)}
                 placeholder="New profile name..."
-                class="frosted-subcard flex-1 rounded-full px-4 py-2 text-sm text-white placeholder:text-white/50 focus:border-white/60 focus:outline-none"
+                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] text-white placeholder:text-white/40"
               />
-              <button
-                type="submit"
-                class="pill-cta-white rounded-full px-5 py-2 text-sm font-semibold"
-              >
+              <button type="submit" class="pill pill-primary">
                 Add
               </button>
             </form>
 
-            <div class="space-y-3">
+            <div class="space-y-2.5">
               <For each={profiles()}>
                 {(p) => (
-                  <div class="fluted-card space-y-3 rounded-3xl p-4">
+                  <div class="glass-card space-y-3 rounded-[20px] p-4">
                     <Show
                       when={editingProfileId() === p.id}
                       fallback={
                         <div class="flex items-center justify-between gap-3">
                           <div class="flex items-center gap-3">
-                            <span class="pill-cta-white flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-medium text-[#160303]">
                               {p.name.slice(0, 1).toUpperCase()}
                             </span>
-                            <span class="text-sm font-medium text-white">
-                              {p.name}
-                            </span>
+                            <div>
+                              <div class="text-[13px] font-medium text-white">{p.name}</div>
+                              <div class="text-[11px] text-white/45">Local profile</div>
+                            </div>
                           </div>
                           <button
                             type="button"
                             onClick={() => startRename(p)}
-                            class="fluted-pill rounded-full px-3.5 py-1 text-xs font-medium text-white"
+                            class="pill pill-secondary h-8 px-3.5"
                           >
                             Rename
                           </button>
@@ -432,19 +446,19 @@ export default function App() {
                           type="text"
                           value={editingName()}
                           onInput={(e) => setEditingName(e.currentTarget.value)}
-                          class="frosted-subcard flex-1 rounded-full px-3.5 py-1.5 text-sm text-white focus:border-white focus:outline-none"
+                          class="glass-inner h-9 flex-1 rounded-full px-3.5 text-[13px] text-white"
                         />
                         <button
                           type="button"
                           onClick={() => void submitRename(p.id, p.name)}
-                          class="pill-cta-white rounded-full px-3.5 py-1.5 text-xs font-semibold"
+                          class="pill pill-primary"
                         >
                           Save
                         </button>
                         <button
                           type="button"
                           onClick={cancelRename}
-                          class="fluted-pill rounded-full px-3 py-1.5 text-xs text-white/80"
+                          class="pill pill-secondary"
                         >
                           Cancel
                         </button>
@@ -455,11 +469,11 @@ export default function App() {
                       <img
                         src={p.wallpaper_path!}
                         alt="Wallpaper"
-                        class="h-28 w-full rounded-2xl border border-white/20 object-cover"
+                        class="h-28 w-full rounded-2xl border border-white/[0.13] object-cover"
                       />
                     </Show>
 
-                    <label class="fluted-pill block cursor-pointer rounded-full py-2.5 text-center text-xs font-medium text-white">
+                    <label class="pill pill-secondary w-full cursor-pointer">
                       Upload Wallpaper
                       <input
                         type="file"
@@ -480,33 +494,39 @@ export default function App() {
       </main>
 
       <nav class="fixed bottom-4 left-0 right-0 z-20 mx-auto max-w-md px-4">
-        <div class="fluted-surface grid grid-cols-3 gap-1.5 rounded-full p-1.5">
+        <div class="nav-bar">
           <button
             type="button"
+            data-active={tab() === 'remote' ? 'true' : undefined}
             onClick={() => setTab('remote')}
-            class={`rounded-full py-2.5 text-xs font-semibold transition ${
-              tab() === 'remote' ? 'pill-cta-white' : 'text-white/75'
-            }`}
+            class="nav-link"
           >
-            Remote
+            <Show when={tab() === 'remote'}>
+              <span class="nav-dot" />
+            </Show>
+            <span>Remote</span>
           </button>
           <button
             type="button"
+            data-active={tab() === 'channels' ? 'true' : undefined}
             onClick={() => setTab('channels')}
-            class={`rounded-full py-2.5 text-xs font-semibold transition ${
-              tab() === 'channels' ? 'pill-cta-white' : 'text-white/75'
-            }`}
+            class="nav-link"
           >
-            Channels
+            <Show when={tab() === 'channels'}>
+              <span class="nav-dot" />
+            </Show>
+            <span>Channels</span>
           </button>
           <button
             type="button"
+            data-active={tab() === 'profiles' ? 'true' : undefined}
             onClick={() => setTab('profiles')}
-            class={`rounded-full py-2.5 text-xs font-semibold transition ${
-              tab() === 'profiles' ? 'pill-cta-white' : 'text-white/75'
-            }`}
+            class="nav-link"
           >
-            Profiles
+            <Show when={tab() === 'profiles'}>
+              <span class="nav-dot" />
+            </Show>
+            <span>Profiles</span>
           </button>
         </div>
       </nav>

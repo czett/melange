@@ -2,7 +2,7 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-j
 import { formatXmltvTime, parseXmltvDate } from "../bridge/epgTime";
 import type { AppMode, Channel, WatchHistoryEntry } from "../bridge/types";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 
 interface TopNavItem {
   id: string;
@@ -40,13 +40,13 @@ function HairlineIcon(props: { kind: "tv" | "resume" | "signal" | "sparkles" | "
   switch (props.kind) {
     case "resume":
       return (
-        <svg class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="h-[18px] w-[18px] text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="6 4 20 12 6 20 6 4" />
         </svg>
       );
     case "signal":
       return (
-        <svg class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="h-[18px] w-[18px] text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 12a10 10 0 0 1 20 0" />
           <path d="M5.5 15.5a6 6 0 0 1 13 0" />
           <circle cx="12" cy="18" r="1.2" />
@@ -54,21 +54,21 @@ function HairlineIcon(props: { kind: "tv" | "resume" | "signal" | "sparkles" | "
       );
     case "sparkles":
       return (
-        <svg class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="h-[18px] w-[18px] text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="M7 15h4M15 9h2M15 12h2" />
         </svg>
       );
     case "clock":
       return (
-        <svg class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="h-[18px] w-[18px] text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9" />
           <path d="M12 7v5l3 2" />
         </svg>
       );
     default:
       return (
-        <svg class="h-5 w-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="h-[18px] w-[18px] text-white/80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round">
           <rect x="2.5" y="6" width="19" height="13" rx="2.5" />
           <path d="M8 2.5l4 3.5 4-3.5" />
         </svg>
@@ -149,7 +149,7 @@ export const HomeView = () => {
         kind: "cw",
         id: `strip-cw-${cw.item_id}`,
         title: cw.title,
-        meta: `Resume ${cw.provider} · ${pct}% watched`,
+        meta: `Resume · ${pct}%`,
         icon: "resume",
         entry: cw
       });
@@ -185,31 +185,28 @@ export const HomeView = () => {
   };
 
   return (
-    <div class="relative flex h-full w-full flex-col justify-between overflow-hidden px-12 py-8">
-      {/* Top Bar: Brand Logo (Left) · Floating Frosted Nav Pill (Center) · White Profile & Frosted Settings Circles (Right) */}
-      <header class="flex items-center justify-between gap-6">
-        <div class="flex items-center gap-3">
+    <div class="relative flex h-full w-full flex-col justify-between overflow-hidden px-14 py-9">
+      {/* Top bar: wordmark · translucent text nav · profile + settings */}
+      <header class="grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+        <div class="flex items-center gap-2.5 text-white">
           <svg
-            class="h-6 w-6 text-white"
+            class="h-[18px] w-[18px]"
             viewBox="0 0 28 20"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="2.2"
             stroke-linecap="round"
             stroke-linejoin="round"
           >
             <path d="M8.5 15.5c-3 0-5.5-2.4-5.5-5.5S5.5 4.5 8.5 4.5c4.2 0 6.8 11 11 11 3 0 5.5-2.4 5.5-5.5s-2.5-5.5-5.5-5.5c-4.2 0-6.8 11-11 11z" />
           </svg>
-          <span class="text-lg font-normal tracking-tight text-white">
-            melange
-          </span>
+          <span class="text-sm font-medium tracking-[-0.02em]">melange</span>
         </div>
 
-        <nav class="fluted-pill flex items-center gap-1 rounded-full px-2 py-1.5">
+        <nav class="nav-bar">
           <For each={TOP_NAV_ITEMS}>
             {(item) => {
               const isCurrent = () => melangeState().mode === item.mode;
-              const focused = () => isFocused(item.id);
               return (
                 <button
                   ref={(el) =>
@@ -222,23 +219,12 @@ export const HomeView = () => {
                   type="button"
                   data-focus-id={item.id}
                   data-focus-radius="9999px"
+                  data-active={isCurrent() ? "true" : undefined}
                   onClick={() => sendCommand({ type: "SetMode", mode: item.mode })}
-                  class={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium tracking-wide transition-all duration-200 ${
-                    focused()
-                      ? "bg-white text-[#140404] shadow-md"
-                      : isCurrent()
-                        ? "bg-white/15 text-white"
-                        : "text-white/70 hover:text-white"
-                  }`}
+                  class="nav-link"
                 >
                   <Show when={isCurrent()}>
-                    <span
-                      class={`h-1.5 w-1.5 rounded-full ${
-                        focused()
-                          ? "bg-[#E13A26]"
-                          : "bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)]"
-                      }`}
-                    />
+                    <span class="nav-dot" />
                   </Show>
                   <span>{item.label}</span>
                 </button>
@@ -247,7 +233,7 @@ export const HomeView = () => {
           </For>
         </nav>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center justify-end gap-2">
           <button
             ref={(el) =>
               onCleanup(
@@ -259,11 +245,9 @@ export const HomeView = () => {
             type="button"
             data-focus-id="home-profile"
             data-focus-radius="9999px"
-            onClick={() =>
-              sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
-            }
+            onClick={() => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })}
             title={`Profile: ${melangeState().active_profile?.name ?? "Default"}`}
-            class="pill-cta-white flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold"
+            class="pill pill-primary pill-icon text-xs font-medium"
           >
             {(melangeState().active_profile?.name ?? "D").slice(0, 1).toUpperCase()}
           </button>
@@ -281,16 +265,14 @@ export const HomeView = () => {
             data-focus-radius="9999px"
             onClick={() => sendCommand({ type: "SetMode", mode: "Settings" })}
             title="Settings"
-            class={`flex h-10 w-10 items-center justify-center rounded-full transition ${
-              isFocused("home-settings") ? "pill-cta-white" : "fluted-pill text-white"
-            }`}
+            class="pill pill-secondary pill-icon"
           >
             <svg
-              class="h-4 w-4"
+              class="h-[15px] w-[15px]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.6"
+              stroke-width="1.5"
               stroke-linecap="round"
               stroke-linejoin="round"
             >
@@ -301,20 +283,19 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Main Stage: Editorial Hero (Left) + Frosted Live & Up Next Schedule Card (Right) */}
-      <main class="my-auto grid grid-cols-12 items-end gap-10 py-6">
-        {/* Left Editorial Hero */}
-        <section class="col-span-7 flex flex-col justify-end pb-2">
-          <div class="mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-[0.22em] text-white/70">
-            <span class="tabular-nums text-white">{formattedTime()}</span>
-            <span class="text-white/35">·</span>
+      {/* Main stage: editorial hero (left) + smoky schedule card (right) */}
+      <main class="my-auto grid grid-cols-12 items-end gap-12 py-6">
+        <section class="col-span-7 flex flex-col justify-end">
+          <div class="mb-5 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
+            <span class="tabular-nums text-white/85">{formattedTime()}</span>
+            <span class="text-white/25">/</span>
             <span>{formattedDate()}</span>
             <Show when={featuredChannel()}>
               {(ch) => (
                 <>
-                  <span class="text-white/35">·</span>
-                  <span class="inline-flex items-center gap-1.5 text-white">
-                    <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+                  <span class="text-white/25">/</span>
+                  <span class="inline-flex items-center gap-1.5 text-white/85">
+                    <span class="live-dot" />
                     {ch().name}
                   </span>
                 </>
@@ -322,24 +303,22 @@ export const HomeView = () => {
             </Show>
           </div>
 
-          <h1 class="line-clamp-2 text-5xl font-light leading-[1.05] tracking-[-0.035em] text-white lg:text-6xl">
+          <h1 class="line-clamp-2 max-w-[16ch] text-[52px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
             {heroTitle()}
           </h1>
 
-          <p class="mt-4 line-clamp-2 max-w-xl text-sm leading-relaxed text-white/78">
+          <p class="mt-5 line-clamp-3 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
             {heroDescription()}
           </p>
 
-          <div class="mt-7 flex items-center gap-3.5">
+          <div class="mt-8 flex items-center gap-2.5">
             <button
-              ref={(el) =>
-                onCleanup(registerFocusable("home-cta-watch", el, handleWatchLive))
-              }
+              ref={(el) => onCleanup(registerFocusable("home-cta-watch", el, handleWatchLive))}
               type="button"
               data-focus-id="home-cta-watch"
               data-focus-radius="9999px"
               onClick={handleWatchLive}
-              class="pill-cta-white flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold"
+              class="pill pill-primary"
             >
               <span>Watch Live</span>
               <span aria-hidden="true">→</span>
@@ -356,14 +335,8 @@ export const HomeView = () => {
               type="button"
               data-focus-id="home-cta-epg"
               data-focus-radius="9999px"
-              onClick={() =>
-                sendCommand({ type: "SetOverlay", overlay: "FullEpg" })
-              }
-              class={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition ${
-                isFocused("home-cta-epg")
-                  ? "pill-cta-white"
-                  : "fluted-pill text-white"
-              }`}
+              onClick={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
+              class="pill pill-secondary"
             >
               <span>Program Guide</span>
               <span aria-hidden="true">→</span>
@@ -371,37 +344,20 @@ export const HomeView = () => {
           </div>
         </section>
 
-        {/* Right Frosted Schedule Card (Pelmatech Schedule Card Inspiration) */}
         <section class="col-span-5 flex flex-col justify-center">
-          <div class="fluted-card rounded-3xl p-5">
-            <div class="mb-3.5 flex items-center justify-between text-xs text-white/75">
-              <div class="flex items-center gap-2 truncate">
-                <svg
-                  class="h-3.5 w-3.5 shrink-0 text-white/80"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 21s-6-5.3-6-10a6 6 0 1 1 12 0c0 4.7-6 10-6 10z" />
-                  <circle cx="12" cy="11" r="2" />
-                </svg>
-                <span class="truncate font-medium tracking-wide">
-                  Live &amp; Up Next Schedule
-                </span>
-              </div>
-              <span class="shrink-0 tabular-nums text-white/55">
-                {melangeState().channels.length} ch
+          <div class="glass-card rounded-[22px] p-5">
+            <div class="mb-4 flex items-center justify-between px-1">
+              <span class="eyebrow">Live &amp; Up Next</span>
+              <span class="text-[11px] tabular-nums text-white/45">
+                {melangeState().channels.length} channels
               </span>
             </div>
 
-            <div class="space-y-2.5">
+            <div class="space-y-2">
               <For
                 each={scheduleChannels()}
                 fallback={
-                  <div class="frosted-subcard rounded-2xl p-4 text-xs text-white/65">
+                  <div class="glass-inner rounded-2xl p-4 text-xs text-white/55">
                     No live channels configured yet.
                   </div>
                 }
@@ -429,47 +385,35 @@ export const HomeView = () => {
                       type="button"
                       data-focus-id={`home-sched-${ch.id}`}
                       data-focus-radius="16px"
-                      onClick={() =>
-                        sendCommand({ type: "SelectChannel", channel_id: ch.id })
-                      }
-                      class="frosted-subcard flex w-full flex-col gap-2.5 rounded-2xl px-4 py-3.5 text-left"
+                      onClick={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
+                      class="glass-inner flex w-full flex-col gap-3 rounded-2xl px-4 py-3.5 text-left"
                     >
                       <div class="flex items-center justify-between gap-3">
-                        <div class="min-w-0 truncate text-sm font-medium text-white">
-                          <span class="mr-2 tabular-nums text-white/60">
-                            {ch.number}
-                          </span>
-                          {ch.name}
+                        <div class="min-w-0 truncate text-[13px] text-white">
+                          <span class="mr-2 tabular-nums text-white/45">{ch.number}</span>
+                          <span class="font-medium">{ch.name}</span>
                           <Show when={nowProg()?.title}>
-                            <span class="ml-2 font-normal text-white/65">
-                              — {nowProg()!.title}
-                            </span>
+                            <span class="ml-2 text-white/55">{nowProg()!.title}</span>
                           </Show>
                         </div>
                         <Show
                           when={isActive()}
                           fallback={
-                            <span class="shrink-0 text-[11px] text-white/60">
-                              {ch.group_title}
-                            </span>
+                            <span class="shrink-0 text-[11px] text-white/45">{ch.group_title}</span>
                           }
                         >
-                          <span class="inline-flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-white">
-                            <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+                          <span class="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-white/85">
+                            <span class="live-dot" />
                             Live
                           </span>
                         </Show>
                       </div>
 
-                      <div class="flex items-center justify-between gap-3 text-base font-light tracking-tight tabular-nums text-white">
+                      <div class="flex items-center gap-3 text-[13px] tabular-nums tracking-[-0.01em] text-white/90">
                         <span>{startStr()}</span>
-                        <span class="flex items-center gap-2">
-                          <span class="h-px w-5 bg-white/25" />
-                          <span class="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-medium text-white/85">
-                            {durStr()}
-                          </span>
-                          <span class="h-px w-5 bg-white/25" />
-                        </span>
+                        <span class="h-px flex-1 bg-white/15" />
+                        <span class="text-[11px] text-white/50">{durStr()}</span>
+                        <span class="h-px flex-1 bg-white/15" />
                         <span>{stopStr()}</span>
                       </div>
                     </button>
@@ -481,9 +425,9 @@ export const HomeView = () => {
         </section>
       </main>
 
-      {/* Bottom 5-Column Hairline Strip (Live Channels & Continue Watching) */}
-      <footer class="border-t border-white/15 pt-4">
-        <div class="grid grid-cols-5 gap-4">
+      {/* Bottom 5-column hairline strip (continue watching + live channels) */}
+      <footer class="border-t border-white/[0.13] pt-4">
+        <div class="grid grid-cols-5 gap-3">
           <For each={bottomStripItems()}>
             {(item) => {
               const onActivate = () => {
@@ -512,22 +456,18 @@ export const HomeView = () => {
 
               return (
                 <button
-                  ref={(el) =>
-                    onCleanup(registerFocusable(item.id, el, onActivate))
-                  }
+                  ref={(el) => onCleanup(registerFocusable(item.id, el, onActivate))}
                   type="button"
                   data-focus-id={item.id}
-                  data-focus-radius="16px"
+                  data-focus-radius="14px"
                   onClick={onActivate}
-                  class="strip-item flex flex-col items-start rounded-2xl p-3 text-left"
+                  class="strip-item flex flex-col items-start rounded-[14px] px-3 py-3 text-left"
                 >
                   <HairlineIcon kind={item.icon} />
-                  <div class="mt-2.5 w-full truncate text-xs font-medium tracking-tight text-white">
+                  <div class="mt-3 w-full truncate text-xs font-medium tracking-[-0.01em] text-white">
                     {item.title}
                   </div>
-                  <div class="mt-0.5 line-clamp-2 w-full text-[11px] leading-snug text-white/60">
-                    {item.meta}
-                  </div>
+                  <div class="mt-0.5 w-full truncate text-[11px] text-white/50">{item.meta}</div>
                 </button>
               );
             }}

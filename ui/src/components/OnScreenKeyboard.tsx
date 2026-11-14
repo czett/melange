@@ -1,5 +1,5 @@
 import { For, onCleanup, onMount } from "solid-js";
-import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable, setFocus } from "../spatial/nav";
 
 interface OnScreenKeyboardProps {
   value: string;
@@ -21,30 +21,28 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
   const clear = () => props.onChange("");
 
   onMount(() => {
-    requestAnimationFrame(() => ensureValidFocus("osk-key-Q"));
+    requestAnimationFrame(() => {
+      setFocus("osk-key-Q", false);
+      ensureValidFocus("osk-key-Q");
+    });
   });
 
   return (
-    <div class="fixed inset-0 z-40 flex items-center justify-center bg-[#220404]/86 p-6 backdrop-blur-3xl">
-      <div class="fluted-surface flex w-full max-w-3xl flex-col gap-5 rounded-3xl p-7">
+    <div class="modal-scrim fixed inset-0 z-40 flex items-center justify-center p-6">
+      <div class="glass-card flex w-full max-w-3xl flex-col gap-5 rounded-[24px] p-7">
         <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.24em] text-white/70">
-            <span class="h-1.5 w-1.5 rounded-full bg-white" />
-            <span>Search</span>
-          </div>
-          <div class="fluted-pill rounded-full px-3.5 py-1 text-xs text-white/70">
-            D-Pad / Arrows + Select
-          </div>
+          <div class="eyebrow">Search</div>
+          <div class="chip">D-pad + OK</div>
         </div>
 
-        <div class="frosted-subcard flex min-h-[3.5rem] items-center justify-between rounded-2xl px-5 py-3.5 text-xl font-light tracking-tight text-white">
+        <div class="glass-inner flex min-h-[3.25rem] items-center justify-between rounded-2xl px-5 py-3 text-lg font-normal tracking-[-0.02em] text-white">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>
             ) : (
               <span class="text-white/45">Type to search...</span>
             )}
-            <span class="inline-block h-5 w-0.5 animate-pulse rounded-full bg-[#E13A26]" />
+            <span class="inline-block h-5 w-px animate-pulse bg-white/80" />
           </div>
         </div>
 
@@ -61,7 +59,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
                       type="button"
                       data-focus-radius="12px"
                       onClick={() => appendChar(key)}
-                      class="fluted-key flex h-12 w-12 items-center justify-center rounded-xl text-base font-medium"
+                      class="key flex h-11 w-11 items-center justify-center rounded-xl text-[13px] font-medium"
                     >
                       {key}
                     </button>
@@ -71,7 +69,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
             )}
           </For>
 
-          <div class="flex justify-center gap-2.5 pt-2">
+          <div class="flex justify-center gap-2 pt-3">
             <button
               ref={(el) =>
                 onCleanup(
@@ -81,9 +79,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               type="button"
               data-focus-radius="9999px"
               onClick={() => props.onChange(props.value + " ")}
-              class={`h-12 rounded-full px-8 text-sm font-medium transition ${
-                isFocused("osk-space") ? "pill-cta-white" : "fluted-pill text-white"
-              }`}
+              class="pill pill-secondary"
             >
               Space
             </button>
@@ -92,9 +88,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               type="button"
               data-focus-radius="9999px"
               onClick={backspace}
-              class={`h-12 rounded-full px-5 text-sm font-medium transition ${
-                isFocused("osk-backspace") ? "pill-cta-white" : "fluted-pill text-white"
-              }`}
+              class="pill pill-secondary"
             >
               Backspace
             </button>
@@ -103,9 +97,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               type="button"
               data-focus-radius="9999px"
               onClick={clear}
-              class={`h-12 rounded-full px-5 text-sm font-medium transition ${
-                isFocused("osk-clear") ? "pill-cta-white" : "fluted-pill text-white/85"
-              }`}
+              class="pill pill-secondary"
             >
               Clear
             </button>
@@ -116,7 +108,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               type="button"
               data-focus-radius="9999px"
               onClick={() => props.onSubmit(props.value)}
-              class="pill-cta-white h-12 rounded-full px-7 text-sm font-semibold"
+              class="pill pill-primary"
             >
               Search
             </button>
@@ -125,9 +117,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               type="button"
               data-focus-radius="9999px"
               onClick={props.onClose}
-              class={`h-12 rounded-full px-5 text-sm font-medium transition ${
-                isFocused("osk-cancel") ? "pill-cta-white" : "fluted-pill text-white/80"
-              }`}
+              class="pill pill-secondary"
             >
               Cancel
             </button>

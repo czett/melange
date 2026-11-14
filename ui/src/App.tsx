@@ -7,6 +7,7 @@ import {
   onNavEvent,
   sendCommand
 } from "./bridge/ws";
+import { FlutedBackdrop } from "./components/FlutedBackdrop";
 import { FocusRing } from "./components/FocusRing";
 import { FullEpg } from "./components/FullEpg";
 import { HomeView } from "./components/HomeView";
@@ -108,16 +109,16 @@ export const App = () => {
     return s === "Playing" || s === "Buffering";
   };
 
-  // Full-page modes (Settings, Mediathek, YouTube, Media) always keep an opaque Pelmatech crimson fluted canvas
-  // so underlying video/logos never bleed through text. Home also displays it when idle (and uses a heavy
-  // frosted crimson veil if video is playing behind it). Raw unblurred video only shows in LiveTv mode.
+  // Full-page modes (Settings, Mediathek, YouTube, Media) always sit on the opaque fluted-glass backdrop so
+  // video never bleeds through text. Home shows it when idle (and a dark smoked veil if video plays behind
+  // it). html/body/#root stay transparent, so raw libmpv video shows cleanly in LiveTv mode.
   const isFullPageMode = () =>
     melangeState().mode === "Settings" ||
     melangeState().mode === "Mediathek" ||
     melangeState().mode === "YouTube" ||
     melangeState().mode === "Media";
 
-  const showPelmatechCanvas = () =>
+  const showBackdrop = () =>
     isFullPageMode() || (melangeState().mode === "Home" && !isVideoActive());
 
   const showHomeVideoVeil = () =>
@@ -137,41 +138,41 @@ export const App = () => {
 
   return (
     <div class="relative h-screen w-screen overflow-hidden bg-transparent text-white">
-      {/* Opaque Luminous Pelmatech Crimson Volumetric Reed Canvas */}
-      <div
-        class="pelmatech-canvas pointer-events-none fixed inset-0 -z-20 transition-opacity duration-500 ease-out"
-        style={{ opacity: showPelmatechCanvas() ? "1" : "0" }}
+      {/* Optical irregular fluted-glass light field (full-page modes + idle Home) */}
+      <FlutedBackdrop
+        class="-z-20 transition-opacity duration-500 ease-out"
+        style={{ opacity: showBackdrop() ? "1" : "0" }}
       />
 
-      {/* Optional profile wallpaper softly glazed into the crimson canvas when idle */}
-      <Show when={showPelmatechCanvas() && melangeState().active_profile?.wallpaper_path}>
+      {/* Optional profile wallpaper, smoked into the glass when idle */}
+      <Show when={showBackdrop() && melangeState().active_profile?.wallpaper_path}>
         {(wp) => (
-          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden transition-opacity duration-500">
+          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden">
             <img
               src={wp()}
               alt=""
-              class="h-full w-full scale-105 object-cover opacity-22 mix-blend-luminosity"
+              class="h-full w-full scale-105 object-cover opacity-20 mix-blend-luminosity"
             />
             <div
               class="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(131,22,19,0.58) 0%, rgba(225,58,38,0.34) 55%, rgba(60,6,6,0.75) 100%)"
+                  "linear-gradient(135deg, rgba(61,7,6,0.6) 0%, rgba(38,5,5,0.35) 55%, rgba(22,3,3,0.7) 100%)"
               }}
             />
           </div>
         )}
       </Show>
 
-      {/* Deeply frosted crimson veil if Home is open while video plays underneath */}
+      {/* Home over live video: subtle dark smoked vignette instead of the light field */}
       <div
-        class="pelmatech-video-veil pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
+        class="video-veil pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
         style={{ opacity: showHomeVideoVeil() ? "1" : "0" }}
       />
 
-      {/* Subtle edge vignette only when LiveTv HUD overlays appear over raw libmpv video */}
+      {/* LiveTv HUD over raw libmpv video: top/bottom vignette only */}
       <div
-        class="video-scrim-active pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
+        class="video-scrim pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
         style={{
           opacity:
             showLiveTvScrim() && melangeState().overlay !== "None" ? "1" : "0"

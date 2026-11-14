@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import type { MediaItem } from "../bridge/types";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 import { OnScreenKeyboard } from "./OnScreenKeyboard";
 
 interface OnDemandViewProps {
@@ -123,42 +123,38 @@ export function OnDemandView(props: OnDemandViewProps) {
   };
 
   return (
-    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden p-10 text-white">
-      <header class="mb-8 flex items-center justify-between gap-6">
+    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden px-14 py-10 text-white">
+      <header class="mb-9 flex items-end justify-between gap-6">
         <div>
-          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.25em] text-white/65">
-            <span class="h-1.5 w-1.5 rounded-full bg-white" />
-            <span>{props.subtitle}</span>
-          </div>
-          <h1 class="mt-1.5 text-4xl font-light tracking-editorial text-white">
+          <div class="eyebrow">{props.subtitle}</div>
+          <h1 class="mt-2 text-[40px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
             {props.title}
           </h1>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <button
             ref={(el) => onCleanup(registerFocusable("od-search", el, openKeyboard))}
             type="button"
             data-focus-radius="9999px"
             onClick={openKeyboard}
-            class={`flex min-w-[15rem] items-center justify-between gap-3 rounded-full px-5 py-2.5 text-sm font-medium transition ${
-              isFocused("od-search")
-                ? "pill-cta-white"
-                : "fluted-pill text-white"
-            }`}
+            class="pill pill-secondary min-w-[15rem] justify-between"
           >
-            <span class="truncate">
-              {query() ? `Search: ${query()}` : "Search..."}
+            <span class="flex min-w-0 items-center gap-2">
+              <svg
+                class="h-3.5 w-3.5 shrink-0 opacity-70"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              >
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="M20 20l-4-4" />
+              </svg>
+              <span class="truncate">{query() ? query() : "Search"}</span>
             </span>
-            <span
-              class={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                isFocused("od-search")
-                  ? "bg-[#140404]/10 text-[#140404]"
-                  : "border border-white/25 bg-white/15 text-white"
-              }`}
-            >
-              KEY
-            </span>
+            <span class="text-[10px] uppercase tracking-[0.14em] opacity-50">OK</span>
           </button>
 
           <button
@@ -168,11 +164,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             type="button"
             data-focus-radius="9999px"
             onClick={() => void loadFeed(props.provider)}
-            class={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
-              isFocused("od-refresh")
-                ? "pill-cta-white"
-                : "fluted-pill text-white"
-            }`}
+            class="pill pill-secondary"
           >
             Refresh
           </button>
@@ -182,11 +174,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             type="button"
             data-focus-radius="9999px"
             onClick={props.onBack}
-            class={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
-              isFocused("od-back")
-                ? "pill-cta-white"
-                : "fluted-pill text-white"
-            }`}
+            class="pill pill-secondary"
           >
             ← Back
           </button>
@@ -198,11 +186,11 @@ export function OnDemandView(props: OnDemandViewProps) {
           <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
             <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>
               {() => (
-                <div class="fluted-card animate-pulse overflow-hidden rounded-2xl">
-                  <div class="aspect-video w-full bg-white/10" />
+                <div class="glass-card animate-pulse overflow-hidden rounded-[18px]">
+                  <div class="aspect-video w-full bg-white/[0.04]" />
                   <div class="space-y-2.5 p-4">
-                    <div class="h-3 w-24 rounded-full bg-white/15" />
-                    <div class="h-4 w-4/5 rounded-full bg-white/20" />
+                    <div class="h-2.5 w-20 rounded-full bg-white/10" />
+                    <div class="h-3 w-4/5 rounded-full bg-white/[0.14]" />
                   </div>
                 </div>
               )}
@@ -212,25 +200,23 @@ export function OnDemandView(props: OnDemandViewProps) {
 
         <Show when={!loading() && errorMsg()}>
           {(err) => (
-            <div class="fluted-surface max-w-xl rounded-3xl border-[#E13A26]/65 p-8">
-              <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E13A26] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-                <span class="h-1.5 w-1.5 rounded-full bg-white" />
-                Feed Unavailable
+            <div class="glass-card max-w-xl rounded-[22px] p-7">
+              <div class="flex items-center gap-2">
+                <span class="live-dot" />
+                <span class="eyebrow">Feed unavailable</span>
               </div>
-              <div class="text-xl font-medium tracking-tight text-white">
+              <div class="mt-3 text-lg font-normal tracking-[-0.02em] text-white">
                 Failed to load {props.title}
               </div>
-              <div class="mt-1.5 text-sm text-white/75">{err()}</div>
+              <div class="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-white/65">{err()}</div>
             </div>
           )}
         </Show>
 
         <Show when={!loading() && !errorMsg() && items().length === 0}>
-          <div class="fluted-card max-w-xl rounded-3xl p-8">
-            <div class="text-xl font-medium tracking-tight text-white">
-              No items available
-            </div>
-            <div class="mt-1.5 text-sm text-white/70">
+          <div class="glass-card max-w-xl rounded-[22px] p-7">
+            <div class="text-lg font-normal tracking-[-0.02em] text-white">No items available</div>
+            <div class="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
               {props.provider === "local"
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : "No results returned. Check your network connection or try a different search."}
@@ -247,14 +233,15 @@ export function OnDemandView(props: OnDemandViewProps) {
                     onCleanup(registerFocusable(`od-item-${item.id}`, el, () => playItem(item)))
                   }
                   type="button"
+                  data-focus-radius="18px"
                   onClick={() => playItem(item)}
-                  class="fluted-card group flex flex-col overflow-hidden rounded-2xl text-left"
+                  class="glass-card glass-card-interactive flex flex-col overflow-hidden rounded-[18px] text-left"
                 >
-                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-white/5">
+                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(24,3,3,0.48)]">
                     <Show
                       when={item.thumbnail_url}
                       fallback={
-                        <div class="px-4 text-center text-xs uppercase tracking-[0.22em] text-white/45">
+                        <div class="px-4 text-center text-[11px] uppercase tracking-[0.16em] text-white/40">
                           {item.channel_or_author}
                         </div>
                       }
@@ -263,7 +250,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                         <img
                           src={thumb()}
                           alt={item.title}
-                          class="h-full w-full object-cover transition-transform duration-500 ease-spring group-hover:scale-105"
+                          class="h-full w-full object-cover"
                           loading="lazy"
                         />
                       )}
@@ -272,24 +259,24 @@ export function OnDemandView(props: OnDemandViewProps) {
                       class="pointer-events-none absolute inset-0"
                       style={{
                         background:
-                          "linear-gradient(180deg, transparent 48%, rgba(29,5,5,0.68) 100%)"
+                          "linear-gradient(180deg, transparent 55%, rgba(22,3,3,0.6) 100%)"
                       }}
                     />
                     <Show when={item.duration_sec > 0}>
-                      <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/25 bg-[#1D0505]/80 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur-md">
+                      <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(22,3,3,0.6)] tabular-nums text-white/85 backdrop-blur-md">
                         {formatDuration(item.duration_sec)}
                       </span>
                     </Show>
                   </div>
 
-                  <div class="flex flex-col gap-1.5 p-4">
-                    <div class="truncate text-xs text-white/60">
+                  <div class="flex flex-col gap-1 px-4 py-3.5">
+                    <div class="truncate text-[11px] text-white/50">
                       {item.channel_or_author}
                       <Show when={item.subtitle}>
                         <span> · {item.subtitle}</span>
                       </Show>
                     </div>
-                    <div class="line-clamp-2 text-sm font-medium leading-snug tracking-tight text-white">
+                    <div class="line-clamp-2 text-[13px] font-medium leading-snug tracking-[-0.01em] text-white">
                       {item.title}
                     </div>
                   </div>

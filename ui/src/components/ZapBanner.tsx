@@ -62,20 +62,20 @@ export const ZapBanner = () => {
         transform: isVisible() ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)"
       }}
     >
-      <div class="fluted-surface w-full max-w-4xl rounded-3xl px-8 py-5">
+      <div class="glass-card w-full max-w-4xl rounded-[22px] px-7 py-5">
         <div class="flex items-center justify-between gap-6">
           <div class="flex items-center gap-5">
-            <div class="frosted-subcard flex h-14 min-w-[3.75rem] items-center justify-center rounded-2xl px-3.5 text-3xl font-light tracking-editorial tabular-nums text-white">
+            <div class="glass-inner flex h-12 min-w-[3.25rem] items-center justify-center rounded-2xl px-3 text-2xl font-normal tracking-[-0.035em] tabular-nums text-white">
               {melangeState().digit_buffer || melangeState().playback.channel_number || "—"}
             </div>
             <div>
               <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-light tracking-editorial text-white">
+                <h2 class="text-[22px] font-normal leading-tight tracking-[-0.03em] text-white">
                   {activeChannel()?.name ?? melangeState().playback.title ?? "Live TV"}
                 </h2>
                 <Show when={melangeState().playback.is_zapping}>
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-[#E13A26] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
-                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  <span class="chip">
+                    <span class="nav-dot animate-pulse" />
                     Tuning
                   </span>
                 </Show>
@@ -85,23 +85,23 @@ export const ZapBanner = () => {
                     melangeState().playback.state === "Playing"
                   }
                 >
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-[#E13A26] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
-                    <span class="h-1.5 w-1.5 rounded-full bg-white" />
-                    LIVE
+                  <span class="chip">
+                    <span class="live-dot" />
+                    Live
                   </span>
                 </Show>
               </div>
-              <p class="mt-0.5 text-xs uppercase tracking-[0.18em] text-white/65">
+              <p class="eyebrow mt-1">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
           </div>
 
-          <div class="text-right text-xs font-medium tabular-nums text-white/65">
+          <div class="text-right text-[11px] tabular-nums text-white/50">
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
-                  {formatXmltvTime(now().start_time)} – {formatXmltvTime(now().stop_time)}
+                  {formatXmltvTime(now().start_time)} — {formatXmltvTime(now().stop_time)}
                 </span>
               )}
             </Show>
@@ -110,14 +110,14 @@ export const ZapBanner = () => {
 
         <div class="mt-4 space-y-2.5">
           <div class="flex items-baseline justify-between gap-4">
-            <p class="truncate text-base font-medium text-white">
+            <p class="truncate text-[13px] font-medium text-white">
               {nowNext()?.now?.title ?? "Program information unavailable"}
             </p>
             <Show when={nowNext()?.next}>
               {(next) => (
-                <p class="shrink-0 text-sm text-white/65">
-                  Next: <span class="text-white/95">{next().title}</span>{" "}
-                  <span class="tabular-nums text-white/50">
+                <p class="shrink-0 text-xs text-white/50">
+                  Next: <span class="text-white/85">{next().title}</span>{" "}
+                  <span class="tabular-nums text-white/40">
                     ({formatXmltvTime(next().start_time)})
                   </span>
                 </p>
@@ -125,9 +125,9 @@ export const ZapBanner = () => {
             </Show>
           </div>
 
-          <div class="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+          <div class="progress-track">
             <div
-              class="crimson-progress-fill h-full rounded-full transition-all duration-500"
+              class="progress-fill transition-all duration-500"
               style={{ width: `${progress()}%` }}
             />
           </div>

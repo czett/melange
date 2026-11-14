@@ -1,25 +1,30 @@
 import { For, Show, onCleanup, onMount } from "solid-js";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, isFocused, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable, setFocus } from "../spatial/nav";
+import { FlutedBackdrop } from "./FlutedBackdrop";
 
 export const ProfileSwitcher = () => {
   onMount(() => {
     const first = melangeState().profiles[0];
-    requestAnimationFrame(() =>
-      ensureValidFocus(first ? `profile-${first.id}` : undefined)
-    );
+    const focusId = first ? `profile-${first.id}` : "profile-close";
+    requestAnimationFrame(() => {
+      setFocus(focusId, false);
+      ensureValidFocus(focusId);
+    });
   });
 
   return (
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#220404]/86 px-8 backdrop-blur-3xl">
-      <div class="fluted-surface w-full max-w-lg rounded-3xl p-8">
+    <div class="fixed inset-0 z-50 flex items-center justify-center px-8">
+      <FlutedBackdrop class="-z-10" still />
+      <div class="glass-card relative w-full max-w-md rounded-[24px] p-7">
         <div class="flex items-start justify-between gap-4">
           <div>
-            <h2 class="text-3xl font-light tracking-editorial text-white">
-              Switch Profile
+            <div class="eyebrow">Who's watching</div>
+            <h2 class="mt-2 text-[28px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
+              Switch profile
             </h2>
-            <p class="mt-1.5 text-sm text-white/70">
-              Select a viewer profile for personalized history and channels
+            <p class="mt-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+              Personal history, favourites and wallpaper follow each profile.
             </p>
           </div>
           <button
@@ -33,26 +38,21 @@ export const ProfileSwitcher = () => {
             type="button"
             data-focus-radius="9999px"
             onClick={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
-            class={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-              isFocused("profile-close") ? "pill-cta-white" : "fluted-pill text-white"
-            }`}
+            class="pill pill-secondary shrink-0"
           >
             ← Back
           </button>
         </div>
 
-        <div class="mt-7 grid grid-cols-1 gap-3">
+        <div class="mt-7 grid grid-cols-1 gap-2">
           <For each={melangeState().profiles}>
             {(profile) => {
               let el!: HTMLButtonElement;
-              const isActive = () =>
-                melangeState().active_profile?.id === profile.id;
+              const isActive = () => melangeState().active_profile?.id === profile.id;
 
               onMount(() => {
-                const cleanup = registerFocusable(
-                  `profile-${profile.id}`,
-                  el,
-                  () => sendCommand({ type: "SelectProfile", profile_id: profile.id })
+                const cleanup = registerFocusable(`profile-${profile.id}`, el, () =>
+                  sendCommand({ type: "SelectProfile", profile_id: profile.id })
                 );
                 onCleanup(cleanup);
               });
@@ -62,24 +62,30 @@ export const ProfileSwitcher = () => {
                   ref={el}
                   type="button"
                   data-focus-id={`profile-${profile.id}`}
-                  onClick={() =>
-                    sendCommand({ type: "SelectProfile", profile_id: profile.id })
-                  }
-                  class="frosted-subcard flex items-center justify-between rounded-2xl px-5 py-4 text-left"
+                  data-focus-radius="16px"
+                  onClick={() => sendCommand({ type: "SelectProfile", profile_id: profile.id })}
+                  class="glass-inner flex items-center justify-between rounded-2xl px-4 py-3.5 text-left"
                 >
-                  <div class="flex items-center gap-4">
-                    <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-gradient-to-br from-[#E13A26] to-[#831613] text-lg font-semibold text-white shadow-inner">
+                  <div class="flex items-center gap-3.5">
+                    <div
+                      class={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-medium ${
+                        isActive()
+                          ? "bg-white text-[#160303]"
+                          : "border border-white/[0.14] bg-white/[0.06] text-white/85"
+                      }`}
+                    >
                       {profile.name.slice(0, 1).toUpperCase()}
                     </div>
                     <div>
-                      <div class="text-base font-medium tracking-tight text-white">
+                      <div class="text-[13px] font-medium tracking-[-0.01em] text-white">
                         {profile.name}
                       </div>
-                      <div class="text-xs text-white/55">Local Profile</div>
+                      <div class="text-[11px] text-white/45">Local profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>
-                    <span class="pill-cta-white rounded-full px-3.5 py-1 text-xs font-semibold">
+                    <span class="inline-flex items-center gap-1.5 text-[11px] text-white/70">
+                      <span class="nav-dot" />
                       Active
                     </span>
                   </Show>

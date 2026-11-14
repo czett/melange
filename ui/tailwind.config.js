@@ -6,24 +6,25 @@ export default {
       colors: {
         melange: {
           crimson: "#E13A26",
+          hot: "#F24E38",
           deep: "#831613",
-          void: "#120303",
-          garnet: "#1D0505",
-          ink: "#140404"
+          edge: "#3D0706",
+          ink: "#160303"
+        },
+        garnet: {
+          glass: "rgba(38, 5, 5, 0.46)",
+          inner: "rgba(24, 3, 3, 0.48)"
         }
       },
       fontFamily: {
-        sans: [
-          "Plus Jakarta Sans",
-          "Inter",
-          "SF Pro Display",
-          "system-ui",
-          "-apple-system",
-          "sans-serif"
-        ]
+        sans: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"]
       },
       letterSpacing: {
-        editorial: "-0.03em"
+        display: "-0.035em",
+        editorial: "-0.02em"
+      },
+      boxShadow: {
+        ambient: "0 14px 36px rgba(15, 2, 2, 0.42)"
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.22, 1, 0.36, 1)"
