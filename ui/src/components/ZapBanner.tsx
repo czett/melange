@@ -14,7 +14,6 @@ export const ZapBanner = () => {
     const overlay = melangeState().overlay;
     const digits = melangeState().digit_buffer;
 
-    // Reset 4s auto-dismiss timer whenever channel, zapping state, or digits change.
     if (dismissTimer !== null) {
       window.clearTimeout(dismissTimer);
       dismissTimer = null;
@@ -66,17 +65,17 @@ export const ZapBanner = () => {
       <div class="fluted-surface w-full max-w-4xl rounded-3xl px-8 py-5">
         <div class="flex items-center justify-between gap-6">
           <div class="flex items-center gap-5">
-            <div class="flex h-14 min-w-[3.75rem] items-center justify-center rounded-2xl border border-white/20 bg-[#120303]/75 px-3.5 text-3xl font-light tracking-editorial tabular-nums text-white shadow-inner">
+            <div class="frosted-subcard flex h-14 min-w-[3.75rem] items-center justify-center rounded-2xl px-3.5 text-3xl font-light tracking-editorial tabular-nums text-white">
               {melangeState().digit_buffer || melangeState().playback.channel_number || "—"}
             </div>
             <div>
               <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-medium tracking-editorial text-white">
+                <h2 class="text-2xl font-light tracking-editorial text-white">
                   {activeChannel()?.name ?? melangeState().playback.title ?? "Live TV"}
                 </h2>
                 <Show when={melangeState().playback.is_zapping}>
-                  <span class="inline-flex items-center gap-1.5 rounded-full border border-[#E13A26]/55 bg-[#E13A26]/25 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
-                    <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-[#E13A26] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
+                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                     Tuning
                   </span>
                 </Show>
@@ -86,19 +85,19 @@ export const ZapBanner = () => {
                     melangeState().playback.state === "Playing"
                   }
                 >
-                  <span class="inline-flex items-center gap-1.5 rounded-full border border-[#E13A26]/55 bg-[#E13A26]/25 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
-                    <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+                  <span class="inline-flex items-center gap-1.5 rounded-full bg-[#E13A26] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
+                    <span class="h-1.5 w-1.5 rounded-full bg-white" />
                     LIVE
                   </span>
                 </Show>
               </div>
-              <p class="mt-0.5 text-xs uppercase tracking-[0.18em] text-white/60">
+              <p class="mt-0.5 text-xs uppercase tracking-[0.18em] text-white/65">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
           </div>
 
-          <div class="text-right text-xs font-medium tabular-nums text-white/60">
+          <div class="text-right text-xs font-medium tabular-nums text-white/65">
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
@@ -116,9 +115,9 @@ export const ZapBanner = () => {
             </p>
             <Show when={nowNext()?.next}>
               {(next) => (
-                <p class="shrink-0 text-sm text-white/60">
-                  Next: <span class="text-white/90">{next().title}</span>{" "}
-                  <span class="tabular-nums text-white/45">
+                <p class="shrink-0 text-sm text-white/65">
+                  Next: <span class="text-white/95">{next().title}</span>{" "}
+                  <span class="tabular-nums text-white/50">
                     ({formatXmltvTime(next().start_time)})
                   </span>
                 </p>

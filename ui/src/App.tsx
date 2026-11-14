@@ -108,8 +108,23 @@ export const App = () => {
     return s === "Playing" || s === "Buffering";
   };
 
-  const showAmbientBackdrop = () =>
-    melangeState().mode !== "LiveTv" && !isVideoActive();
+  // Full-page modes (Settings, Mediathek, YouTube, Media) always keep an opaque Pelmatech crimson fluted canvas
+  // so underlying video/logos never bleed through text. Home also displays it when idle (and uses a heavy
+  // frosted crimson veil if video is playing behind it). Raw unblurred video only shows in LiveTv mode.
+  const isFullPageMode = () =>
+    melangeState().mode === "Settings" ||
+    melangeState().mode === "Mediathek" ||
+    melangeState().mode === "YouTube" ||
+    melangeState().mode === "Media";
+
+  const showPelmatechCanvas = () =>
+    isFullPageMode() || (melangeState().mode === "Home" && !isVideoActive());
+
+  const showHomeVideoVeil = () =>
+    melangeState().mode === "Home" && isVideoActive();
+
+  const showLiveTvScrim = () =>
+    melangeState().mode === "LiveTv" && isVideoActive();
 
   const showFocusRing = () =>
     melangeState().mode !== "LiveTv" ||
@@ -122,36 +137,45 @@ export const App = () => {
 
   return (
     <div class="relative h-screen w-screen overflow-hidden bg-transparent text-white">
-      {/* Ambient crimson fluted backdrop when idle; fades out completely during libmpv playback */}
+      {/* Opaque Luminous Pelmatech Crimson Volumetric Reed Canvas */}
       <div
-        class="crimson-ambient-bg pointer-events-none fixed inset-0 -z-20 transition-opacity duration-700 ease-out"
-        style={{ opacity: showAmbientBackdrop() ? "1" : "0" }}
+        class="pelmatech-canvas pointer-events-none fixed inset-0 -z-20 transition-opacity duration-500 ease-out"
+        style={{ opacity: showPelmatechCanvas() ? "1" : "0" }}
       />
 
-      {/* Optional profile wallpaper softly glazed into the crimson garnet canvas when idle */}
-      <Show when={showAmbientBackdrop() && melangeState().active_profile?.wallpaper_path}>
+      {/* Optional profile wallpaper softly glazed into the crimson canvas when idle */}
+      <Show when={showPelmatechCanvas() && melangeState().active_profile?.wallpaper_path}>
         {(wp) => (
-          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden transition-opacity duration-700">
+          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden transition-opacity duration-500">
             <img
               src={wp()}
               alt=""
-              class="h-full w-full object-cover opacity-30 mix-blend-luminosity scale-105"
+              class="h-full w-full scale-105 object-cover opacity-22 mix-blend-luminosity"
             />
             <div
               class="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(18,3,3,0.72) 0%, rgba(131,22,19,0.45) 55%, rgba(18,3,3,0.82) 100%)"
+                  "linear-gradient(135deg, rgba(131,22,19,0.58) 0%, rgba(225,58,38,0.34) 55%, rgba(60,6,6,0.75) 100%)"
               }}
             />
           </div>
         )}
       </Show>
 
-      {/* Warm obsidian-garnet edge vignette when live 1080p video shines through */}
+      {/* Deeply frosted crimson veil if Home is open while video plays underneath */}
       <div
-        class="video-scrim-active pointer-events-none fixed inset-0 -z-10 transition-opacity duration-700"
-        style={{ opacity: melangeState().mode !== "LiveTv" && isVideoActive() ? "1" : "0" }}
+        class="pelmatech-video-veil pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
+        style={{ opacity: showHomeVideoVeil() ? "1" : "0" }}
+      />
+
+      {/* Subtle edge vignette only when LiveTv HUD overlays appear over raw libmpv video */}
+      <div
+        class="video-scrim-active pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
+        style={{
+          opacity:
+            showLiveTvScrim() && melangeState().overlay !== "None" ? "1" : "0"
+        }}
       />
 
       <Show when={melangeState().mode === "Home"}>

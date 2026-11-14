@@ -9,27 +9,12 @@
   --melange-garnet-base: #1D0505;
   --melange-ink-dark: #140404;
 
-  --glass-blur: blur(24px) saturate(165%);
-  --glass-blur-heavy: blur(32px) saturate(175%);
-  --fluted-ribs: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.06) 0px,
-    rgba(255, 255, 255, 0.01) 3px,
-    rgba(0, 0, 0, 0.18) 6px,
-    rgba(255, 255, 255, 0.04) 9px
-  );
-  --fluted-ribs-fine: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.048) 0px,
-    rgba(255, 255, 255, 0.01) 2px,
-    rgba(0, 0, 0, 0.14) 5px,
-    rgba(255, 255, 255, 0.03) 7px
-  );
-  --rim-specular: rgba(255, 255, 255, 0.24);
-  --rim-top: rgba(255, 255, 255, 0.34);
-  --rim-subtle: rgba(255, 255, 255, 0.15);
-  --shadow-garnet: 0 20px 48px rgba(18, 3, 3, 0.68);
-  --shadow-garnet-heavy: 0 28px 72px rgba(18, 3, 3, 0.84);
+  --glass-blur: blur(28px) saturate(165%);
+  --glass-blur-heavy: blur(36px) saturate(175%);
+  --rim-specular: rgba(255, 255, 255, 0.22);
+  --rim-top: rgba(255, 255, 255, 0.30);
+  --shadow-ambient: 0 22px 54px rgba(24, 3, 3, 0.44);
+  --shadow-ambient-heavy: 0 30px 76px rgba(18, 3, 3, 0.62);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -40,7 +25,7 @@
     opacity: 1;
   }
   50% {
-    transform: scale(1.28);
+    transform: scale(1.26);
     opacity: 0.62;
   }
 }
@@ -48,7 +33,7 @@
 body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background-color: #120303;
+  background-color: #6b0e0d;
   color: #ffffff;
   font-family:
     'Plus Jakarta Sans',
@@ -69,84 +54,88 @@ body {
   scrollbar-width: none;
 }
 
-.crimson-ambient-bg {
-  background:
-    radial-gradient(620px circle at 16% 10%, rgba(225, 58, 38, 0.45), transparent 56%),
-    radial-gradient(520px circle at 88% 82%, rgba(131, 22, 19, 0.65), transparent 60%),
-    linear-gradient(155deg, #120303 0%, #2a0707 44%, #831613 82%, #1d0505 100%);
+/* Luminous Crimson Volumetric Canvas Refracted Through Fine Vertical Glass Reeds */
+.pelmatech-canvas {
+  background-color: #6b0e0d;
+  background-image:
+    radial-gradient(75% 60% at 62% 28%, rgba(225, 58, 38, 0.90) 0%, rgba(225, 58, 38, 0.32) 50%, transparent 78%),
+    radial-gradient(65% 58% at 18% 84%, rgba(225, 58, 38, 0.78) 0%, rgba(131, 22, 19, 0.42) 52%, transparent 80%),
+    linear-gradient(155deg, #3c0606 0%, #831613 42%, #a61e17 68%, #4b0808 100%);
+  overflow: hidden;
 }
 
-.crimson-ambient-bg::after {
+.pelmatech-canvas::after {
   content: '';
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.03) 0px,
-    rgba(255, 255, 255, 0.005) 5px,
-    rgba(18, 3, 3, 0.24) 11px,
-    rgba(255, 255, 255, 0.02) 16px
+    rgba(255, 255, 255, 0.085) 0px,
+    rgba(255, 160, 140, 0.04) 3px,
+    rgba(30, 3, 3, 0.28) 9px,
+    rgba(80, 8, 8, 0.14) 13px,
+    rgba(255, 255, 255, 0.05) 16px,
+    rgba(255, 255, 255, 0.085) 18px
   );
-  mix-blend-mode: overlay;
+  mix-blend-mode: soft-light;
+  opacity: 0.92;
 }
 
+/* Smooth Frosted Glass Surfaces (Zero Stripes Inside Cards) */
 .fluted-surface {
   position: relative;
-  background:
-    var(--fluted-ribs),
-    radial-gradient(120% 90% at 16% 0%, rgba(225, 58, 38, 0.22), transparent 58%),
-    linear-gradient(175deg, rgba(131, 22, 19, 0.42) 0%, rgba(29, 5, 5, 0.78) 100%);
+  background: linear-gradient(165deg, rgba(110, 16, 15, 0.42) 0%, rgba(46, 6, 6, 0.62) 100%);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border: 1px solid var(--rim-specular);
   box-shadow:
     inset 0 1px 0 var(--rim-top),
-    inset 0 -1px 0 rgba(225, 58, 38, 0.16),
-    var(--shadow-garnet-heavy);
+    var(--shadow-ambient-heavy);
 }
 
 .fluted-card {
   position: relative;
-  background:
-    var(--fluted-ribs),
-    linear-gradient(160deg, rgba(131, 22, 19, 0.28) 0%, rgba(29, 5, 5, 0.64) 100%);
+  background: rgba(90, 12, 12, 0.34);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--rim-subtle);
+  border: 1px solid var(--rim-specular);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    var(--shadow-garnet);
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    var(--shadow-ambient);
+}
+
+.frosted-subcard {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 .fluted-pill {
   position: relative;
-  background:
-    var(--fluted-ribs-fine),
-    linear-gradient(165deg, rgba(131, 22, 19, 0.28) 0%, rgba(29, 5, 5, 0.56) 100%);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid var(--rim-subtle);
+  background: rgba(90, 12, 12, 0.34);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--rim-specular);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20);
   transition: transform 150ms var(--ease-spring), background 150ms ease, border-color 150ms ease;
 }
 
 .fluted-pill:active {
   transform: scale(0.95);
-  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(225, 58, 38, 0.44);
+  border-color: rgba(255, 255, 255, 0.65);
 }
 
 .fluted-key {
   position: relative;
-  background:
-    var(--fluted-ribs-fine),
-    linear-gradient(180deg, rgba(131, 22, 19, 0.34) 0%, rgba(29, 5, 5, 0.68) 100%);
+  background: rgba(255, 255, 255, 0.11);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.20);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 8px 20px rgba(18, 3, 3, 0.48);
+    0 8px 20px rgba(18, 3, 3, 0.36);
   color: #ffffff;
   transition: transform 140ms var(--ease-spring), background 120ms ease, color 120ms ease;
 }
@@ -162,7 +151,7 @@ body {
   color: #140404;
   border: 1px solid #ffffff;
   box-shadow:
-    0 8px 24px rgba(18, 3, 3, 0.55),
+    0 8px 24px rgba(18, 3, 3, 0.44),
     0 0 18px rgba(255, 255, 255, 0.18);
   transition: transform 150ms var(--ease-spring), box-shadow 150ms ease;
 }
@@ -173,6 +162,6 @@ body {
 
 .live-beacon {
   background-color: #E13A26;
-  box-shadow: 0 0 10px rgba(225, 58, 38, 0.85);
+  box-shadow: 0 0 10px rgba(225, 58, 38, 0.90);
   animation: liveBeacon 2s ease-in-out infinite;
 }

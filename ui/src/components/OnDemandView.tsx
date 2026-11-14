@@ -123,11 +123,11 @@ export function OnDemandView(props: OnDemandViewProps) {
   };
 
   return (
-    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden bg-[#120303]/28 p-10 text-white">
+    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden p-10 text-white">
       <header class="mb-8 flex items-center justify-between gap-6">
         <div>
-          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.25em] text-white/60">
-            <span class="h-1.5 w-1.5 rounded-full bg-[#E13A26]" />
+          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.25em] text-white/65">
+            <span class="h-1.5 w-1.5 rounded-full bg-white" />
             <span>{props.subtitle}</span>
           </div>
           <h1 class="mt-1.5 text-4xl font-light tracking-editorial text-white">
@@ -154,7 +154,7 @@ export function OnDemandView(props: OnDemandViewProps) {
               class={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                 isFocused("od-search")
                   ? "bg-[#140404]/10 text-[#140404]"
-                  : "border border-[#E13A26]/45 bg-[#E13A26]/25 text-white"
+                  : "border border-white/25 bg-white/15 text-white"
               }`}
             >
               KEY
@@ -199,7 +199,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>
               {() => (
                 <div class="fluted-card animate-pulse overflow-hidden rounded-2xl">
-                  <div class="aspect-video w-full bg-[#831613]/25" />
+                  <div class="aspect-video w-full bg-white/10" />
                   <div class="space-y-2.5 p-4">
                     <div class="h-3 w-24 rounded-full bg-white/15" />
                     <div class="h-4 w-4/5 rounded-full bg-white/20" />
@@ -212,15 +212,15 @@ export function OnDemandView(props: OnDemandViewProps) {
 
         <Show when={!loading() && errorMsg()}>
           {(err) => (
-            <div class="fluted-surface max-w-xl rounded-3xl border-[#E13A26]/55 p-8">
-              <div class="mb-2 inline-flex items-center gap-2 rounded-full border border-[#E13A26]/50 bg-[#E13A26]/25 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-                <span class="live-beacon h-1.5 w-1.5 rounded-full" />
+            <div class="fluted-surface max-w-xl rounded-3xl border-[#E13A26]/65 p-8">
+              <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-[#E13A26] px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+                <span class="h-1.5 w-1.5 rounded-full bg-white" />
                 Feed Unavailable
               </div>
               <div class="text-xl font-medium tracking-tight text-white">
                 Failed to load {props.title}
               </div>
-              <div class="mt-1.5 text-sm text-white/70">{err()}</div>
+              <div class="mt-1.5 text-sm text-white/75">{err()}</div>
             </div>
           )}
         </Show>
@@ -230,7 +230,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             <div class="text-xl font-medium tracking-tight text-white">
               No items available
             </div>
-            <div class="mt-1.5 text-sm text-white/65">
+            <div class="mt-1.5 text-sm text-white/70">
               {props.provider === "local"
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : "No results returned. Check your network connection or try a different search."}
@@ -250,11 +250,11 @@ export function OnDemandView(props: OnDemandViewProps) {
                   onClick={() => playItem(item)}
                   class="fluted-card group flex flex-col overflow-hidden rounded-2xl text-left"
                 >
-                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#120303]/75">
+                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-white/5">
                     <Show
                       when={item.thumbnail_url}
                       fallback={
-                        <div class="px-4 text-center text-xs uppercase tracking-[0.22em] text-white/40">
+                        <div class="px-4 text-center text-xs uppercase tracking-[0.22em] text-white/45">
                           {item.channel_or_author}
                         </div>
                       }
@@ -272,18 +272,18 @@ export function OnDemandView(props: OnDemandViewProps) {
                       class="pointer-events-none absolute inset-0"
                       style={{
                         background:
-                          "linear-gradient(180deg, transparent 45%, rgba(18,3,3,0.72) 100%)"
+                          "linear-gradient(180deg, transparent 48%, rgba(29,5,5,0.68) 100%)"
                       }}
                     />
                     <Show when={item.duration_sec > 0}>
-                      <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/20 bg-[#120303]/85 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur-md">
+                      <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/25 bg-[#1D0505]/80 px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur-md">
                         {formatDuration(item.duration_sec)}
                       </span>
                     </Show>
                   </div>
 
                   <div class="flex flex-col gap-1.5 p-4">
-                    <div class="truncate text-xs text-white/55">
+                    <div class="truncate text-xs text-white/60">
                       {item.channel_or_author}
                       <Show when={item.subtitle}>
                         <span> · {item.subtitle}</span>

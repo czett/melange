@@ -21,18 +21,18 @@ export const FullEpg = () => {
   };
 
   return (
-    <div class="fixed inset-0 z-40 flex items-center justify-center bg-[#120303]/75 p-10 backdrop-blur-md">
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-[#220404]/86 p-10 backdrop-blur-3xl">
       <div class="fluted-surface flex h-full max-h-[84vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl">
         <header class="flex items-center justify-between border-b border-white/15 px-8 py-5">
           <div class="flex items-center gap-4">
             <h1 class="text-3xl font-light tracking-editorial text-white">
               Program Guide
             </h1>
-            <span class="fluted-pill rounded-full px-3.5 py-1 text-xs font-medium text-white/80">
+            <span class="fluted-pill rounded-full px-3.5 py-1 text-xs font-medium text-white/85">
               {melangeState().channels.length} Channels
             </span>
           </div>
-          <div class="flex items-center gap-3 text-xs text-white/65">
+          <div class="flex items-center gap-3 text-xs text-white/70">
             <span class="fluted-pill rounded-full px-3.5 py-1.5">Arrows Navigate</span>
             <span class="fluted-pill rounded-full px-3.5 py-1.5">Enter Tune</span>
             <button
@@ -78,13 +78,13 @@ export const FullEpg = () => {
                     onClick={() =>
                       sendCommand({ type: "SelectChannel", channel_id: ch.id })
                     }
-                    class="fluted-card flex w-60 shrink-0 items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left"
+                    class="frosted-subcard flex w-60 shrink-0 items-center gap-3.5 rounded-2xl px-4 py-3.5 text-left"
                   >
                     <span
                       class={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold tabular-nums ${
                         isPlaying()
                           ? "bg-white text-[#140404]"
-                          : "border border-white/20 bg-[#120303]/75 text-white"
+                          : "border border-white/20 bg-white/10 text-white"
                       }`}
                     >
                       {ch.number}
@@ -98,7 +98,7 @@ export const FullEpg = () => {
                           <span class="live-beacon h-2 w-2 shrink-0 rounded-full" />
                         </Show>
                       </div>
-                      <span class="text-xs text-white/50">{ch.group_title}</span>
+                      <span class="text-xs text-white/55">{ch.group_title}</span>
                     </div>
                   </button>
 
@@ -123,12 +123,12 @@ export const FullEpg = () => {
                             onClick={() =>
                               sendCommand({ type: "SelectChannel", channel_id: ch.id })
                             }
-                            class={`fluted-card flex min-w-[235px] flex-1 flex-col justify-between rounded-2xl px-4 py-3 text-left ${
-                              idx() === 0 ? "border-[#E13A26]/45" : ""
+                            class={`frosted-subcard flex min-w-[235px] flex-1 flex-col justify-between rounded-2xl px-4 py-3 text-left ${
+                              idx() === 0 ? "border-[#E13A26]/55" : ""
                             }`}
                           >
                             <div>
-                              <div class="flex items-center justify-between gap-2 text-xs tabular-nums text-white/60">
+                              <div class="flex items-center justify-between gap-2 text-xs tabular-nums text-white/65">
                                 <span>
                                   {formatXmltvTime(prog.start_time)} –{" "}
                                   {formatXmltvTime(prog.stop_time)}
@@ -142,7 +142,7 @@ export const FullEpg = () => {
                               <div class="mt-1.5 truncate text-sm font-medium text-white">
                                 {prog.title}
                               </div>
-                              <div class="mt-0.5 line-clamp-1 text-xs text-white/55">
+                              <div class="mt-0.5 line-clamp-1 text-xs text-white/60">
                                 {prog.description}
                               </div>
                             </div>
@@ -163,7 +163,7 @@ export const FullEpg = () => {
                     </For>
 
                     <Show when={programs().length === 0}>
-                      <div class="fluted-card flex flex-1 items-center rounded-2xl px-5 text-sm text-white/45">
+                      <div class="frosted-subcard flex flex-1 items-center rounded-2xl px-5 text-sm text-white/50">
                         No schedule entries available
                       </div>
                     </Show>

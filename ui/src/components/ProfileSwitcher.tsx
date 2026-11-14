@@ -11,14 +11,14 @@ export const ProfileSwitcher = () => {
   });
 
   return (
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#120303]/78 px-8 backdrop-blur-md">
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#220404]/86 px-8 backdrop-blur-3xl">
       <div class="fluted-surface w-full max-w-lg rounded-3xl p-8">
         <div class="flex items-start justify-between gap-4">
           <div>
             <h2 class="text-3xl font-light tracking-editorial text-white">
               Switch Profile
             </h2>
-            <p class="mt-1.5 text-sm text-white/65">
+            <p class="mt-1.5 text-sm text-white/70">
               Select a viewer profile for personalized history and channels
             </p>
           </div>
@@ -65,7 +65,7 @@ export const ProfileSwitcher = () => {
                   onClick={() =>
                     sendCommand({ type: "SelectProfile", profile_id: profile.id })
                   }
-                  class="fluted-card flex items-center justify-between rounded-2xl px-5 py-4 text-left"
+                  class="frosted-subcard flex items-center justify-between rounded-2xl px-5 py-4 text-left"
                 >
                   <div class="flex items-center gap-4">
                     <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-gradient-to-br from-[#E13A26] to-[#831613] text-lg font-semibold text-white shadow-inner">
@@ -75,7 +75,7 @@ export const ProfileSwitcher = () => {
                       <div class="text-base font-medium tracking-tight text-white">
                         {profile.name}
                       </div>
-                      <div class="text-xs text-white/50">Local Profile</div>
+                      <div class="text-xs text-white/55">Local Profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>

@@ -25,24 +25,24 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
   });
 
   return (
-    <div class="fixed inset-0 z-40 flex items-center justify-center bg-[#120303]/80 p-6 backdrop-blur-xl">
+    <div class="fixed inset-0 z-40 flex items-center justify-center bg-[#220404]/86 p-6 backdrop-blur-3xl">
       <div class="fluted-surface flex w-full max-w-3xl flex-col gap-5 rounded-3xl p-7">
         <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.24em] text-white/65">
-            <span class="h-1.5 w-1.5 rounded-full bg-[#E13A26]" />
+          <div class="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.24em] text-white/70">
+            <span class="h-1.5 w-1.5 rounded-full bg-white" />
             <span>Search</span>
           </div>
-          <div class="fluted-pill rounded-full px-3.5 py-1 text-xs text-white/65">
+          <div class="fluted-pill rounded-full px-3.5 py-1 text-xs text-white/70">
             D-Pad / Arrows + Select
           </div>
         </div>
 
-        <div class="flex min-h-[3.5rem] items-center justify-between rounded-2xl border border-white/20 bg-[#120303]/80 px-5 py-3.5 text-xl font-light tracking-tight text-white shadow-inner">
+        <div class="frosted-subcard flex min-h-[3.5rem] items-center justify-between rounded-2xl px-5 py-3.5 text-xl font-light tracking-tight text-white">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>
             ) : (
-              <span class="text-white/40">Type to search...</span>
+              <span class="text-white/45">Type to search...</span>
             )}
             <span class="inline-block h-5 w-0.5 animate-pulse rounded-full bg-[#E13A26]" />
           </div>
@@ -104,7 +104,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               data-focus-radius="9999px"
               onClick={clear}
               class={`h-12 rounded-full px-5 text-sm font-medium transition ${
-                isFocused("osk-clear") ? "pill-cta-white" : "fluted-pill text-white/80"
+                isFocused("osk-clear") ? "pill-cta-white" : "fluted-pill text-white/85"
               }`}
             >
               Clear
@@ -126,7 +126,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               data-focus-radius="9999px"
               onClick={props.onClose}
               class={`h-12 rounded-full px-5 text-sm font-medium transition ${
-                isFocused("osk-cancel") ? "pill-cta-white" : "fluted-pill text-white/75"
+                isFocused("osk-cancel") ? "pill-cta-white" : "fluted-pill text-white/80"
               }`}
             >
               Cancel

@@ -1,5 +1,5 @@
 :root {
-  /* Strict Crimson & Obsidian Garnet Palette */
+  /* Strict Pelmatech Crimson & Deep Red Palette */
   --melange-crimson: #E13A26;
   --melange-deep-red: #831613;
   --melange-garnet-void: #120303;
@@ -8,52 +8,40 @@
 
   /* Typography & Ink */
   --text-primary: #FFFFFF;
-  --text-secondary: rgba(255, 255, 255, 0.72);
-  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-secondary: rgba(255, 255, 255, 0.78);
+  --text-muted: rgba(255, 255, 255, 0.52);
 
-  /* Fluted / Reeded Glass Material */
-  --glass-blur: blur(24px) saturate(165%);
-  --glass-blur-heavy: blur(32px) saturate(175%);
-  --fluted-ribs: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.06) 0px,
-    rgba(255, 255, 255, 0.01) 3px,
-    rgba(0, 0, 0, 0.18) 6px,
-    rgba(255, 255, 255, 0.04) 9px
-  );
-  --fluted-ribs-fine: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.048) 0px,
-    rgba(255, 255, 255, 0.01) 2px,
-    rgba(0, 0, 0, 0.14) 5px,
-    rgba(255, 255, 255, 0.03) 7px
-  );
+  /* Smooth Translucent Frosted Glass (Zero Stripes Inside Cards) */
+  --glass-blur: blur(28px) saturate(165%);
+  --glass-blur-heavy: blur(36px) saturate(175%);
+  --glass-surface: rgba(88, 12, 12, 0.32);
+  --glass-surface-elevated: rgba(62, 8, 8, 0.54);
+  --glass-surface-modal: rgba(44, 6, 6, 0.72);
+  --glass-pill-bg: rgba(90, 12, 12, 0.30);
 
-  /* Specular Borders & Shadows */
-  --rim-specular: rgba(255, 255, 255, 0.24);
-  --rim-top: rgba(255, 255, 255, 0.34);
-  --rim-subtle: rgba(255, 255, 255, 0.15);
-  --crimson-glow: rgba(225, 58, 38, 0.42);
-  --crimson-soft: rgba(225, 58, 38, 0.20);
-  --shadow-garnet: 0 22px 54px rgba(18, 3, 3, 0.68);
-  --shadow-garnet-heavy: 0 32px 84px rgba(18, 3, 3, 0.84);
+  /* Razor-thin Specular Borders & Shadows */
+  --rim-specular: rgba(255, 255, 255, 0.22);
+  --rim-top: rgba(255, 255, 255, 0.30);
+  --rim-subtle: rgba(255, 255, 255, 0.16);
+  --shadow-ambient: 0 24px 60px rgba(24, 3, 3, 0.44);
+  --shadow-ambient-heavy: 0 32px 80px rgba(18, 3, 3, 0.62);
 
   /* Motion */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@keyframes crimsonBeamDrift {
+@keyframes pelmatechBloomDrift {
   0% {
-    transform: translate3d(-3%, -2%, 0) scale(1);
-    opacity: 0.88;
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1);
+    opacity: 0.92;
   }
   50% {
-    transform: translate3d(3%, 2%, 0) scale(1.06);
+    transform: translate3d(2.5%, 1.5%, 0) scale(1.05);
     opacity: 1;
   }
   100% {
-    transform: translate3d(-3%, -2%, 0) scale(1);
-    opacity: 0.88;
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1);
+    opacity: 0.92;
   }
 }
 
@@ -61,15 +49,15 @@
   0%,
   100% {
     box-shadow:
-      0 0 0 1px rgba(225, 58, 38, 0.45),
-      0 0 26px rgba(225, 58, 38, 0.38),
-      inset 0 0 16px rgba(255, 255, 255, 0.12);
+      0 0 0 1px rgba(225, 58, 38, 0.42),
+      0 0 24px rgba(225, 58, 38, 0.36),
+      inset 0 0 12px rgba(255, 255, 255, 0.12);
   }
   50% {
     box-shadow:
-      0 0 0 1px rgba(225, 58, 38, 0.72),
-      0 0 36px rgba(225, 58, 38, 0.56),
-      inset 0 0 20px rgba(255, 255, 255, 0.18);
+      0 0 0 1px rgba(225, 58, 38, 0.68),
+      0 0 34px rgba(225, 58, 38, 0.52),
+      inset 0 0 18px rgba(255, 255, 255, 0.18);
   }
 }
 
@@ -80,86 +68,100 @@
     opacity: 1;
   }
   50% {
-    transform: scale(1.28);
+    transform: scale(1.26);
     opacity: 0.62;
   }
 }
 
-/* Idle Ambient Crimson Fluted Backdrop */
-.crimson-ambient-bg {
-  background:
-    radial-gradient(1100px circle at 18% 12%, rgba(225, 58, 38, 0.48), transparent 56%),
-    radial-gradient(900px circle at 84% 78%, rgba(131, 22, 19, 0.64), transparent 58%),
-    linear-gradient(135deg, #120303 0%, #2a0707 42%, #831613 78%, #1d0505 100%);
+/*
+ * Luminous Crimson Volumetric Canvas Refracted Through Fine Vertical Glass Reeds
+ * (Reeds live ONLY on the background canvas — floating cards on top are clean frosted glass.)
+ */
+.pelmatech-canvas {
+  background-color: #6b0e0d;
+  background-image:
+    radial-gradient(64% 68% at 58% 36%, rgba(225, 58, 38, 0.92) 0%, rgba(225, 58, 38, 0.32) 48%, transparent 76%),
+    radial-gradient(52% 62% at 22% 84%, rgba(225, 58, 38, 0.80) 0%, rgba(131, 22, 19, 0.42) 52%, transparent 78%),
+    radial-gradient(48% 54% at 88% 72%, rgba(225, 58, 38, 0.65) 0%, transparent 72%),
+    linear-gradient(135deg, #3c0606 0%, #831613 38%, #a61e17 65%, #4b0808 100%);
   overflow: hidden;
 }
 
-.crimson-ambient-bg::before {
+/* Secondary soft volumetric light flare */
+.pelmatech-canvas::before {
   content: "";
   position: absolute;
-  inset: -12%;
+  inset: -10%;
   pointer-events: none;
   background:
-    radial-gradient(62% 52% at 62% 24%, rgba(225, 58, 38, 0.34), transparent 64%),
-    radial-gradient(45% 65% at 24% 82%, rgba(225, 58, 38, 0.22), transparent 62%);
-  animation: crimsonBeamDrift 18s ease-in-out infinite;
+    radial-gradient(42% 58% at 48% 48%, rgba(255, 110, 86, 0.24) 0%, rgba(225, 58, 38, 0.38) 38%, transparent 70%),
+    radial-gradient(36% 48% at 74% 18%, rgba(225, 58, 38, 0.46) 0%, transparent 66%);
+  filter: blur(28px);
+  animation: pelmatechBloomDrift 18s ease-in-out infinite;
   will-change: transform, opacity;
 }
 
-.crimson-ambient-bg::after {
+/* Smooth optical vertical glass reeds refracting the crimson light */
+.pelmatech-canvas::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.032) 0px,
-    rgba(255, 255, 255, 0.005) 5px,
-    rgba(18, 3, 3, 0.24) 11px,
-    rgba(255, 255, 255, 0.02) 16px
+    rgba(255, 255, 255, 0.085) 0px,
+    rgba(255, 160, 140, 0.04) 3px,
+    rgba(30, 3, 3, 0.28) 9px,
+    rgba(80, 8, 8, 0.14) 13px,
+    rgba(255, 255, 255, 0.05) 16px,
+    rgba(255, 255, 255, 0.085) 18px
   );
-  mix-blend-mode: overlay;
+  mix-blend-mode: soft-light;
+  opacity: 0.92;
 }
 
-/* Live Video Passthrough Scrim */
+/* Frosted Crimson Veil when Home sits over active Live TV (prevents sharp video bleed) */
+.pelmatech-video-veil {
+  background:
+    radial-gradient(65% 65% at 58% 35%, rgba(225, 58, 38, 0.28), transparent 72%),
+    linear-gradient(150deg, rgba(64, 8, 8, 0.78) 0%, rgba(29, 5, 5, 0.84) 100%);
+  backdrop-filter: blur(36px) saturate(150%);
+  -webkit-backdrop-filter: blur(36px) saturate(150%);
+}
+
+/* Subtle edge vignette only for LiveTv HUD overlays */
 .video-scrim-active {
   background: linear-gradient(
     180deg,
-    rgba(18, 3, 3, 0.72) 0%,
-    rgba(18, 3, 3, 0.14) 36%,
-    rgba(18, 3, 3, 0.18) 64%,
-    rgba(18, 3, 3, 0.82) 100%
+    rgba(18, 3, 3, 0.42) 0%,
+    rgba(18, 3, 3, 0.0) 28%,
+    rgba(18, 3, 3, 0.0) 68%,
+    rgba(18, 3, 3, 0.68) 100%
   );
 }
 
-/* Heavy Fluted Surface (Docks, Modals, OSD, Banners, Keyboard Deck) */
+/* Smooth Translucent Frosted Surfaces (No Stripes) */
 .fluted-surface {
   position: relative;
-  background:
-    var(--fluted-ribs),
-    radial-gradient(120% 90% at 16% 0%, rgba(225, 58, 38, 0.24), transparent 58%),
-    linear-gradient(175deg, rgba(131, 22, 19, 0.42) 0%, rgba(29, 5, 5, 0.76) 100%);
+  background: linear-gradient(165deg, rgba(110, 16, 15, 0.40) 0%, rgba(46, 6, 6, 0.58) 100%);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
   border: 1px solid var(--rim-specular);
   box-shadow:
     inset 0 1px 0 var(--rim-top),
-    inset 0 -1px 0 rgba(225, 58, 38, 0.16),
-    var(--shadow-garnet-heavy);
+    var(--shadow-ambient-heavy);
 }
 
-/* Fluted Interactive Card (Channels, Continue Watching, Media Grid, EPG Cells, Settings) */
+/* Smooth Frosted Card (Schedule Card, Media Grid, EPG Cells, Settings Cards) */
 .fluted-card {
   position: relative;
-  background:
-    var(--fluted-ribs),
-    linear-gradient(160deg, rgba(131, 22, 19, 0.30) 0%, rgba(29, 5, 5, 0.62) 100%);
+  background: rgba(90, 12, 12, 0.32);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--rim-subtle);
+  border: 1px solid var(--rim-specular);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    var(--shadow-garnet);
+    var(--shadow-ambient);
   transition:
     transform 210ms var(--ease-spring),
     border-color 180ms ease,
@@ -169,16 +171,13 @@
 
 .fluted-card:hover,
 .fluted-card[data-focused="true"] {
-  background:
-    var(--fluted-ribs),
-    radial-gradient(100% 80% at 50% 0%, rgba(225, 58, 38, 0.30), transparent 70%),
-    linear-gradient(160deg, rgba(131, 22, 19, 0.46) 0%, rgba(29, 5, 5, 0.74) 100%);
-  border-color: rgba(255, 255, 255, 0.64);
-  transform: translate3d(0, -2px, 0) scale(1.018);
+  background: rgba(131, 22, 19, 0.46);
+  border-color: rgba(255, 255, 255, 0.66);
+  transform: translate3d(0, -2px, 0) scale(1.016);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.40),
-    0 0 32px rgba(225, 58, 38, 0.32),
-    var(--shadow-garnet);
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 0 28px rgba(225, 58, 38, 0.30),
+    var(--shadow-ambient);
 }
 
 .fluted-card[data-pressed="true"],
@@ -186,16 +185,41 @@
   transform: translate3d(0, 0, 0) scale(0.975);
 }
 
-/* Fluted Pill Control */
+/* Inner Sub-Card inside Frosted Containers (e.g., Schedule Rows) */
+.frosted-subcard {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  transition:
+    transform 190ms var(--ease-spring),
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.frosted-subcard:hover,
+.frosted-subcard[data-focused="true"] {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.72);
+  transform: scale(1.015);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 8px 26px rgba(18, 3, 3, 0.38);
+}
+
+.frosted-subcard[data-pressed="true"],
+.frosted-subcard:active {
+  transform: scale(0.98);
+}
+
+/* Smooth Frosted Pill Control */
 .fluted-pill {
   position: relative;
-  background:
-    var(--fluted-ribs-fine),
-    linear-gradient(165deg, rgba(131, 22, 19, 0.28) 0%, rgba(29, 5, 5, 0.54) 100%);
-  backdrop-filter: blur(20px) saturate(165%);
-  -webkit-backdrop-filter: blur(20px) saturate(165%);
-  border: 1px solid var(--rim-subtle);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background: rgba(90, 12, 12, 0.32);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border: 1px solid var(--rim-specular);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20);
   transition:
     transform 190ms var(--ease-spring),
     background 180ms ease,
@@ -206,14 +230,12 @@
 
 .fluted-pill:hover,
 .fluted-pill[data-focused="true"] {
-  background:
-    var(--fluted-ribs-fine),
-    linear-gradient(165deg, rgba(225, 58, 38, 0.38) 0%, rgba(131, 22, 19, 0.62) 100%);
+  background: rgba(225, 58, 38, 0.42);
   border-color: rgba(255, 255, 255, 0.72);
   transform: scale(1.02);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    0 0 24px rgba(225, 58, 38, 0.36);
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 0 22px rgba(225, 58, 38, 0.32);
 }
 
 .fluted-pill[data-pressed="true"],
@@ -221,18 +243,16 @@
   transform: scale(0.965);
 }
 
-/* Fluted Tactile Keycap (On-Screen Keyboard) */
+/* Smooth Frosted Tactile Keycap (On-Screen Keyboard) */
 .fluted-key {
   position: relative;
-  background:
-    var(--fluted-ribs-fine),
-    linear-gradient(180deg, rgba(131, 22, 19, 0.34) 0%, rgba(29, 5, 5, 0.68) 100%);
+  background: rgba(255, 255, 255, 0.10);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.20);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 8px 20px rgba(18, 3, 3, 0.45);
+    0 8px 20px rgba(18, 3, 3, 0.36);
   color: #ffffff;
   transition:
     transform 160ms var(--ease-spring),
@@ -248,8 +268,8 @@
   border-color: #ffffff;
   transform: translate3d(0, -1px, 0) scale(1.06);
   box-shadow:
-    0 0 24px rgba(225, 58, 38, 0.48),
-    0 12px 28px rgba(18, 3, 3, 0.56);
+    0 0 24px rgba(225, 58, 38, 0.46),
+    0 12px 28px rgba(18, 3, 3, 0.48);
 }
 
 .fluted-key[data-pressed="true"],
@@ -263,8 +283,8 @@
   color: #140404;
   border: 1px solid #ffffff;
   box-shadow:
-    0 10px 28px rgba(18, 3, 3, 0.56),
-    0 0 20px rgba(255, 255, 255, 0.18);
+    0 10px 28px rgba(18, 3, 3, 0.44),
+    0 0 18px rgba(255, 255, 255, 0.18);
   transition:
     transform 190ms var(--ease-spring),
     box-shadow 180ms ease,
@@ -278,7 +298,7 @@
   transform: scale(1.03);
   box-shadow:
     0 0 0 2px rgba(225, 58, 38, 0.65),
-    0 14px 34px rgba(225, 58, 38, 0.42);
+    0 14px 34px rgba(225, 58, 38, 0.38);
 }
 
 .pill-cta-white[data-pressed="true"],
@@ -286,15 +306,38 @@
   transform: scale(0.96);
 }
 
+/* Bottom Strip Hairline Item */
+.strip-item {
+  border: 1px solid transparent;
+  transition:
+    transform 190ms var(--ease-spring),
+    background 180ms ease,
+    border-color 180ms ease;
+}
+
+.strip-item:hover,
+.strip-item[data-focused="true"] {
+  background: rgba(90, 12, 12, 0.38);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translate3d(0, -2px, 0);
+}
+
+.strip-item[data-pressed="true"],
+.strip-item:active {
+  transform: scale(0.975);
+}
+
 /* Crimson Progress Bar & Live Beacon */
 .crimson-progress-fill {
-  background: linear-gradient(90deg, #831613 0%, #E13A26 72%, #FFFFFF 100%);
+  background: linear-gradient(90deg, #831613 0%, #E13A26 68%, #FFFFFF 100%);
   box-shadow: 0 0 12px rgba(225, 58, 38, 0.55);
 }
 
 .live-beacon {
   background-color: #E13A26;
-  box-shadow: 0 0 10px rgba(225, 58, 38, 0.85);
+  box-shadow: 0 0 10px rgba(225, 58, 38, 0.90);
   animation: liveBeacon 2s ease-in-out infinite;
 }
 

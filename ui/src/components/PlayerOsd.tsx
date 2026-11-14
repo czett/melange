@@ -70,7 +70,7 @@ export function PlayerOsd() {
         <div class="fluted-surface pointer-events-auto mx-auto flex max-w-4xl flex-col gap-4 rounded-3xl px-8 py-5">
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <div class="flex items-center gap-2 truncate text-xs uppercase tracking-[0.22em] text-white/60">
+              <div class="flex items-center gap-2 truncate text-xs uppercase tracking-[0.22em] text-white/65">
                 <span class="live-beacon h-1.5 w-1.5 rounded-full" />
                 <span>{playback().subtitle ?? "On Demand"}</span>
               </div>
@@ -123,7 +123,7 @@ export function PlayerOsd() {
                 data-focus-radius="9999px"
                 onClick={() => sendCommand({ type: "SetMode", mode: "Home" })}
                 class={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                  isFocused("osd-back") ? "pill-cta-white" : "fluted-pill text-white/85"
+                  isFocused("osd-back") ? "pill-cta-white" : "fluted-pill text-white/90"
                 }`}
               >
                 ← Back
@@ -132,7 +132,7 @@ export function PlayerOsd() {
           </div>
 
           <div class="flex items-center gap-4">
-            <span class="w-14 text-right text-xs font-medium tabular-nums text-white/75">
+            <span class="w-14 text-right text-xs font-medium tabular-nums text-white/80">
               {formatTime(playback().position_sec)}
             </span>
             <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-white/15">
@@ -141,7 +141,7 @@ export function PlayerOsd() {
                 style={{ width: `${progressPct()}%` }}
               />
             </div>
-            <span class="w-14 text-xs font-medium tabular-nums text-white/55">
+            <span class="w-14 text-xs font-medium tabular-nums text-white/60">
               {formatTime(playback().duration_sec)}
             </span>
           </div>
