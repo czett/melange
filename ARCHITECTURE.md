@@ -61,3 +61,14 @@
 - **Bridge (`src/bridge/`):** Auto-reconnecting WebSocket store and TypeScript protocol types.
 - **Spatial Nav (`src/spatial/`):** Geometry-based directional traversal with 60fps `translate3d` focus ring and `Back` history stack.
 - **Glassmorphism Views (`src/components/`, `src/themes/`):** CSS custom property theme system, Home/Lockscreen with auto-fading ambient wallpaper, Zap Banner with live EPG progress and 4s auto-dismiss, Full EPG overlay, and Profile Switcher.
+
+
+## Milestone 4: Hardware Adapters & Companion APIs
+- `core/src/providers/tvheadend.rs`: `TvheadendProvider` with Basic Auth and graceful fallback to `M3uXmltvProvider`.
+- `core/src/input/`: `mod.rs`, `gilrs_input.rs`, `evdev_input.rs`, `cec_input.rs` (feature-gated `cec`).
+- `core/src/server.rs`:
+  - `GET /api/companion/info` (offline `qrcode` SVG + LAN IP detection)
+  - `POST /api/channels/reorder`, `POST /api/channels/:id/favorite`
+  - `POST /api/profiles`, `PATCH /api/profiles/:id`, `POST /api/profiles/:id/wallpaper` (multipart)
+  - `POST /api/remote/nav`
+  - Static serving for `/companion` (`companion/dist`) and `/wallpapers` (`wallpapers/` or `dev/wallpapers/`).

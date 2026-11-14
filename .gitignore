@@ -29,3 +29,6 @@ dist/
 *.swo
 *~
 .DS_Store
+
+# Companion & wallpaper uploads
+wallpapers/

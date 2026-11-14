@@ -67,3 +67,15 @@ cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cd ui && npm run typecheck && npm run build
 ```
+
+
+## Milestone 4: Living-Room Hardware & QR Smartphone Companion
+
+### Hardware Adapters
+- **Tvheadend (`MELANGE_TVHEADEND_URL`)**: Optional `MELANGE_TVHEADEND_USER` and `MELANGE_TVHEADEND_PASS`. Fetches `/api/channel/grid?limit=500` and `/api/epg/events/grid?limit=2000`, falling back to M3U/XMLTV if unconfigured or unreachable.
+- **2.4GHz USB Remote (`evdev`)**: Automatically scans `/dev/input/event*` for USB HID remote/consumer devices and maps media/navigation keys to `NavEvent`, degrading gracefully on `PermissionDenied`.
+- **HDMI-CEC (`--features cec`)**: Optional Cargo feature (`cargo run -p melange-shell --features cec`) so default laptop builds do not require `libcec-dev`.
+
+### Smartphone Companion (`/companion`)
+- Open **Settings** in `melange-ui` to scan the offline-generated QR code for `http://<LAN-IP>:9000/companion`.
+- Includes **Remote** (D-Pad, Ch+/Ch-, EPG, Play/Pause, 0-9), **Channels** (reorder & favorites), and **Profiles** (create, rename, upload custom wallpaper).
