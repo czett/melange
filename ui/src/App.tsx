@@ -80,6 +80,7 @@ export const App = () => {
 
     const onResize = () => measureFocused();
     window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
 
     // Browser-only keyboard fallback when inspecting http://127.0.0.1:9000 outside melange-shell.
     const onKeyDown = (e: KeyboardEvent) => {
@@ -94,6 +95,7 @@ export const App = () => {
     onCleanup(() => {
       unsubNav();
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
       window.removeEventListener("keydown", onKeyDown);
     });
   });

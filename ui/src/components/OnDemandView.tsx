@@ -250,7 +250,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                   onClick={() => playItem(item)}
                   class="glass-card glass-card-interactive flex flex-col overflow-hidden rounded-[18px] text-left"
                 >
-                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(24,3,3,0.48)]">
+                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(20,2,2,0.34)]">
                     <Show
                       when={item.thumbnail_url}
                       fallback={
@@ -259,27 +259,20 @@ export function OnDemandView(props: OnDemandViewProps) {
                             class="absolute inset-0"
                             style={{
                               background:
-                                "linear-gradient(135deg, #5e0b0a 0%, #831613 52%, #4a0807 100%)"
+                                "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(20,2,2,0.22) 55%, rgba(12,1,1,0.38) 100%)"
                             }}
                           />
                           <div
                             class="absolute inset-0"
                             style={{
                               background:
-                                "radial-gradient(80% 90% at 16% 8%, rgba(255, 82, 59, 0.4) 0%, transparent 66%)"
+                                "radial-gradient(75% 80% at 22% 14%, rgba(255, 255, 255, 0.08) 0%, transparent 65%)"
                             }}
                           />
-                          <div
-                            class="absolute inset-0"
-                            style={{
-                              background:
-                                "linear-gradient(112deg, transparent 34%, rgba(255,255,255,0.16) 46%, rgba(255,255,255,0.02) 55%, transparent 68%)"
-                            }}
-                          />
-                          <span class="relative select-none text-[46px] font-medium leading-none tracking-[-0.05em] text-white/95 drop-shadow-[0_8px_20px_rgba(22,3,3,0.5)]">
+                          <span class="relative select-none text-[42px] font-medium leading-none tracking-[-0.05em] text-white/90">
                             {broadcasterMonogram(item)}
                           </span>
-                          <span class="absolute bottom-3 left-4 max-w-[80%] truncate text-[9px] uppercase tracking-[0.2em] text-white/55">
+                          <span class="absolute bottom-3 left-4 max-w-[80%] truncate text-[9px] uppercase tracking-[0.2em] text-white/50">
                             {item.channel_or_author || props.subtitle}
                           </span>
                         </div>

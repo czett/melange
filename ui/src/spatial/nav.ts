@@ -107,6 +107,19 @@ export function ensureValidFocus(preferredId?: string): void {
   setFocusRect((r) => ({ ...r, visible: false }));
 }
 
+const SELF_FOCUS_SELECTOR =
+  ".pill, .nav-link, .text-link, .glass-card-interactive, .glass-inner, .strip-item, .key";
+
+function usesSelfFocus(el: HTMLElement): boolean {
+  if (el.dataset.focusSelf === "false" || el.dataset.focusRing === "reticle") {
+    return false;
+  }
+  if (el.dataset.focusSelf === "true") {
+    return true;
+  }
+  return el.matches(SELF_FOCUS_SELECTOR);
+}
+
 export function measureFocused(): void {
   const id = focusedId();
   if (!id) {
@@ -116,6 +129,10 @@ export function measureFocused(): void {
   const target = targets.get(id);
   if (!target || !target.el.isConnected) {
     setFocusRect((r) => ({ ...r, visible: false }));
+    return;
+  }
+  if (usesSelfFocus(target.el)) {
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
     return;
   }
   const rect = target.el.getBoundingClientRect();

@@ -132,7 +132,7 @@ export function SettingsView(props: SettingsViewProps) {
                 <img
                   src={wp()}
                   alt="Profile Wallpaper"
-                  class="h-40 w-full rounded-2xl border border-white/[0.13] object-cover"
+                  class="h-40 w-full rounded-2xl border border-white/10 object-cover"
                 />
               )}
             </Show>

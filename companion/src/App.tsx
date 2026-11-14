@@ -239,7 +239,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-medium tracking-[-0.01em] text-[#160303] transition-transform duration-150 active:scale-95"
+                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-medium tracking-[-0.01em] text-[#160303] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#160303]/60 active:scale-95"
                 >
                   OK
                 </button>
@@ -469,7 +469,7 @@ export default function App() {
                       <img
                         src={p.wallpaper_path!}
                         alt="Wallpaper"
-                        class="h-28 w-full rounded-2xl border border-white/[0.13] object-cover"
+                        class="h-28 w-full rounded-2xl border border-white/10 object-cover"
                       />
                     </Show>
 

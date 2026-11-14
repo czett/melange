@@ -2,15 +2,15 @@
  * melange — Optical Fluted Glass design system
  *
  * Rules:
- *  - Zero neon glows. Elevation = dark ambient depth + razor-thin 1px hairlines.
- *  - Surfaces are smoky translucent garnet frosted glass, never bright red fills.
- *  - #E13A26 is reserved for live dots, 2px progress bars and the ambient light field.
- *  - Focus feedback is quiet and tactile: invert to white, or crisp hairline + scale(1.02).
+ *  - Zero neon glows and zero double-border focus rings.
+ *  - Surfaces are smoky translucent garnet frosted glass, never bright opaque red fills.
+ *  - #E13A26 is reserved for live dots, 2px progress bars, and the refracted light field.
+ *  - Focus feedback is single-layer and tactile: clean inversion, subtle fill, or 1px hairline.
  */
 :root {
   /* Light field palette */
   --melange-crimson: #e13a26;
-  --melange-crimson-hot: #f24e38;
+  --melange-crimson-hot: #ff5a42;
   --melange-deep-red: #831613;
   --melange-edge: #3d0706;
   --melange-ink: #160303;
@@ -21,14 +21,15 @@
   --text-muted: rgba(255, 255, 255, 0.45);
 
   /* Smoky garnet frosted glass */
-  --glass-surface: rgba(38, 5, 5, 0.46);
-  --glass-surface-focus: rgba(54, 8, 8, 0.56);
-  --glass-inner: rgba(24, 3, 3, 0.48);
-  --glass-inner-focus: rgba(255, 255, 255, 0.07);
-  --glass-blur: blur(28px) saturate(145%);
-  --hairline: rgba(255, 255, 255, 0.13);
+  --glass-surface: rgba(32, 4, 4, 0.42);
+  --glass-surface-home: rgba(32, 4, 4, 0.36);
+  --glass-surface-focus: rgba(46, 7, 7, 0.56);
+  --glass-inner: rgba(20, 2, 2, 0.36);
+  --glass-inner-focus: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(28px) saturate(140%);
+  --hairline: rgba(255, 255, 255, 0.1);
   --hairline-focus: rgba(255, 255, 255, 0.85);
-  --shadow-ambient: 0 14px 36px rgba(15, 2, 2, 0.42);
+  --shadow-ambient: 0 16px 40px rgba(14, 2, 2, 0.42);
 
   /* Motion */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -42,107 +43,9 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #5e0b0a;
+  background: #240404;
   contain: strict;
   isolation: isolate;
-}
-
-/* Layer A — luminous diagonal crimson field. */
-.fluted-backdrop__field {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 130% at 8% 0%, rgba(131, 22, 19, 0.9) 0%, transparent 58%),
-    linear-gradient(135deg, #5e0b0a 0%, #6e0d0c 36%, #831613 68%, #5e0b0a 100%);
-}
-
-/*
- * Layer A — two soft volumetric light pools: centre-left behind the hero copy and
- * upper-centre behind the nav bar, with a broad diagonal bloom tying them together.
- */
-.fluted-backdrop__bloom {
-  position: absolute;
-  inset: -16%;
-  background:
-    radial-gradient(
-      44% 52% at 27% 56%,
-      rgba(255, 82, 59, 0.95) 0%,
-      rgba(225, 58, 38, 0.6) 28%,
-      rgba(225, 58, 38, 0.16) 54%,
-      transparent 74%
-    ),
-    radial-gradient(
-      34% 28% at 56% 3%,
-      rgba(255, 82, 59, 0.72) 0%,
-      rgba(225, 58, 38, 0.32) 42%,
-      transparent 74%
-    ),
-    linear-gradient(
-      116deg,
-      transparent 22%,
-      rgba(225, 58, 38, 0.16) 42%,
-      rgba(255, 82, 59, 0.24) 52%,
-      transparent 74%
-    );
-  filter: blur(52px);
-  mix-blend-mode: screen;
-  animation: flutedBloomDrift 26s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-/*
- * Layer B — wide architectural cylindrical reeds. One 48px pitch:
- * specular left edge → soft highlight → neutral core → shadow trough → rim catchlight.
- */
-.fluted-backdrop__reeds {
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.16) 0px,
-    rgba(255, 255, 255, 0.04) 10px,
-    transparent 24px,
-    rgba(28, 2, 2, 0.34) 42px,
-    rgba(255, 255, 255, 0.11) 46px,
-    rgba(255, 255, 255, 0.16) 48px
-  );
-}
-
-/* Second, offset reed layer at 74px pitch: irregular optical rhythm without tiling. */
-.fluted-backdrop__reeds--offset {
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.15) 0px,
-    rgba(255, 255, 255, 0.05) 15px,
-    transparent 34px,
-    rgba(28, 2, 2, 0.28) 60px,
-    rgba(255, 255, 255, 0.1) 69px,
-    rgba(255, 255, 255, 0.15) 74px
-  );
-  background-position: 17px 0;
-  mix-blend-mode: soft-light;
-  opacity: 0.8;
-}
-
-/* Editorial vignette — keeps type crisp at the edges. */
-.fluted-backdrop__vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(120% 90% at 42% 52%, transparent 52%, rgba(22, 3, 3, 0.55) 100%),
-    linear-gradient(180deg, rgba(22, 3, 3, 0.35) 0%, transparent 18%, transparent 74%, rgba(22, 3, 3, 0.5) 100%);
-}
-
-@keyframes flutedBloomDrift {
-  0%,
-  100% {
-    transform: translate3d(-1.5%, -1%, 0) scale(1);
-    opacity: 0.85;
-  }
-  50% {
-    transform: translate3d(1.5%, 1%, 0) scale(1.04);
-    opacity: 1;
-  }
 }
 
 /* LiveTv HUD over raw libmpv video: top/bottom vignette only. */
@@ -156,9 +59,9 @@
   );
 }
 
-/* Modal scrim for overlays (EPG, keyboard). */
+/* Modal scrim for overlays (EPG, keyboard, profile switcher). */
 .modal-scrim {
-  background: rgba(16, 2, 2, 0.62);
+  background: rgba(16, 2, 2, 0.56);
   backdrop-filter: blur(24px) saturate(130%);
   -webkit-backdrop-filter: blur(24px) saturate(130%);
 }
@@ -173,6 +76,10 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
+}
+
+.glass-card-home {
+  background: var(--glass-surface-home);
 }
 
 /* Interactive card (media tiles, etc.) */
@@ -211,7 +118,7 @@
 .glass-inner[data-focused="true"] {
   background: var(--glass-inner-focus);
   border-color: var(--hairline-focus);
-  transform: scale(1.02);
+  transform: scale(1.015);
 }
 
 .glass-inner[data-pressed="true"],
@@ -219,7 +126,7 @@
   transform: scale(0.985);
 }
 
-/* ───────────────────────── Pills ───────────────────────── */
+/* ───────────────────────── Pills & Links ───────────────────────── */
 
 .pill {
   display: inline-flex;
@@ -235,29 +142,33 @@
     transform var(--dur-geometry) var(--ease-spring),
     background-color 160ms ease,
     border-color 160ms ease,
-    color 160ms ease;
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-/* Primary: solid white, ink text */
+/* Primary: crisp white pill, ink text, zero resting border */
 .pill-primary {
   padding: 0 1.25rem;
   background: #ffffff;
   color: var(--melange-ink);
-  border: 1px solid #ffffff;
+  border: none;
   font-weight: 500;
   letter-spacing: -0.01em;
 }
 
 .pill-primary[data-focused="true"] {
-  transform: scale(1.02);
+  transform: scale(1.03);
+  box-shadow:
+    0 0 0 2.5px rgba(22, 3, 3, 0.45),
+    0 0 0 4px rgba(255, 255, 255, 0.92);
 }
 
-/* Secondary: translucent hairline */
+/* Secondary: translucent hairline pill, inverts cleanly to white on focus */
 .pill-secondary {
   padding: 0 1rem;
   background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   font-weight: 400;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -269,7 +180,6 @@
   padding: 0;
 }
 
-/* Quiet focus: invert cleanly to white */
 .pill-secondary[data-focused="true"] {
   background: #ffffff;
   color: var(--melange-ink);
@@ -282,6 +192,40 @@
   transform: scale(0.97);
 }
 
+/* Borderless editorial text link CTA (Program Guide →) */
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    transform var(--dur-geometry) var(--ease-spring),
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.text-link[data-focused="true"] {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: scale(1.02);
+}
+
+.text-link[data-pressed="true"],
+.text-link:active {
+  transform: scale(0.97);
+}
+
 /* Static meta chip (non-interactive) */
 .chip {
   display: inline-flex;
@@ -291,7 +235,7 @@
   padding: 0 0.625rem;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.7);
   font-size: 10px;
   font-weight: 500;
@@ -312,12 +256,12 @@
   align-items: center;
   gap: 0.25rem;
   height: 2.5rem;
-  padding: 0 1.25rem;
+  padding: 0 0.875rem;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(40px) saturate(140%);
-  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  backdrop-filter: blur(36px) saturate(140%);
+  -webkit-backdrop-filter: blur(36px) saturate(140%);
 }
 
 .nav-link {
@@ -325,17 +269,26 @@
   align-items: center;
   gap: 0.4rem;
   height: 1.75rem;
-  padding: 0 0.625rem;
+  padding: 0 0.7rem;
+  border: none;
   border-radius: 9999px;
+  background: transparent;
   font-size: 0.75rem;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.6);
-  transition: color 160ms ease;
+  color: rgba(255, 255, 255, 0.65);
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
 }
 
-.nav-link[data-active="true"],
+.nav-link[data-active="true"] {
+  color: #ffffff;
+  font-weight: 500;
+}
+
 .nav-link[data-focused="true"] {
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .nav-dot {
@@ -356,7 +309,7 @@
 
 .strip-item[data-focused="true"] {
   background: var(--glass-surface);
-  border-color: var(--hairline);
+  border-color: var(--hairline-focus);
   transform: translate3d(0, -2px, 0);
 }
 
@@ -436,7 +389,7 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* ───────────────────────── Spatial focus reticle ───────────────────────── */
+/* ───────────────────────── Fallback spatial focus reticle ───────────────────────── */
 
 .focus-ring {
   position: fixed;
@@ -455,7 +408,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fluted-backdrop__bloom,
   .live-dot {
     animation: none;
   }

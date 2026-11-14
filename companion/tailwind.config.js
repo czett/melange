@@ -6,14 +6,14 @@ export default {
       colors: {
         melange: {
           crimson: '#E13A26',
-          hot: '#F24E38',
+          hot: '#FF5A42',
           deep: '#831613',
           edge: '#3D0706',
           ink: '#160303',
         },
         garnet: {
-          glass: 'rgba(38, 5, 5, 0.46)',
-          inner: 'rgba(24, 3, 3, 0.48)',
+          glass: 'rgba(32, 4, 4, 0.42)',
+          inner: 'rgba(20, 2, 2, 0.36)',
         },
       },
       fontFamily: {

@@ -291,85 +291,38 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Main stage: editorial hero (left) + smoky schedule card (right) */}
-      <main class="my-auto grid grid-cols-12 items-end gap-12 py-6">
+      {/* Main stage: editorial hero (left) + smoky schedule card & bottom-right CTAs (right) */}
+      <main class="my-auto grid grid-cols-12 items-end gap-12 py-4">
         <section class="col-span-7 flex flex-col justify-end">
-          <div class="mb-5 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
+          <div class="mb-4 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
             <span class="tabular-nums text-white/85">{formattedTime()}</span>
             <span class="text-white/25">/</span>
             <span>{formattedDate()}</span>
-            <Show when={featuredChannel()}>
-              {(ch) => (
+            <Show when={heroContext()}>
+              {(ctx) => (
                 <>
                   <span class="text-white/25">/</span>
                   <span class="inline-flex items-center gap-1.5 text-white/85">
                     <span class="live-dot" />
-                    {ch().name}
+                    {ctx()}
                   </span>
                 </>
               )}
             </Show>
           </div>
 
-          <h1 class="max-w-[16ch] text-[56px] font-medium leading-[1.03] tracking-[-0.04em] text-white">
-            <span class="line-clamp-2">{heroTitle()}</span>
-            <Show when={heroContext()}>
-              {(ctx) => (
-                <span class="mt-1 block text-[0.62em] font-normal tracking-[-0.02em] text-white/55">
-                  {ctx()}
-                </span>
-              )}
-            </Show>
+          <h1 class="line-clamp-2 max-w-[14ch] text-[56px] font-medium leading-[1.02] tracking-[-0.04em] text-white xl:text-[60px]">
+            {heroTitle()}
           </h1>
 
-          <p class="mt-5 line-clamp-3 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+          <p class="mt-4 line-clamp-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
             {heroDescription()}
           </p>
-
-          <div class="mt-8 flex items-center gap-2.5">
-            <button
-              ref={(el) => onCleanup(registerFocusable("home-cta-watch", el, handleWatchLive))}
-              type="button"
-              data-focus-id="home-cta-watch"
-              data-focus-radius="9999px"
-              onClick={handleWatchLive}
-              class="pill pill-primary"
-            >
-              <span>Watch Live</span>
-              <span aria-hidden="true">→</span>
-            </button>
-
-            <button
-              ref={(el) =>
-                onCleanup(
-                  registerFocusable("home-cta-epg", el, () =>
-                    sendCommand({ type: "SetOverlay", overlay: "FullEpg" })
-                  )
-                )
-              }
-              type="button"
-              data-focus-id="home-cta-epg"
-              data-focus-radius="9999px"
-              onClick={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
-              class="pill pill-secondary"
-            >
-              <span>Program Guide</span>
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
         </section>
 
-        <section class="col-span-5 flex flex-col justify-center">
-          <div
-            class="glass-card rounded-[22px] p-5"
-            style={{
-              background: "rgba(131, 22, 19, 0.28)",
-              "backdrop-filter": "blur(32px) saturate(150%)",
-              "-webkit-backdrop-filter": "blur(32px) saturate(150%)",
-              "border-color": "rgba(255, 255, 255, 0.2)"
-            }}
-          >
-            <div class="mb-4 flex items-center justify-between px-1">
+        <section class="col-span-5 flex flex-col justify-end gap-5">
+          <div class="glass-card glass-card-home rounded-[22px] p-4">
+            <div class="mb-3.5 flex items-center justify-between px-1">
               <span class="eyebrow">Live &amp; Up Next</span>
               <span class="text-[11px] tabular-nums text-white/45">
                 {melangeState().channels.length} channels
@@ -409,7 +362,7 @@ export const HomeView = () => {
                       data-focus-id={`home-sched-${ch.id}`}
                       data-focus-radius="16px"
                       onClick={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
-                      class="glass-inner flex w-full flex-col gap-3 rounded-2xl px-4 py-3.5 text-left"
+                      class="glass-inner flex w-full flex-col gap-2.5 rounded-2xl px-4 py-3 text-left"
                     >
                       <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0 truncate text-[13px] text-white">
@@ -445,12 +398,44 @@ export const HomeView = () => {
               </For>
             </div>
           </div>
+
+          <div class="flex items-center gap-3">
+            <button
+              ref={(el) => onCleanup(registerFocusable("home-cta-watch", el, handleWatchLive))}
+              type="button"
+              data-focus-id="home-cta-watch"
+              data-focus-radius="9999px"
+              onClick={handleWatchLive}
+              class="pill pill-primary"
+            >
+              <span>Watch Live</span>
+              <span aria-hidden="true">→</span>
+            </button>
+
+            <button
+              ref={(el) =>
+                onCleanup(
+                  registerFocusable("home-cta-epg", el, () =>
+                    sendCommand({ type: "SetOverlay", overlay: "FullEpg" })
+                  )
+                )
+              }
+              type="button"
+              data-focus-id="home-cta-epg"
+              data-focus-radius="9999px"
+              onClick={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
+              class="text-link"
+            >
+              <span>Program Guide</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
         </section>
       </main>
 
       {/* Bottom 5-column hairline strip (continue watching + live channels) */}
-      <footer class="border-t border-white/[0.13] pt-4">
-        <div class="grid grid-cols-5 gap-3">
+      <footer class="border-t border-white/10 pt-4">
+        <div class="grid grid-cols-5 gap-4">
           <For each={bottomStripItems()}>
             {(item) => {
               const onActivate = () => {
@@ -490,7 +475,9 @@ export const HomeView = () => {
                   <div class="mt-3 w-full truncate text-xs font-medium tracking-[-0.01em] text-white">
                     {item.title}
                   </div>
-                  <div class="mt-0.5 w-full truncate text-[11px] text-white/50">{item.meta}</div>
+                  <div class="mt-0.5 line-clamp-2 w-full text-[11px] leading-snug text-white/50">
+                    {item.meta}
+                  </div>
                 </button>
               );
             }}

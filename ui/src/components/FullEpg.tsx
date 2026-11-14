@@ -25,7 +25,7 @@ export const FullEpg = () => {
   return (
     <div class="modal-scrim fixed inset-0 z-40 flex items-center justify-center p-12">
       <div class="glass-card flex h-full max-h-[84vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px]">
-        <header class="flex items-center justify-between border-b border-white/[0.13] px-8 py-5">
+        <header class="flex items-center justify-between border-b border-white/10 px-8 py-5">
           <div class="flex items-baseline gap-4">
             <h1 class="text-[28px] font-normal leading-none tracking-[-0.035em] text-white">
               Program Guide
@@ -83,7 +83,7 @@ export const FullEpg = () => {
                       class={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums ${
                         isPlaying()
                           ? "bg-white text-[#160303]"
-                          : "border border-white/[0.13] text-white/70"
+                          : "border border-white/10 text-white/70"
                       }`}
                     >
                       {ch.number}

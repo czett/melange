@@ -1,7 +1,6 @@
 import { For, Show, onCleanup, onMount } from "solid-js";
 import { melangeState, sendCommand } from "../bridge/ws";
 import { ensureValidFocus, registerFocusable, setFocus } from "../spatial/nav";
-import { FlutedBackdrop } from "./FlutedBackdrop";
 
 export const ProfileSwitcher = () => {
   onMount(() => {
@@ -14,8 +13,7 @@ export const ProfileSwitcher = () => {
   });
 
   return (
-    <div class="fixed inset-0 z-50 flex items-center justify-center px-8">
-      <FlutedBackdrop class="-z-10" still />
+    <div class="modal-scrim fixed inset-0 z-50 flex items-center justify-center px-8">
       <div class="glass-card relative w-full max-w-md rounded-[24px] p-7">
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -71,7 +69,7 @@ export const ProfileSwitcher = () => {
                       class={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-medium ${
                         isActive()
                           ? "bg-white text-[#160303]"
-                          : "border border-white/[0.14] bg-white/[0.06] text-white/85"
+                          : "border border-white/10 bg-white/[0.06] text-white/85"
                       }`}
                     >
                       {profile.name.slice(0, 1).toUpperCase()}
