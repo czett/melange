@@ -57,43 +57,48 @@ export const ZapBanner = () => {
 
   return (
     <div
-      class="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-10 transition-all duration-300 ease-out"
+      class="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-10 transition-all duration-300 ease-spring"
       style={{
         opacity: isVisible() ? "1" : "0",
         transform: isVisible() ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)"
       }}
     >
-      <div class="glass-panel-heavy w-full max-w-4xl rounded-3xl px-7 py-5">
+      <div class="fluted-surface w-full max-w-4xl rounded-3xl px-8 py-5">
         <div class="flex items-center justify-between gap-6">
           <div class="flex items-center gap-5">
-            <div class="flex h-14 min-w-[3.75rem] items-center justify-center rounded-2xl bg-white/12 px-3 text-2xl font-bold tracking-tight tabular-nums text-white">
+            <div class="flex h-14 min-w-[3.75rem] items-center justify-center rounded-2xl border border-white/20 bg-[#120303]/75 px-3.5 text-3xl font-light tracking-editorial tabular-nums text-white shadow-inner">
               {melangeState().digit_buffer || melangeState().playback.channel_number || "—"}
             </div>
             <div>
               <div class="flex items-center gap-3">
-                <h2 class="text-xl font-semibold tracking-tight text-white">
+                <h2 class="text-2xl font-medium tracking-editorial text-white">
                   {activeChannel()?.name ?? melangeState().playback.title ?? "Live TV"}
                 </h2>
                 <Show when={melangeState().playback.is_zapping}>
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-sky-400/20 px-2.5 py-0.5 text-xs font-medium text-sky-300">
-                    <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-[#E13A26]/55 bg-[#E13A26]/25 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
+                    <span class="live-beacon h-1.5 w-1.5 rounded-full" />
                     Tuning
                   </span>
                 </Show>
-                <Show when={!melangeState().playback.is_zapping && melangeState().playback.state === "Playing"}>
-                  <span class="inline-flex items-center gap-1.5 rounded-full bg-red-500/20 px-2.5 py-0.5 text-xs font-medium text-red-300">
-                    <span class="h-1.5 w-1.5 rounded-full bg-red-500" />
+                <Show
+                  when={
+                    !melangeState().playback.is_zapping &&
+                    melangeState().playback.state === "Playing"
+                  }
+                >
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-[#E13A26]/55 bg-[#E13A26]/25 px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
+                    <span class="live-beacon h-1.5 w-1.5 rounded-full" />
                     LIVE
                   </span>
                 </Show>
               </div>
-              <p class="mt-0.5 text-sm text-white/60">
+              <p class="mt-0.5 text-xs uppercase tracking-[0.18em] text-white/60">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
           </div>
 
-          <div class="text-right text-xs font-medium text-white/55 tabular-nums">
+          <div class="text-right text-xs font-medium tabular-nums text-white/60">
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
@@ -112,7 +117,7 @@ export const ZapBanner = () => {
             <Show when={nowNext()?.next}>
               {(next) => (
                 <p class="shrink-0 text-sm text-white/60">
-                  Next: <span class="text-white/85">{next().title}</span>{" "}
+                  Next: <span class="text-white/90">{next().title}</span>{" "}
                   <span class="tabular-nums text-white/45">
                     ({formatXmltvTime(next().start_time)})
                   </span>
@@ -121,9 +126,9 @@ export const ZapBanner = () => {
             </Show>
           </div>
 
-          <div class="h-1.5 w-full overflow-hidden rounded-full bg-white/12">
+          <div class="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
             <div
-              class="h-full rounded-full bg-gradient-to-r from-sky-400 to-cyan-300 transition-all duration-500"
+              class="crimson-progress-fill h-full rounded-full transition-all duration-500"
               style={{ width: `${progress()}%` }}
             />
           </div>
