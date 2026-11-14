@@ -1,0 +1,34 @@
+[Unit]
+Description=Melange 10-Foot TV Kiosk Appliance (cage Wayland compositor)
+After=network-online.target systemd-user-sessions.service pipewire.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=melange
+Group=melange
+
+# PAM & VT/seatd session setup for headless Wayland kiosk on tty1
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+
+# Hardware-acceleration & Wayland/PipeWire runtime environment
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=WLR_NO_HARDWARE_CURSORS=1
+Environment=MOZ_ENABLE_WAYLAND=1
+Environment=QT_QPA_PLATFORM=wayland
+
+# Launch single-app Wayland kiosk compositor wrapping melange-shell
+ExecStart=/usr/bin/cage -s -- /usr/local/bin/melange-shell --kiosk
+
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

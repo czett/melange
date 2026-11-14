@@ -1,0 +1,21 @@
+# WireGuard Remote Maintenance Tunnel Template (/etc/wireguard/wg0.conf)
+# Enables secure remote SSH access to the Melange kiosk appliance.
+#
+# Generate keys on the appliance:
+#   wg genkey | tee /etc/wireguard/private.key | wg pubkey > /etc/wireguard/public.key
+#   chmod 600 /etc/wireguard/private.key
+#
+# Enable on boot:
+#   systemctl enable --now wg-quick@wg0
+
+[Interface]
+PrivateKey = <APPLIANCE_PRIVATE_KEY>
+Address = 10.66.66.2/24
+ListenPort = 51820
+
+[Peer]
+# Admin / Maintenance Workstation
+PublicKey = <ADMIN_PUBLIC_KEY>
+Endpoint = <ADMIN_ENDPOINT_HOST>:51820
+AllowedIPs = 10.66.66.1/32
+PersistentKeepalive = 25

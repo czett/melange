@@ -1,0 +1,23 @@
+# Melange Kiosk Appliance udev rules
+# Grants the `input` and `video` groups non-root read/write access to:
+# - Sony DualShock 4 controllers (USB v1/v2 & Bluetooth)
+# - /dev/hidraw* gamepads
+# - /dev/input/event* IR/2.4GHz remotes and keyboards
+# - /dev/cec* HDMI-CEC adapters
+
+# Sony DualShock 4 (USB v1: 054c:05c4, USB v2: 054c:09cc)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="05c4", MODE="0660", GROUP="input", TAG+="uaccess"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="09cc", MODE="0660", GROUP="input", TAG+="uaccess"
+
+# Sony DualShock 4 (Bluetooth)
+SUBSYSTEM=="hidraw", KERNELS=="*054C:05C4*", MODE="0660", GROUP="input", TAG+="uaccess"
+SUBSYSTEM=="hidraw", KERNELS=="*054C:09CC*", MODE="0660", GROUP="input", TAG+="uaccess"
+
+# Generic hidraw gamepads & 2.4GHz dongles
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", MODE="0660", GROUP="input", TAG+="uaccess"
+
+# Input event devices (2.4GHz air-mouse remotes, IR receivers, keyboards)
+KERNEL=="event*", SUBSYSTEM=="input", MODE="0660", GROUP="input", TAG+="uaccess"
+
+# HDMI-CEC adapters (/dev/cec0, /dev/cec1, ...)
+KERNEL=="cec[0-9]*", SUBSYSTEM=="cec", MODE="0660", GROUP="video", TAG+="uaccess"

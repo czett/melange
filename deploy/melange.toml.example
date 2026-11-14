@@ -1,0 +1,19 @@
+# Melange Production Kiosk Configuration (/etc/melange/melange.toml)
+
+# HTTP & WebSocket server port (serves embedded UI, /companion, and /api/*)
+port = 3000
+
+# SQLite database path for channels, EPG, profiles, and watch history
+db_path = "/var/lib/melange/melange.db"
+
+# Wallpaper upload storage directory
+wallpapers_dir = "/var/lib/melange/wallpapers"
+
+# Local media library directory for On-Demand Local Media provider
+local_media_dir = "/var/lib/melange/media"
+
+# Optional Tvheadend server URL for Live TV & EPG
+# tvheadend_url = "http://127.0.0.1:9981"
+
+# Optional Piped API URL for YouTube On-Demand provider
+# piped_url = "https://pipedapi.kavin.rocks"
