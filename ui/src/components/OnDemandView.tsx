@@ -22,6 +22,19 @@ function formatDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+/**
+ * Typographic monogram for items without artwork (e.g. MediathekViewWeb). Uses the
+ * broadcaster's initials, or a compact three-letter mark for single-token names.
+ */
+function broadcasterMonogram(item: MediaItem): string {
+  const source = (item.channel_or_author || item.title || "M").trim();
+  const words = source.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+  return (words[0] ?? "M").slice(0, 3).toUpperCase();
+}
+
 export function OnDemandView(props: OnDemandViewProps) {
   const [items, setItems] = createSignal<MediaItem[]>([]);
   const [loading, setLoading] = createSignal(false);
@@ -241,8 +254,34 @@ export function OnDemandView(props: OnDemandViewProps) {
                     <Show
                       when={item.thumbnail_url}
                       fallback={
-                        <div class="px-4 text-center text-[11px] uppercase tracking-[0.16em] text-white/40">
-                          {item.channel_or_author}
+                        <div class="relative flex h-full w-full items-center justify-center overflow-hidden">
+                          <div
+                            class="absolute inset-0"
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #5e0b0a 0%, #831613 52%, #4a0807 100%)"
+                            }}
+                          />
+                          <div
+                            class="absolute inset-0"
+                            style={{
+                              background:
+                                "radial-gradient(80% 90% at 16% 8%, rgba(255, 82, 59, 0.4) 0%, transparent 66%)"
+                            }}
+                          />
+                          <div
+                            class="absolute inset-0"
+                            style={{
+                              background:
+                                "linear-gradient(112deg, transparent 34%, rgba(255,255,255,0.16) 46%, rgba(255,255,255,0.02) 55%, transparent 68%)"
+                            }}
+                          />
+                          <span class="relative select-none text-[46px] font-medium leading-none tracking-[-0.05em] text-white/95 drop-shadow-[0_8px_20px_rgba(22,3,3,0.5)]">
+                            {broadcasterMonogram(item)}
+                          </span>
+                          <span class="absolute bottom-3 left-4 max-w-[80%] truncate text-[9px] uppercase tracking-[0.2em] text-white/55">
+                            {item.channel_or_author || props.subtitle}
+                          </span>
                         </div>
                       }
                     >

@@ -72,13 +72,15 @@ export function SettingsView(props: SettingsViewProps) {
           <Show
             when={info()}
             fallback={
-              <div class="glass-inner h-52 w-52 animate-pulse rounded-2xl" />
+              <div class="glass-inner aspect-square w-full max-w-[200px] animate-pulse rounded-2xl" />
             }
           >
             {(data) => (
               <>
-                <div class="rounded-2xl bg-white p-3.5 [&_svg]:block [&_svg]:h-44 [&_svg]:w-44">
-                  <div innerHTML={data().qr_svg} />
+                <div class="mx-auto w-full max-w-[200px]">
+                  <div class="rounded-2xl bg-white p-3.5 shadow-lg [&_svg]:mx-auto [&_svg]:block [&_svg]:h-40 [&_svg]:w-40">
+                    <div innerHTML={data().qr_svg} />
+                  </div>
                 </div>
                 <div class="chip h-8 px-4 font-mono text-xs tabular-nums text-white/80">
                   {data().url}

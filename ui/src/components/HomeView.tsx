@@ -119,6 +119,14 @@ export const HomeView = () => {
     return "Your Living-Room Television";
   };
 
+  const heroContext = () => {
+    const ch = featuredChannel();
+    if (!ch) return null;
+    const nowProg = featuredNowNext()?.now;
+    if (!nowProg) return `${ch.name} · Live`;
+    return `${ch.name} · ${formatXmltvTime(nowProg.start_time)}–${formatXmltvTime(nowProg.stop_time)}`;
+  };
+
   const heroDescription = () => {
     const desc = featuredNowNext()?.now?.description;
     if (desc && desc.trim().length > 0) return desc;
@@ -303,8 +311,15 @@ export const HomeView = () => {
             </Show>
           </div>
 
-          <h1 class="line-clamp-2 max-w-[16ch] text-[52px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
-            {heroTitle()}
+          <h1 class="max-w-[16ch] text-[56px] font-medium leading-[1.03] tracking-[-0.04em] text-white">
+            <span class="line-clamp-2">{heroTitle()}</span>
+            <Show when={heroContext()}>
+              {(ctx) => (
+                <span class="mt-1 block text-[0.62em] font-normal tracking-[-0.02em] text-white/55">
+                  {ctx()}
+                </span>
+              )}
+            </Show>
           </h1>
 
           <p class="mt-5 line-clamp-3 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
@@ -345,7 +360,15 @@ export const HomeView = () => {
         </section>
 
         <section class="col-span-5 flex flex-col justify-center">
-          <div class="glass-card rounded-[22px] p-5">
+          <div
+            class="glass-card rounded-[22px] p-5"
+            style={{
+              background: "rgba(131, 22, 19, 0.28)",
+              "backdrop-filter": "blur(32px) saturate(150%)",
+              "-webkit-backdrop-filter": "blur(32px) saturate(150%)",
+              "border-color": "rgba(255, 255, 255, 0.2)"
+            }}
+          >
             <div class="mb-4 flex items-center justify-between px-1">
               <span class="eyebrow">Live &amp; Up Next</span>
               <span class="text-[11px] tabular-nums text-white/45">

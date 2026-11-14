@@ -42,28 +42,86 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: var(--melange-edge);
+  background: #5e0b0a;
   contain: strict;
+  isolation: isolate;
 }
 
-.fluted-backdrop > svg {
+/* Layer A — luminous diagonal crimson field. */
+.fluted-backdrop__field {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
+  background:
+    radial-gradient(120% 130% at 8% 0%, rgba(131, 22, 19, 0.9) 0%, transparent 58%),
+    linear-gradient(135deg, #5e0b0a 0%, #6e0d0c 36%, #831613 68%, #5e0b0a 100%);
 }
 
-/* Slow, compositor-only drift of a soft secondary bloom (transform/opacity only). */
+/*
+ * Layer A — two soft volumetric light pools: centre-left behind the hero copy and
+ * upper-centre behind the nav bar, with a broad diagonal bloom tying them together.
+ */
 .fluted-backdrop__bloom {
   position: absolute;
-  inset: -12%;
+  inset: -16%;
   background:
-    radial-gradient(34% 40% at 30% 54%, rgba(242, 78, 56, 0.22) 0%, transparent 70%),
-    radial-gradient(30% 34% at 80% 82%, rgba(225, 58, 38, 0.18) 0%, transparent 72%);
+    radial-gradient(
+      44% 52% at 27% 56%,
+      rgba(255, 82, 59, 0.95) 0%,
+      rgba(225, 58, 38, 0.6) 28%,
+      rgba(225, 58, 38, 0.16) 54%,
+      transparent 74%
+    ),
+    radial-gradient(
+      34% 28% at 56% 3%,
+      rgba(255, 82, 59, 0.72) 0%,
+      rgba(225, 58, 38, 0.32) 42%,
+      transparent 74%
+    ),
+    linear-gradient(
+      116deg,
+      transparent 22%,
+      rgba(225, 58, 38, 0.16) 42%,
+      rgba(255, 82, 59, 0.24) 52%,
+      transparent 74%
+    );
+  filter: blur(52px);
   mix-blend-mode: screen;
   animation: flutedBloomDrift 26s ease-in-out infinite;
   will-change: transform, opacity;
+}
+
+/*
+ * Layer B — wide architectural cylindrical reeds. One 48px pitch:
+ * specular left edge → soft highlight → neutral core → shadow trough → rim catchlight.
+ */
+.fluted-backdrop__reeds {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16) 0px,
+    rgba(255, 255, 255, 0.04) 10px,
+    transparent 24px,
+    rgba(28, 2, 2, 0.34) 42px,
+    rgba(255, 255, 255, 0.11) 46px,
+    rgba(255, 255, 255, 0.16) 48px
+  );
+}
+
+/* Second, offset reed layer at 74px pitch: irregular optical rhythm without tiling. */
+.fluted-backdrop__reeds--offset {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.15) 0px,
+    rgba(255, 255, 255, 0.05) 15px,
+    transparent 34px,
+    rgba(28, 2, 2, 0.28) 60px,
+    rgba(255, 255, 255, 0.1) 69px,
+    rgba(255, 255, 255, 0.15) 74px
+  );
+  background-position: 17px 0;
+  mix-blend-mode: soft-light;
+  opacity: 0.8;
 }
 
 /* Editorial vignette — keeps type crisp at the edges. */
@@ -85,15 +143,6 @@
     transform: translate3d(1.5%, 1%, 0) scale(1.04);
     opacity: 1;
   }
-}
-
-/* Home over live video: quiet dark smoked glass + vignette instead of the light field. */
-.video-veil {
-  background:
-    radial-gradient(120% 95% at 40% 50%, rgba(22, 3, 3, 0.35) 0%, rgba(14, 2, 2, 0.78) 100%),
-    rgba(22, 3, 3, 0.38);
-  backdrop-filter: blur(30px) saturate(130%);
-  -webkit-backdrop-filter: blur(30px) saturate(130%);
 }
 
 /* LiveTv HUD over raw libmpv video: top/bottom vignette only. */
