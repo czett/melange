@@ -59,8 +59,8 @@
 
 ### `melange-ui` (`ui/`)
 - **Bridge (`src/bridge/`):** Auto-reconnecting WebSocket store and TypeScript protocol types.
-- **Spatial Nav (`src/spatial/`):** Geometry-based directional traversal with 60fps `translate3d` focus ring and `Back` history stack.
-- **Glassmorphism Views (`src/components/`, `src/themes/`):** CSS custom property theme system, Home/Lockscreen with auto-fading ambient wallpaper, Zap Banner with live EPG progress and 4s auto-dismiss, Full EPG overlay, and Profile Switcher.
+- **Spatial Nav (`src/spatial/`):** Geometry-based directional traversal with 60fps `translate3d` adaptive `FocusRing`, reactive `data-focused` / `data-pressed` haptic states, and `Back` history stack.
+- **Crimson Fluted-Glass Views (`src/components/`, `src/themes/`):** Strict `#E13A26` / `#831613` / `#120303` / `#1D0505` / `#FFFFFF` palette and reeded/fluted-glass material system (`.crimson-ambient-bg`, `.fluted-surface`, `.fluted-card`, `.fluted-pill`, `.fluted-key`, `.pill-cta-white`) across Home (with auto-fading ambient backdrop for `libmpv` passthrough), Zap Banner, Full EPG, Profile Switcher, On-Demand browsers, On-Screen Keyboard, Player OSD, and Settings, matched in `companion/`.
 
 
 ## Milestone 4: Hardware Adapters & Companion APIs

@@ -8,7 +8,8 @@
 melange/
 ├── core/                 # melange-core: config, sqlite, m3u/xmltv, input router, rodio audio, player controller, axum http/ws server
 ├── shell/                # melange-shell: gtk4 overlay window (libmpv glarea + transparent webkit6 webview)
-├── ui/                   # melange-ui: stateless solidjs + typescript + tailwind glassmorphism frontend
+├── ui/                   # melange-ui: stateless solidjs + typescript + tailwind crimson fluted-glass frontend
+├── companion/            # melange-companion: mobile remote/channel/profile pwa in crimson fluted-glass
 ├── scripts/
 │   └── seed_dev.sh       # zero-hardware dev fixture generator
 ├── assets/
