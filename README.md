@@ -79,3 +79,28 @@ cd ui && npm run typecheck && npm run build
 ### Smartphone Companion (`/companion`)
 - Open **Settings** in `melange-ui` to scan the offline-generated QR code for `http://<LAN-IP>:9000/companion`.
 - Includes **Remote** (D-Pad, Ch+/Ch-, EPG, Play/Pause, 0-9), **Channels** (reorder & favorites), and **Profiles** (create, rename, upload custom wallpaper).
+
+
+## Milestone 5: Kiosk Appliance Packaging & Deployment
+
+### Single-Binary Release Bundle
+`melange-shell` embeds `ui/dist`, `companion/dist`, and `assets/sounds` directly via `rust-embed` (`core/src/assets.rs`). In `--dev` mode, live disk files are preferred when present for rapid frontend iteration; in `--kiosk` / `--desktop` mode, the binary runs standalone anywhere.
+
+Build the release tarball (`dist/melange-kiosk-linux-x86_64.tar.gz`):
+
+```bash
+just package-release
+```
+
+### Appliance Provisioning (`cage` + `systemd` + PipeWire + WireGuard)
+1. Extract `melange-kiosk-linux-x86_64.tar.gz` on a minimal Debian, Ubuntu, or Arch Linux host with `cage`, `pipewire`, `pipewire-pulse`, and `wireplumber` installed.
+2. Run the idempotent provisioning script as root:
+   ```bash
+   sudo ./deploy/setup-appliance.sh
+   ```
+   This creates the `melange` system user (`video`, `render`, `input`, `audio`), installs `deploy/99-melange-input.rules` for DualShock 4 / 2.4GHz remotes / `/dev/cec*`, enables `loginctl enable-linger melange` for PipeWire, installs `/usr/local/bin/melange-shell` and `/etc/melange/melange.toml`, and enables `melange-kiosk.service`.
+3. (Optional) Configure `deploy/wg0.conf.template` at `/etc/wireguard/wg0.conf` for remote SSH maintenance.
+4. Start the kiosk:
+   ```bash
+   sudo systemctl start melange-kiosk.service
+   ```

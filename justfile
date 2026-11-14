@@ -23,3 +23,16 @@ test:
 # Run clippy across all workspace targets
 check:
     cargo clippy --workspace --all-targets -- -D warnings
+
+# Build frontends, compile release binary with embedded assets, and package kiosk tarball
+package-release:
+    cd ui && npm ci && npm run build
+    cd companion && npm ci && npm run build
+    cargo build --release --bin melange-shell
+    rm -rf dist/melange-kiosk-linux-x86_64
+    mkdir -p dist/melange-kiosk-linux-x86_64/deploy
+    cp target/release/melange-shell dist/melange-kiosk-linux-x86_64/deploy/
+    cp deploy/* dist/melange-kiosk-linux-x86_64/deploy/
+    cp README.md ARCHITECTURE.md dist/melange-kiosk-linux-x86_64/
+    tar -C dist -czf dist/melange-kiosk-linux-x86_64.tar.gz melange-kiosk-linux-x86_64
+    rm -rf dist/melange-kiosk-linux-x86_64

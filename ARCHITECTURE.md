@@ -72,3 +72,10 @@
   - `POST /api/profiles`, `PATCH /api/profiles/:id`, `POST /api/profiles/:id/wallpaper` (multipart)
   - `POST /api/remote/nav`
   - Static serving for `/companion` (`companion/dist`) and `/wallpapers` (`wallpapers/` or `dev/wallpapers/`).
+
+
+## Milestone 5: Kiosk Appliance Architecture (M1–M5 Overview)
+- **M1–M2**: `melange-core` (`axum` + WebSocket state manager, `rusqlite` persistence, `gilrs`/`rodio` input & audio, `mpv`/`libmpv` video backend) + `melange-shell` (`wry` + `tao` WebView).
+- **M3**: On-Demand providers (MediathekViewWeb, Piped/YouTube, Local Media) and watch-history tracking.
+- **M4**: Tvheadend Live TV/EPG adapter, `evdev` 2.4GHz remote & optional `cec` HDMI-CEC adapters, and offline QR-paired `/companion` web app.
+- **M5**: `rust-embed` single-binary asset embedding (`EmbeddedUi`, `EmbeddedCompanion`, `EmbeddedSounds` in `core/src/assets.rs`), `cage` Wayland kiosk `systemd` unit (`deploy/melange-kiosk.service`), non-root `udev` rules (`deploy/99-melange-input.rules`), WireGuard maintenance template (`deploy/wg0.conf.template`), and `just package-release` tarball packaging.
