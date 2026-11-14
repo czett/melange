@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 gtk4 = { version = "0.11", features = ["v4_12"] }
+libc = "0.2"
 libloading = "0.8"
 libmpv2 = "7.0"
 melange-core = { path = "../core" }

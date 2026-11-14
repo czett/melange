@@ -22,7 +22,17 @@ use crate::mpv_gl::MpvPlayer;
 
 const APP_ID: &str = "org.melange.tv";
 
+/// Ensure `LC_NUMERIC` is `"C"` as required by `libmpv` (GTK4's `gtk::init()` resets locales).
+fn ensure_c_numeric_locale() {
+    // SAFETY: `c"C"` is a valid static NUL-terminated C string.
+    unsafe {
+        libc::setlocale(libc::LC_NUMERIC, c"C".as_ptr());
+    }
+}
+
 fn main() {
+    ensure_c_numeric_locale();
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -44,6 +54,7 @@ fn main() {
 
     let config_clone = config.clone();
     app.connect_activate(move |app| {
+        ensure_c_numeric_locale();
         if let Err(err) = build_ui(app, &config_clone) {
             error!(error = %err, "failed to build melange-shell UI");
         }
@@ -377,5 +388,22 @@ fn map_gtk_key(key: Key) -> Option<NavEvent> {
         Key::_8 | Key::KP_8 => Some(NavEvent::Digit(8)),
         Key::_9 | Key::KP_9 => Some(NavEvent::Digit(9)),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lc_numeric_is_set_to_c() {
+        ensure_c_numeric_locale();
+        // SAFETY: Passing NULL queries the current LC_NUMERIC locale without modifying it.
+        let ptr = unsafe { libc::setlocale(libc::LC_NUMERIC, std::ptr::null()) };
+        assert!(!ptr.is_null());
+        let locale = unsafe { std::ffi::CStr::from_ptr(ptr) }
+            .to_str()
+            .expect("LC_NUMERIC should be valid UTF-8");
+        assert_eq!(locale, "C");
     }
 }

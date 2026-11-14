@@ -54,7 +54,7 @@
 - **HTTP & WebSocket Server (`server.rs`):** `axum` server, `StateManager`, REST API, `/ws` broadcast hub, and static `ui/dist` serving.
 
 ### `melange-shell` (`shell/`)
-- **GTK4 Overlay Window (`main.rs`):** `gtk4::Application` (`org.melange.tv`) layering `webkit6::WebView` (transparent RGBA) over `gtk4::GLArea` inside `gtk4::Overlay`, with capture-phase keyboard forwarding.
+- **GTK4 Overlay Window (`main.rs`):** `gtk4::Application` (`org.melange.tv`) layering `webkit6::WebView` (transparent RGBA) over `gtk4::GLArea` inside `gtk4::Overlay`, with capture-phase keyboard forwarding. Sets `LC_NUMERIC="C"` at startup and in `connect_activate` before `MpvPlayer::new()` because `gtk::init()` resets locales and `libmpv` requires `LC_NUMERIC="C"`.
 - **Embedded OpenGL Video (`mpv_gl.rs`):** `gtk4::GLArea` wired to `libmpv2::render::RenderContext` using `libepoxy.so.0`.
 
 ### `melange-ui` (`ui/`)
