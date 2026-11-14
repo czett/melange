@@ -1,15 +1,18 @@
 use std::collections::HashMap;
-use std::net::SocketAddr;
-use std::path::Path;
+use std::net::{SocketAddr, UdpSocket};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::extract::{Query, State};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Multipart, Path as AxumPath, Query, State};
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, patch, post};
 use axum::{Json, Router};
 use futures_util::{SinkExt, StreamExt};
+use qrcode::QrCode;
+use qrcode::render::svg;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
@@ -135,6 +138,10 @@ pub struct StateManager {
     epg_entries: RwLock<Vec<EpgEntry>>,
     ws_tx: broadcast::Sender<ServerMessage>,
     shell_cmd_tx: RwLock<Option<std::sync::mpsc::Sender<ShellCommand>>>,
+    nav_tx: RwLock<Option<std::sync::mpsc::Sender<NavEvent>>>,
+    db_path: RwLock<Option<PathBuf>>,
+    wallpapers_dir: RwLock<PathBuf>,
+    port: RwLock<u16>,
     audio: Arc<AudioEngine>,
     mediathek: Arc<MediathekProvider>,
     youtube: RwLock<Arc<YouTubeProvider>>,
@@ -169,11 +176,62 @@ impl StateManager {
             epg_entries: RwLock::new(epg_entries),
             ws_tx,
             shell_cmd_tx: RwLock::new(None),
+            nav_tx: RwLock::new(None),
+            db_path: RwLock::new(None),
+            wallpapers_dir: RwLock::new(PathBuf::from("wallpapers")),
+            port: RwLock::new(9000),
             audio,
             mediathek: Arc::new(MediathekProvider::new()),
             youtube: RwLock::new(Arc::new(YouTubeProvider::new("https://pipedapi.kavin.rocks"))),
             local_media: RwLock::new(Arc::new(LocalMediaProvider::new(Vec::new()))),
         })
+    }
+
+    pub fn attach_db_path(&self, path: PathBuf) {
+        if let Ok(mut guard) = self.db_path.write() {
+            *guard = Some(path);
+        }
+    }
+
+    pub fn attach_nav_sender(&self, tx: std::sync::mpsc::Sender<NavEvent>) {
+        if let Ok(mut guard) = self.nav_tx.write() {
+            *guard = Some(tx);
+        }
+    }
+
+    pub fn set_wallpapers_dir(&self, dir: PathBuf) {
+        if let Ok(mut guard) = self.wallpapers_dir.write() {
+            *guard = dir;
+        }
+    }
+
+    pub fn set_port(&self, port: u16) {
+        if let Ok(mut guard) = self.port.write() {
+            *guard = port;
+        }
+    }
+
+    pub fn set_channels(&self, channels: Vec<Channel>) {
+        if let Ok(mut guard) = self.state.write() {
+            guard.channels = channels;
+            let _ = self.ws_tx.send(ServerMessage::StateUpdate {
+                state: guard.clone(),
+            });
+        }
+    }
+
+    pub fn set_profiles(&self, profiles: Vec<Profile>) {
+        if let Ok(mut guard) = self.state.write() {
+            if let Some(active) = &guard.active_profile
+                && let Some(updated) = profiles.iter().find(|p| p.id == active.id)
+            {
+                guard.active_profile = Some(updated.clone());
+            }
+            guard.profiles = profiles;
+            let _ = self.ws_tx.send(ServerMessage::StateUpdate {
+                state: guard.clone(),
+            });
+        }
     }
 
     pub fn set_providers(&self, piped_url: String, media_dirs: Vec<std::path::PathBuf>) {
@@ -456,11 +514,23 @@ impl StateManager {
 }
 
 pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
+    let wallpapers_dir = state
+        .wallpapers_dir
+        .read()
+        .map(|g| g.clone())
+        .unwrap_or_else(|_| PathBuf::from("wallpapers"));
+
     let api_router = Router::new()
         .route("/api/health", get(health_handler))
+        .route("/api/companion/info", get(companion_info_handler))
         .route("/api/channels", get(channels_handler))
+        .route("/api/channels/reorder", post(reorder_channels_handler))
+        .route("/api/channels/{id}/favorite", post(toggle_favorite_handler))
         .route("/api/epg", get(epg_handler))
-        .route("/api/profiles", get(profiles_handler))
+        .route("/api/profiles", get(profiles_handler).post(create_profile_handler))
+        .route("/api/profiles/{id}", patch(update_profile_handler))
+        .route("/api/profiles/{id}/wallpaper", post(upload_wallpaper_handler))
+        .route("/api/remote/nav", post(remote_nav_handler))
         .route("/api/ondemand/feed", get(ondemand_feed_handler))
         .route("/api/ondemand/search", get(ondemand_search_handler))
         .route("/api/continue-watching", get(continue_watching_handler))
@@ -468,8 +538,13 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .with_state(state);
 
     let serve_dir = ServeDir::new(ui_dist_dir).append_index_html_on_directories(true);
+    let companion_dir =
+        ServeDir::new("companion/dist").append_index_html_on_directories(true);
+    let wallpapers_service = ServeDir::new(wallpapers_dir);
 
     api_router
+        .nest_service("/companion", companion_dir)
+        .nest_service("/wallpapers", wallpapers_service)
         .fallback_service(serve_dir)
         .layer(CorsLayer::permissive())
 }
@@ -737,4 +812,321 @@ fn civil_from_days(days_since_epoch: i64) -> (i64, i64, i64) {
     let m = mp + if mp < 10 { 3 } else { -9 };
     let year = y + if m <= 2 { 1 } else { 0 };
     (year, m, d)
+}
+
+
+#[derive(Serialize)]
+struct CompanionInfoResponse {
+    url: String,
+    qr_svg: String,
+}
+
+fn detect_lan_ip() -> String {
+    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0")
+        && socket.connect("192.0.2.1:80").is_ok()
+        && let Ok(addr) = socket.local_addr()
+    {
+        let ip = addr.ip();
+        if !ip.is_loopback() {
+            return ip.to_string();
+        }
+    }
+    "127.0.0.1".to_string()
+}
+
+async fn companion_info_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
+    let port = state.port.read().map(|g| *g).unwrap_or(9000);
+    let ip = detect_lan_ip();
+    let url = format!("http://{ip}:{port}/companion");
+    let qr_svg = QrCode::new(url.as_bytes())
+        .map(|code| {
+            code.render::<svg::Color>()
+                .min_dimensions(200, 200)
+                .dark_color(svg::Color("#000000"))
+                .light_color(svg::Color("#ffffff"))
+                .build()
+        })
+        .unwrap_or_default();
+
+    Json(CompanionInfoResponse { url, qr_svg })
+}
+
+#[derive(Deserialize)]
+struct ReorderChannelsRequest {
+    channel_ids: Vec<serde_json::Value>,
+}
+
+async fn reorder_channels_handler(
+    State(state): State<Arc<StateManager>>,
+    Json(payload): Json<ReorderChannelsRequest>,
+) -> impl IntoResponse {
+    let ids: Vec<i64> = payload
+        .channel_ids
+        .into_iter()
+        .filter_map(|v| match v {
+            serde_json::Value::Number(n) => n.as_i64(),
+            serde_json::Value::String(s) => s.parse::<i64>().ok(),
+            _ => None,
+        })
+        .collect();
+
+    let Some(db_path) = state.db_path.read().ok().and_then(|g| g.clone()) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "database not configured" })),
+        )
+            .into_response();
+    };
+
+    match crate::db::Database::open(&db_path) {
+        Ok(db) => {
+            if let Err(err) = db.reorder_channels(&ids) {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": err.to_string() })),
+                )
+                    .into_response();
+            }
+            if let Ok(channels) = db.list_channels() {
+                state.set_channels(channels);
+            }
+            Json(serde_json::json!({ "ok": true })).into_response()
+        }
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn toggle_favorite_handler(
+    State(state): State<Arc<StateManager>>,
+    AxumPath(id): AxumPath<i64>,
+) -> impl IntoResponse {
+    let Some(db_path) = state.db_path.read().ok().and_then(|g| g.clone()) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "database not configured" })),
+        )
+            .into_response();
+    };
+
+    match crate::db::Database::open(&db_path) {
+        Ok(db) => match db.toggle_channel_favorite(id) {
+            Ok(is_favorite) => {
+                if let Ok(channels) = db.list_channels() {
+                    state.set_channels(channels);
+                }
+                Json(serde_json::json!({ "ok": true, "is_favorite": is_favorite })).into_response()
+            }
+            Err(err) => (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response(),
+        },
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct CreateProfileRequest {
+    name: String,
+    #[serde(default)]
+    avatar: String,
+}
+
+async fn create_profile_handler(
+    State(state): State<Arc<StateManager>>,
+    Json(payload): Json<CreateProfileRequest>,
+) -> impl IntoResponse {
+    let Some(db_path) = state.db_path.read().ok().and_then(|g| g.clone()) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "database not configured" })),
+        )
+            .into_response();
+    };
+
+    match crate::db::Database::open(&db_path) {
+        Ok(db) => match db.create_profile(payload.name.trim(), payload.avatar.trim()) {
+            Ok(profile) => {
+                if let Ok(profiles) = db.list_profiles() {
+                    state.set_profiles(profiles);
+                }
+                (StatusCode::CREATED, Json(profile)).into_response()
+            }
+            Err(err) => (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response(),
+        },
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct UpdateProfileRequest {
+    name: Option<String>,
+    avatar: Option<String>,
+    wallpaper_path: Option<String>,
+}
+
+async fn update_profile_handler(
+    State(state): State<Arc<StateManager>>,
+    AxumPath(id): AxumPath<i64>,
+    Json(payload): Json<UpdateProfileRequest>,
+) -> impl IntoResponse {
+    let Some(db_path) = state.db_path.read().ok().and_then(|g| g.clone()) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "database not configured" })),
+        )
+            .into_response();
+    };
+
+    match crate::db::Database::open(&db_path) {
+        Ok(db) => match db.update_profile(
+            id,
+            payload.name.as_deref(),
+            payload.avatar.as_deref(),
+            payload.wallpaper_path.as_deref(),
+        ) {
+            Ok(profile) => {
+                if let Ok(profiles) = db.list_profiles() {
+                    state.set_profiles(profiles);
+                }
+                Json(profile).into_response()
+            }
+            Err(err) => (
+                StatusCode::NOT_FOUND,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response(),
+        },
+        Err(err) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn upload_wallpaper_handler(
+    State(state): State<Arc<StateManager>>,
+    AxumPath(id): AxumPath<i64>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let Some(db_path) = state.db_path.read().ok().and_then(|g| g.clone()) else {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "database not configured" })),
+        )
+            .into_response();
+    };
+
+    let wallpapers_dir = state
+        .wallpapers_dir
+        .read()
+        .map(|g| g.clone())
+        .unwrap_or_else(|_| PathBuf::from("wallpapers"));
+
+    if let Err(err) = tokio::fs::create_dir_all(&wallpapers_dir).await {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response();
+    }
+
+    if let Ok(Some(field)) = multipart.next_field().await {
+        let filename = field
+            .file_name()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| "wallpaper.png".to_string());
+        let ext = Path::new(&filename)
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase())
+            .filter(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "webp"))
+            .unwrap_or_else(|| "png".to_string());
+
+        let Ok(bytes) = field.bytes().await else {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": "failed to read multipart field" })),
+            )
+                .into_response();
+        };
+
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let out_name = format!("profile_{id}_{ts}.{ext}");
+        let out_path = wallpapers_dir.join(&out_name);
+        if let Err(err) = tokio::fs::write(&out_path, &bytes).await {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response();
+        }
+
+        let public_path = format!("/wallpapers/{out_name}");
+        return match crate::db::Database::open(&db_path) {
+            Ok(db) => match db.set_profile_wallpaper(id, &public_path) {
+                Ok(profile) => {
+                    if let Ok(profiles) = db.list_profiles() {
+                        state.set_profiles(profiles);
+                    }
+                    Json(profile).into_response()
+                }
+                Err(err) => (
+                    StatusCode::NOT_FOUND,
+                    Json(serde_json::json!({ "error": err.to_string() })),
+                )
+                    .into_response(),
+            },
+            Err(err) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response(),
+        };
+    }
+
+    (
+        StatusCode::BAD_REQUEST,
+        Json(serde_json::json!({ "error": "no file uploaded" })),
+    )
+        .into_response()
+}
+
+#[derive(Deserialize)]
+struct RemoteNavRequest {
+    event: NavEvent,
+}
+
+async fn remote_nav_handler(
+    State(state): State<Arc<StateManager>>,
+    Json(payload): Json<RemoteNavRequest>,
+) -> impl IntoResponse {
+    state.audio.play(payload.event.sound_kind());
+    if let Ok(guard) = state.nav_tx.read()
+        && let Some(tx) = guard.as_ref()
+    {
+        let _ = tx.send(payload.event);
+    }
+    Json(serde_json::json!({ "ok": true }))
 }

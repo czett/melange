@@ -10,6 +10,10 @@ use crate::providers::MediaItem;
 pub struct Profile {
     pub id: i64,
     pub name: String,
+    #[serde(default)]
+    pub avatar: String,
+    #[serde(default)]
+    pub wallpaper_path: Option<String>,
     pub created_at: String,
 }
 
@@ -32,6 +36,10 @@ pub struct Channel {
     pub group_title: String,
     pub logo_url: String,
     pub stream_url: String,
+    #[serde(default)]
+    pub is_favorite: bool,
+    #[serde(default)]
+    pub sort_order: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -86,6 +94,8 @@ impl Database {
             CREATE TABLE IF NOT EXISTS profiles (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
+                avatar TEXT NOT NULL DEFAULT '',
+                wallpaper_path TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -96,7 +106,9 @@ impl Database {
                 name TEXT NOT NULL,
                 group_title TEXT NOT NULL DEFAULT '',
                 logo_url TEXT NOT NULL DEFAULT '',
-                stream_url TEXT NOT NULL
+                stream_url TEXT NOT NULL,
+                is_favorite INTEGER NOT NULL DEFAULT 0,
+                sort_order INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS epg_cache (
@@ -132,6 +144,15 @@ impl Database {
             ",
         )?;
 
+        for alter in [
+            "ALTER TABLE profiles ADD COLUMN avatar TEXT NOT NULL DEFAULT ''",
+            "ALTER TABLE profiles ADD COLUMN wallpaper_path TEXT",
+            "ALTER TABLE channels ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE channels ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0",
+        ] {
+            let _ = self.conn.execute(alter, []);
+        }
+
         let profile_count: i64 =
             self.conn
                 .query_row("SELECT COUNT(*) FROM profiles", [], |row| row.get(0))?;
@@ -144,17 +165,76 @@ impl Database {
     }
 
     pub fn list_profiles(&self) -> Result<Vec<Profile>, MelangeError> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, name, created_at FROM profiles ORDER BY id ASC")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, avatar, wallpaper_path, created_at FROM profiles ORDER BY id ASC",
+        )?;
         let rows = stmt.query_map([], |row| {
             Ok(Profile {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                created_at: row.get(2)?,
+                avatar: row.get(2)?,
+                wallpaper_path: row.get(3)?,
+                created_at: row.get(4)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn create_profile(&self, name: &str, avatar: &str) -> Result<Profile, MelangeError> {
+        self.conn.execute(
+            "INSERT INTO profiles (name, avatar) VALUES (?1, ?2)",
+            params![name, avatar],
+        )?;
+        let id = self.conn.last_insert_rowid();
+        self.get_profile(id)
+    }
+
+    pub fn get_profile(&self, id: i64) -> Result<Profile, MelangeError> {
+        self.conn
+            .query_row(
+                "SELECT id, name, avatar, wallpaper_path, created_at FROM profiles WHERE id = ?1",
+                params![id],
+                |row| {
+                    Ok(Profile {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        avatar: row.get(2)?,
+                        wallpaper_path: row.get(3)?,
+                        created_at: row.get(4)?,
+                    })
+                },
+            )
+            .map_err(Into::into)
+    }
+
+    pub fn update_profile(
+        &self,
+        id: i64,
+        name: Option<&str>,
+        avatar: Option<&str>,
+        wallpaper_path: Option<&str>,
+    ) -> Result<Profile, MelangeError> {
+        if let Some(name) = name {
+            self.conn
+                .execute("UPDATE profiles SET name = ?1 WHERE id = ?2", params![name, id])?;
+        }
+        if let Some(avatar) = avatar {
+            self.conn.execute(
+                "UPDATE profiles SET avatar = ?1 WHERE id = ?2",
+                params![avatar, id],
+            )?;
+        }
+        if let Some(wp) = wallpaper_path {
+            self.conn.execute(
+                "UPDATE profiles SET wallpaper_path = ?1 WHERE id = ?2",
+                params![wp, id],
+            )?;
+        }
+        self.get_profile(id)
+    }
+
+    pub fn set_profile_wallpaper(&self, id: i64, wallpaper_path: &str) -> Result<Profile, MelangeError> {
+        self.update_profile(id, None, None, Some(wallpaper_path))
     }
 
     pub fn upsert_channel(&self, ch: &ChannelInput) -> Result<i64, MelangeError> {
@@ -188,9 +268,9 @@ impl Database {
 
     pub fn list_channels(&self) -> Result<Vec<Channel>, MelangeError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, number, tvg_id, name, group_title, logo_url, stream_url
+            "SELECT id, number, tvg_id, name, group_title, logo_url, stream_url, is_favorite, sort_order
              FROM channels
-             ORDER BY number ASC",
+             ORDER BY sort_order ASC, number ASC",
         )?;
         let rows = stmt.query_map([], |row| {
             Ok(Channel {
@@ -201,15 +281,40 @@ impl Database {
                 group_title: row.get(4)?,
                 logo_url: row.get(5)?,
                 stream_url: row.get(6)?,
+                is_favorite: row.get::<_, i64>(7)? != 0,
+                sort_order: row.get(8)?,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    pub fn reorder_channels(&self, channel_ids: &[i64]) -> Result<(), MelangeError> {
+        let mut stmt = self
+            .conn
+            .prepare("UPDATE channels SET sort_order = ?1 WHERE id = ?2")?;
+        for (idx, id) in channel_ids.iter().enumerate() {
+            stmt.execute(params![idx as i64, id])?;
+        }
+        Ok(())
+    }
+
+    pub fn toggle_channel_favorite(&self, channel_id: i64) -> Result<bool, MelangeError> {
+        self.conn.execute(
+            "UPDATE channels SET is_favorite = CASE WHEN is_favorite = 0 THEN 1 ELSE 0 END WHERE id = ?1",
+            params![channel_id],
+        )?;
+        let fav: i64 = self.conn.query_row(
+            "SELECT is_favorite FROM channels WHERE id = ?1",
+            params![channel_id],
+            |row| row.get(0),
+        )?;
+        Ok(fav != 0)
+    }
+
     pub fn get_channel_by_number(&self, number: i64) -> Result<Option<Channel>, MelangeError> {
         self.conn
             .query_row(
-                "SELECT id, number, tvg_id, name, group_title, logo_url, stream_url
+                "SELECT id, number, tvg_id, name, group_title, logo_url, stream_url, is_favorite, sort_order
                  FROM channels WHERE number = ?1",
                 params![number],
                 |row| {
@@ -221,6 +326,8 @@ impl Database {
                         group_title: row.get(4)?,
                         logo_url: row.get(5)?,
                         stream_url: row.get(6)?,
+                        is_favorite: row.get::<_, i64>(7)? != 0,
+                        sort_order: row.get(8)?,
                     })
                 },
             )

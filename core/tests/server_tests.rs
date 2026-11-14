@@ -13,6 +13,8 @@ async fn spawn_test_server() -> (String, Arc<StateManager>) {
     let profiles = vec![Profile {
         id: 1,
         name: "Default".to_string(),
+        avatar: String::new(),
+        wallpaper_path: None,
         created_at: "2026-11-14 00:00:00".to_string(),
     }];
     let channels = vec![
@@ -24,6 +26,8 @@ async fn spawn_test_server() -> (String, Arc<StateManager>) {
             group_title: "Public".to_string(),
             logo_url: String::new(),
             stream_url: "https://example.com/1.m3u8".to_string(),
+            is_favorite: false,
+            sort_order: 0,
         },
         Channel {
             id: 2,
@@ -33,6 +37,8 @@ async fn spawn_test_server() -> (String, Arc<StateManager>) {
             group_title: "Public".to_string(),
             logo_url: String::new(),
             stream_url: "https://example.com/2.m3u8".to_string(),
+            is_favorite: false,
+            sort_order: 0,
         },
     ];
     let epg = vec![EpgEntry {

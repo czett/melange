@@ -51,6 +51,8 @@ fn sample_channels(count: usize) -> Vec<Channel> {
             group_title: "Public".to_string(),
             logo_url: String::new(),
             stream_url: format!("https://example.com/stream/{n}.m3u8"),
+            is_favorite: false,
+            sort_order: 0,
         })
         .collect()
 }
