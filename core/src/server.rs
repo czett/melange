@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::response::IntoResponse;
 use axum::routing::get;
@@ -18,16 +18,20 @@ use tower_http::services::ServeDir;
 use tracing::{debug, info, warn};
 
 use crate::audio::{AudioEngine, SoundKind};
-use crate::db::{Channel, EpgEntry, Profile};
+use crate::db::{Channel, EpgEntry, Profile, WatchHistoryEntry};
 use crate::error::MelangeError;
 use crate::input::NavEvent;
 use crate::player::PlaybackState;
+use crate::providers::{
+    LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, YouTubeProvider,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AppMode {
     Home,
     LiveTv,
     Mediathek,
+    YouTube,
     Media,
     Settings,
 }
@@ -39,6 +43,7 @@ pub enum OverlayKind {
     MiniEpg,
     FullEpg,
     ProfileSwitcher,
+    PlayerOsd,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -48,8 +53,10 @@ pub struct PlaybackSnapshot {
     pub subtitle: Option<String>,
     pub channel_id: Option<i64>,
     pub channel_number: Option<i64>,
+    pub current_media: Option<MediaItem>,
     pub position_sec: f64,
     pub duration_sec: f64,
+    pub paused: bool,
     pub is_zapping: bool,
 }
 
@@ -61,8 +68,10 @@ impl Default for PlaybackSnapshot {
             subtitle: None,
             channel_id: None,
             channel_number: None,
+            current_media: None,
             position_sec: 0.0,
             duration_sec: 0.0,
+            paused: false,
             is_zapping: false,
         }
     }
@@ -85,6 +94,7 @@ pub struct MelangeState {
     pub epg_now_next: HashMap<String, EpgNowNext>,
     pub playback: PlaybackSnapshot,
     pub digit_buffer: String,
+    pub continue_watching: Vec<WatchHistoryEntry>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -103,6 +113,9 @@ pub enum ClientCommand {
     SetOverlay { overlay: OverlayKind },
     SelectProfile { profile_id: i64 },
     PlaySound { sound: SoundKind },
+    PlayMedia { item: MediaItem, resume: bool },
+    SeekRelative { offset_sec: f64 },
+    TogglePause,
 }
 
 #[derive(Debug, Clone)]
@@ -110,6 +123,9 @@ pub enum ShellCommand {
     SelectChannel { channel_id: i64 },
     SetMode { mode: AppMode },
     SetOverlay { overlay: OverlayKind },
+    PlayMedia { item: MediaItem, start_position_sec: f64 },
+    SeekRelative { offset_sec: f64 },
+    TogglePause,
 }
 
 pub struct StateManager {
@@ -118,6 +134,9 @@ pub struct StateManager {
     ws_tx: broadcast::Sender<ServerMessage>,
     shell_cmd_tx: RwLock<Option<std::sync::mpsc::Sender<ShellCommand>>>,
     audio: Arc<AudioEngine>,
+    mediathek: Arc<MediathekProvider>,
+    youtube: RwLock<Arc<YouTubeProvider>>,
+    local_media: RwLock<Arc<LocalMediaProvider>>,
 }
 
 impl StateManager {
@@ -140,6 +159,7 @@ impl StateManager {
             epg_now_next,
             playback: PlaybackSnapshot::default(),
             digit_buffer: String::new(),
+            continue_watching: Vec::new(),
         };
 
         Arc::new(Self {
@@ -148,7 +168,35 @@ impl StateManager {
             ws_tx,
             shell_cmd_tx: RwLock::new(None),
             audio,
+            mediathek: Arc::new(MediathekProvider::new()),
+            youtube: RwLock::new(Arc::new(YouTubeProvider::new("https://pipedapi.kavin.rocks"))),
+            local_media: RwLock::new(Arc::new(LocalMediaProvider::new(Vec::new()))),
         })
+    }
+
+    pub fn set_providers(&self, piped_url: String, media_dirs: Vec<std::path::PathBuf>) {
+        if let Ok(mut guard) = self.youtube.write() {
+            *guard = Arc::new(YouTubeProvider::new(piped_url));
+        }
+        if let Ok(mut guard) = self.local_media.write() {
+            *guard = Arc::new(LocalMediaProvider::new(media_dirs));
+        }
+    }
+
+    pub fn set_continue_watching(&self, entries: Vec<WatchHistoryEntry>) {
+        if let Ok(mut guard) = self.state.write() {
+            guard.continue_watching = entries;
+        }
+        self.broadcast_state();
+    }
+
+    pub fn update_playback_progress(&self, position_sec: f64, duration_sec: f64, paused: bool) {
+        if let Ok(mut guard) = self.state.write() {
+            guard.playback.position_sec = position_sec;
+            guard.playback.duration_sec = duration_sec;
+            guard.playback.paused = paused;
+        }
+        self.broadcast_state();
     }
 
     pub fn attach_shell_sender(&self, tx: std::sync::mpsc::Sender<ShellCommand>) {
@@ -293,6 +341,52 @@ impl StateManager {
             ClientCommand::PlaySound { sound } => {
                 self.audio.play(sound);
             }
+            ClientCommand::PlayMedia { item, resume } => {
+                let start_position_sec = if resume {
+                    let st = self.state.read().expect("state lock");
+                    st.continue_watching
+                        .iter()
+                        .find(|e| e.item_id == item.id)
+                        .map(|e| e.position_sec)
+                        .unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                {
+                    let mut st = self.state.write().expect("state lock");
+                    st.overlay = OverlayKind::PlayerOsd;
+                    st.playback.state = PlaybackState::Playing;
+                    st.playback.title = Some(item.title.clone());
+                    st.playback.subtitle = item
+                        .subtitle
+                        .clone()
+                        .or_else(|| Some(item.channel_or_author.clone()));
+                    st.playback.channel_id = None;
+                    st.playback.channel_number = None;
+                    st.playback.current_media = Some(item.clone());
+                    st.playback.position_sec = start_position_sec;
+                    st.playback.duration_sec = item.duration_sec as f64;
+                    st.playback.paused = false;
+                    st.playback.is_zapping = false;
+                }
+                self.audio.play(SoundKind::Select);
+                self.broadcast_state();
+                self.send_shell_command(ShellCommand::PlayMedia {
+                    item,
+                    start_position_sec,
+                });
+            }
+            ClientCommand::SeekRelative { offset_sec } => {
+                self.send_shell_command(ShellCommand::SeekRelative { offset_sec });
+            }
+            ClientCommand::TogglePause => {
+                {
+                    let mut st = self.state.write().expect("state lock");
+                    st.playback.paused = !st.playback.paused;
+                }
+                self.broadcast_state();
+                self.send_shell_command(ShellCommand::TogglePause);
+            }
         }
     }
 
@@ -324,8 +418,10 @@ impl StateManager {
                 subtitle: next_subtitle,
                 channel_id: next_channel_id,
                 channel_number: next_channel_number,
+                current_media: None,
                 position_sec,
                 duration_sec,
+                paused: false,
                 is_zapping,
             };
 
@@ -363,6 +459,9 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .route("/api/channels", get(channels_handler))
         .route("/api/epg", get(epg_handler))
         .route("/api/profiles", get(profiles_handler))
+        .route("/api/ondemand/feed", get(ondemand_feed_handler))
+        .route("/api/ondemand/search", get(ondemand_search_handler))
+        .route("/api/continue-watching", get(continue_watching_handler))
         .route("/ws", get(ws_handler))
         .with_state(state);
 
@@ -447,6 +546,62 @@ async fn epg_handler(State(state): State<Arc<StateManager>>) -> impl IntoRespons
 
 async fn profiles_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
     Json(state.snapshot().profiles)
+}
+
+#[derive(Deserialize)]
+struct OnDemandFeedQuery {
+    provider: String,
+}
+
+#[derive(Deserialize)]
+struct OnDemandSearchQuery {
+    provider: String,
+    #[serde(default)]
+    q: String,
+}
+
+async fn ondemand_feed_handler(
+    State(state): State<Arc<StateManager>>,
+    Query(params): Query<OnDemandFeedQuery>,
+) -> Json<Vec<MediaItem>> {
+    let items = match params.provider.as_str() {
+        "mediathek" => state.mediathek.feed().await.unwrap_or_default(),
+        "youtube" => {
+            let yt = state.youtube.read().expect("youtube lock").clone();
+            yt.feed().await.unwrap_or_default()
+        }
+        "local" => {
+            let local = state.local_media.read().expect("local lock").clone();
+            local.feed().await.unwrap_or_default()
+        }
+        _ => Vec::new(),
+    };
+    Json(items)
+}
+
+async fn ondemand_search_handler(
+    State(state): State<Arc<StateManager>>,
+    Query(params): Query<OnDemandSearchQuery>,
+) -> Json<Vec<MediaItem>> {
+    let items = match params.provider.as_str() {
+        "mediathek" => state.mediathek.search(&params.q).await.unwrap_or_default(),
+        "youtube" => {
+            let yt = state.youtube.read().expect("youtube lock").clone();
+            yt.search(&params.q).await.unwrap_or_default()
+        }
+        "local" => {
+            let local = state.local_media.read().expect("local lock").clone();
+            local.search(&params.q).await.unwrap_or_default()
+        }
+        _ => Vec::new(),
+    };
+    Json(items)
+}
+
+async fn continue_watching_handler(
+    State(state): State<Arc<StateManager>>,
+) -> Json<Vec<WatchHistoryEntry>> {
+    Json(state.snapshot().continue_watching)
 }
 
 async fn ws_handler(

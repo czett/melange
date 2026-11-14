@@ -9,7 +9,7 @@ pub mod server;
 
 pub use audio::{AudioEngine, SoundKind};
 pub use config::{AppConfig, RunMode};
-pub use db::{Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile};
+pub use db::{Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile, WatchHistoryEntry};
 pub use error::MelangeError;
 pub use input::{GamepadHandle, InputRouter, NavEvent};
 pub use player::{PlaybackState, PlayerBackend, PlayerController};

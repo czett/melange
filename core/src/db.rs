@@ -4,6 +4,7 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
 use crate::error::MelangeError;
+use crate::providers::MediaItem;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Profile {
@@ -113,6 +114,20 @@ impl Database {
                 profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
                 channel_id INTEGER NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
                 watched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS media_watch_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                item_id TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                title TEXT NOT NULL,
+                stream_url TEXT NOT NULL,
+                thumbnail_url TEXT,
+                position_sec REAL NOT NULL DEFAULT 0.0,
+                duration_sec REAL NOT NULL DEFAULT 0.0,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(profile_id, item_id)
             );
             ",
         )?;
@@ -279,4 +294,97 @@ impl Database {
         )?;
         Ok(())
     }
+
+    pub fn upsert_watch_progress(
+        &self,
+        profile_id: i64,
+        item: &MediaItem,
+        position_sec: f64,
+        duration_sec: f64,
+    ) -> Result<(), MelangeError> {
+        let effective_duration = if duration_sec > 0.0 {
+            duration_sec
+        } else {
+            item.duration_sec as f64
+        };
+        if effective_duration > 0.0 && (position_sec / effective_duration) >= 0.95 {
+            self.remove_watch_progress(profile_id, &item.id)?;
+            return Ok(());
+        }
+
+        self.conn.execute(
+            "INSERT INTO media_watch_history
+             (profile_id, item_id, provider, title, stream_url, thumbnail_url, position_sec, duration_sec, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, CURRENT_TIMESTAMP)
+             ON CONFLICT(profile_id, item_id) DO UPDATE SET
+                title = excluded.title,
+                stream_url = excluded.stream_url,
+                thumbnail_url = excluded.thumbnail_url,
+                position_sec = excluded.position_sec,
+                duration_sec = excluded.duration_sec,
+                updated_at = CURRENT_TIMESTAMP",
+            params![
+                profile_id,
+                item.id,
+                item.provider,
+                item.title,
+                item.stream_url,
+                item.thumbnail_url,
+                position_sec.max(0.0),
+                effective_duration.max(0.0),
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_continue_watching(
+        &self,
+        profile_id: i64,
+        limit: usize,
+    ) -> Result<Vec<WatchHistoryEntry>, MelangeError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, profile_id, item_id, provider, title, stream_url, thumbnail_url, position_sec, duration_sec, updated_at
+             FROM media_watch_history
+             WHERE profile_id = ?1
+             ORDER BY updated_at DESC, id DESC
+             LIMIT ?2",
+        )?;
+        let rows = stmt.query_map(params![profile_id, limit as i64], |row| {
+            Ok(WatchHistoryEntry {
+                id: row.get(0)?,
+                profile_id: row.get(1)?,
+                item_id: row.get(2)?,
+                provider: row.get(3)?,
+                title: row.get(4)?,
+                stream_url: row.get(5)?,
+                thumbnail_url: row.get(6)?,
+                position_sec: row.get(7)?,
+                duration_sec: row.get(8)?,
+                updated_at: row.get(9)?,
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn remove_watch_progress(&self, profile_id: i64, item_id: &str) -> Result<(), MelangeError> {
+        self.conn.execute(
+            "DELETE FROM media_watch_history WHERE profile_id = ?1 AND item_id = ?2",
+            params![profile_id, item_id],
+        )?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WatchHistoryEntry {
+    pub id: i64,
+    pub profile_id: i64,
+    pub item_id: String,
+    pub provider: String,
+    pub title: String,
+    pub stream_url: String,
+    pub thumbnail_url: Option<String>,
+    pub position_sec: f64,
+    pub duration_sec: f64,
+    pub updated_at: String,
 }

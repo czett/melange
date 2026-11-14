@@ -78,6 +78,7 @@ impl MpvPlayer {
             init.set_property("hwdec", "auto-safe")?;
             init.set_property("keep-open", "always")?;
             init.set_property("idle", "yes")?;
+            init.set_property("ytdl", "yes")?;
             init.set_property("terminal", "no")?;
             Ok(())
         })
@@ -144,6 +145,30 @@ impl MpvPlayer {
     pub fn teardown_gl(&mut self) {
         self.render_ctx = None;
         self.resolver = None;
+    }
+
+    pub fn play_url_at(&mut self, url: &str, start_position_sec: f64) -> Result<(), MelangeError> {
+        let start_val = if start_position_sec > 1.0 {
+            format!("+{start_position_sec:.1}")
+        } else {
+            "none".to_string()
+        };
+        let _ = self.mpv.set_property("start", start_val.as_str());
+        self.load_replace(url)
+    }
+
+    pub fn seek_relative(&mut self, offset_sec: f64) -> Result<(), MelangeError> {
+        let offset = format!("{offset_sec:.1}");
+        self.mpv
+            .command("seek", &[offset.as_str(), "relative"])
+            .map_err(|e| MelangeError::Player(format!("seek failed: {e}")))
+    }
+
+    pub fn playback_progress(&self) -> (f64, f64, bool) {
+        let pos: f64 = self.mpv.get_property("time-pos").unwrap_or(0.0);
+        let dur: f64 = self.mpv.get_property("duration").unwrap_or(0.0);
+        let paused: bool = self.mpv.get_property("pause").unwrap_or(false);
+        (pos.max(0.0), dur.max(0.0), paused)
     }
 }
 

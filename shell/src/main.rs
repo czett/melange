@@ -71,7 +71,13 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let epg_entries = db.list_all_epg()?;
 
     let audio = Arc::new(AudioEngine::new(&config.sounds_dir));
-    let state_manager = StateManager::new(profiles, channels.clone(), epg_entries, Arc::clone(&audio));
+    let state_manager = StateManager::new(profiles.clone(), channels.clone(), epg_entries, Arc::clone(&audio));
+    state_manager.set_providers(config.piped_url.clone(), config.media_dirs.clone());
+    if let Some(profile) = profiles.first()
+        && let Ok(entries) = db.list_continue_watching(profile.id, 20)
+    {
+        state_manager.set_continue_watching(entries);
+    }
 
     let (shell_cmd_tx, shell_cmd_rx) = mpsc::channel::<ShellCommand>();
     state_manager.attach_shell_sender(shell_cmd_tx);
@@ -228,6 +234,27 @@ fn handle_shell_command(
             }
         }
         ShellCommand::SetMode { .. } | ShellCommand::SetOverlay { .. } => {}
+        ShellCommand::PlayMedia {
+            item,
+            start_position_sec,
+        } => {
+            let mut ctrl = controller.borrow_mut();
+            if let Err(err) = ctrl.backend_mut().play_url_at(&item.stream_url, start_position_sec) {
+                error!(error = %err, url = %item.stream_url, "failed to play on-demand media");
+            }
+        }
+        ShellCommand::SeekRelative { offset_sec } => {
+            let mut ctrl = controller.borrow_mut();
+            if let Err(err) = ctrl.backend_mut().seek_relative(offset_sec) {
+                error!(error = %err, "failed to seek");
+            }
+        }
+        ShellCommand::TogglePause => {
+            let mut ctrl = controller.borrow_mut();
+            if let Err(err) = ctrl.toggle_pause() {
+                error!(error = %err, "failed to toggle pause");
+            }
+        }
     }
 }
 
