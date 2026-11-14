@@ -20,11 +20,14 @@ const EMPTY_STATE: MelangeState = {
     subtitle: null,
     channel_id: null,
     channel_number: null,
+    current_media: null,
     position_sec: 0,
     duration_sec: 0,
+    paused: false,
     is_zapping: false
   },
-  digit_buffer: ""
+  digit_buffer: "",
+  continue_watching: []
 };
 
 const [melangeState, setMelangeState] = createSignal<MelangeState>(EMPTY_STATE);

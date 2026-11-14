@@ -13,6 +13,7 @@ interface DockItem {
 const DOCK_ITEMS: DockItem[] = [
   { id: "dock-livetv", label: "Live TV", mode: "LiveTv", hint: "Watch" },
   { id: "dock-mediathek", label: "Mediathek", mode: "Mediathek", hint: "ARD / ZDF" },
+  { id: "dock-youtube", label: "YouTube", mode: "YouTube", hint: "Piped" },
   { id: "dock-media", label: "Media", mode: "Media", hint: "Library" },
   { id: "dock-settings", label: "Settings", mode: "Settings", hint: "System" }
 ];
@@ -195,38 +196,67 @@ export const HomeView = () => {
             Continue Watching
           </h2>
           <div class="no-scrollbar flex gap-4 overflow-x-auto py-1">
-            <For each={CONTINUE_PLACEHOLDERS}>
-              {(item) => {
+            <For
+              each={melangeState().continue_watching}
+              fallback={
+                <div class="glass-panel rounded-2xl px-5 py-4 text-xs text-white/55">
+                  No recent on-demand playback yet. Browse Mediathek, YouTube, or Local Media.
+                </div>
+              }
+            >
+              {(entry) => {
                 let cwEl!: HTMLButtonElement;
+                const resumeEntry = () =>
+                  sendCommand({
+                    type: "PlayMedia",
+                    item: {
+                      id: entry.item_id,
+                      provider: entry.provider,
+                      title: entry.title,
+                      subtitle: null,
+                      description: null,
+                      channel_or_author: entry.provider,
+                      duration_sec: Math.round(entry.duration_sec),
+                      thumbnail_url: entry.thumbnail_url,
+                      stream_url: entry.stream_url,
+                      published_at: null,
+                    },
+                    resume: true,
+                  });
+
                 onMount(() => {
-                  const cleanup = registerFocusable(item.id, cwEl, () =>
-                    sendCommand({ type: "SetMode", mode: "Mediathek" })
-                  );
+                  const cleanup = registerFocusable(`cw-${entry.item_id}`, cwEl, resumeEntry);
                   onCleanup(cleanup);
                 });
+
+                const pct =
+                  entry.duration_sec > 0
+                    ? Math.min(100, Math.max(0, (entry.position_sec / entry.duration_sec) * 100))
+                    : 0;
 
                 return (
                   <button
                     ref={cwEl}
                     type="button"
-                    data-focus-id={item.id}
-                    onClick={() =>
-                      sendCommand({ type: "SetMode", mode: "Mediathek" })
-                    }
+                    data-focus-id={`cw-${entry.item_id}`}
+                    onClick={resumeEntry}
                     class="glass-panel flex w-64 shrink-0 flex-col justify-between rounded-2xl p-4 text-left transition hover:bg-white/15"
                   >
                     <div class="flex items-center justify-between text-xs text-white/50">
-                      <span>On Demand</span>
+                      <span class="uppercase">{entry.provider}</span>
                       <span class="rounded bg-white/10 px-2 py-0.5 text-[10px]">
-                        M3
+                        Resume
                       </span>
                     </div>
                     <div class="mt-4">
                       <div class="truncate text-sm font-semibold text-white">
-                        {item.title}
+                        {entry.title}
                       </div>
-                      <div class="mt-0.5 truncate text-xs text-white/60">
-                        {item.subtitle}
+                      <div class="mt-2 h-1.5 w-full rounded-full bg-white/15 overflow-hidden">
+                        <div
+                          class="h-full rounded-full bg-white"
+                          style={{ width: `${pct}%` }}
+                        />
                       </div>
                     </div>
                   </button>

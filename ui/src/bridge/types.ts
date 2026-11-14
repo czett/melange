@@ -1,11 +1,12 @@
-export type AppMode = "Home" | "LiveTv" | "Mediathek" | "Media" | "Settings";
+export type AppMode = "Home" | "LiveTv" | "Mediathek" | "YouTube" | "Media" | "Settings";
 
 export type OverlayKind =
   | "None"
   | "ZapBanner"
   | "MiniEpg"
   | "FullEpg"
-  | "ProfileSwitcher";
+  | "ProfileSwitcher"
+  | "PlayerOsd";
 
 export type PlaybackState = "Idle" | "Buffering" | "Playing" | "Paused";
 
@@ -42,14 +43,42 @@ export interface EpgNowNext {
   next: EpgEntry | null;
 }
 
+export interface MediaItem {
+  id: string;
+  provider: string;
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  channel_or_author: string;
+  duration_sec: number;
+  thumbnail_url: string | null;
+  stream_url: string;
+  published_at: string | null;
+}
+
+export interface WatchHistoryEntry {
+  id: number;
+  profile_id: number;
+  item_id: string;
+  provider: string;
+  title: string;
+  stream_url: string;
+  thumbnail_url: string | null;
+  position_sec: number;
+  duration_sec: number;
+  updated_at: string;
+}
+
 export interface PlaybackSnapshot {
   state: PlaybackState;
   title: string | null;
   subtitle: string | null;
   channel_id: number | null;
   channel_number: number | null;
+  current_media: MediaItem | null;
   position_sec: number;
   duration_sec: number;
+  paused: boolean;
   is_zapping: boolean;
 }
 
@@ -62,6 +91,7 @@ export interface MelangeState {
   epg_now_next: Record<string, EpgNowNext>;
   playback: PlaybackSnapshot;
   digit_buffer: string;
+  continue_watching: WatchHistoryEntry[];
 }
 
 export type NavEvent =
@@ -87,4 +117,7 @@ export type ClientCommand =
   | { type: "SetMode"; mode: AppMode }
   | { type: "SetOverlay"; overlay: OverlayKind }
   | { type: "SelectProfile"; profile_id: number }
-  | { type: "PlaySound"; sound: SoundKind };
+  | { type: "PlaySound"; sound: SoundKind }
+  | { type: "PlayMedia"; item: MediaItem; resume: boolean }
+  | { type: "SeekRelative"; offset_sec: number }
+  | { type: "TogglePause" };
