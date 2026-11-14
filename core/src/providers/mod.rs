@@ -8,11 +8,13 @@ use crate::error::MelangeError;
 pub mod local_media;
 pub mod m3u_xmltv;
 pub mod mediathek;
+pub mod tvheadend;
 pub mod youtube;
 
 pub use local_media::LocalMediaProvider;
 pub use m3u_xmltv::{M3uXmltvProvider, SyncReport};
 pub use mediathek::MediathekProvider;
+pub use tvheadend::TvheadendProvider;
 pub use youtube::YouTubeProvider;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

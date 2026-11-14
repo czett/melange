@@ -10,9 +10,9 @@ use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, EventControllerKey, GLArea, Overlay, PropagationPhase};
 use melange_core::{
-    AppConfig, AppMode, AudioEngine, Database, GamepadHandle, InputRouter, M3uXmltvProvider,
-    NavEvent, OverlayKind, PlayerController, RunMode, ShellCommand, StateManager,
-    spawn_server_thread,
+    AppConfig, AppMode, AudioEngine, CecHandle, Database, EvdevHandle, GamepadHandle, InputRouter,
+    M3uXmltvProvider, NavEvent, OverlayKind, PlayerController, RunMode, ShellCommand, StateManager,
+    TvheadendProvider, spawn_server_thread,
 };
 use tracing::{error, info, warn};
 use webkit6::WebView;
@@ -54,16 +54,40 @@ fn main() {
 
 fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::MelangeError> {
     let db = Database::open(&config.db_path)?;
-    if config.channels_path.exists() {
-        let report =
-            M3uXmltvProvider::sync_from_files(&db, &config.channels_path, &config.epg_path)?;
-        info!(
-            channels = report.channels_upserted,
-            epg = report.epg_entries_upserted,
-            "synced m3u/xmltv into sqlite"
+    let mut tvh_synced = false;
+    if let Some(tvh_url) = &config.tvheadend_url {
+        let tvh = TvheadendProvider::new(
+            tvh_url,
+            config.tvheadend_user.clone(),
+            config.tvheadend_pass.clone(),
         );
-    } else {
-        warn!(path = %config.channels_path.display(), "channels.m3u not found");
+        match tvh.sync_blocking(&db) {
+            Ok(report) => {
+                info!(
+                    channels = report.channels_upserted,
+                    epg = report.epg_entries_upserted,
+                    "synced tvheadend into sqlite"
+                );
+                tvh_synced = true;
+            }
+            Err(err) => {
+                warn!(error = %err, "tvheadend unreachable; falling back to m3u/xmltv");
+            }
+        }
+    }
+
+    if !tvh_synced {
+        if config.channels_path.exists() {
+            let report =
+                M3uXmltvProvider::sync_from_files(&db, &config.channels_path, &config.epg_path)?;
+            info!(
+                channels = report.channels_upserted,
+                epg = report.epg_entries_upserted,
+                "synced m3u/xmltv into sqlite"
+            );
+        } else {
+            warn!(path = %config.channels_path.display(), "channels.m3u not found");
+        }
     }
 
     let profiles = db.list_profiles()?;
@@ -73,6 +97,9 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let audio = Arc::new(AudioEngine::new(&config.sounds_dir));
     let state_manager = StateManager::new(profiles.clone(), channels.clone(), epg_entries, Arc::clone(&audio));
     state_manager.set_providers(config.piped_url.clone(), config.media_dirs.clone());
+    state_manager.attach_db_path(config.db_path.clone());
+    state_manager.set_wallpapers_dir(config.wallpapers_dir.clone());
+    state_manager.set_port(config.port);
     if let Some(profile) = profiles.first()
         && let Ok(entries) = db.list_continue_watching(profile.id, 20)
     {
@@ -89,8 +116,11 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     )?;
 
     let (nav_tx, nav_rx) = mpsc::channel::<NavEvent>();
+    state_manager.attach_nav_sender(nav_tx.clone());
     let router = Rc::new(InputRouter::new(Arc::clone(&audio), nav_tx.clone()));
-    let _gamepad = GamepadHandle::spawn(nav_tx, Arc::clone(&audio));
+    let _gamepad = GamepadHandle::spawn(nav_tx.clone(), Arc::clone(&audio));
+    let _evdev = EvdevHandle::spawn(nav_tx.clone(), Arc::clone(&audio));
+    let _cec = CecHandle::spawn(nav_tx, Arc::clone(&audio));
 
     let mpv_player = MpvPlayer::new()?;
     let controller = Rc::new(RefCell::new(PlayerController::new(channels, mpv_player)));
@@ -319,7 +349,8 @@ fn handle_nav_event(
         | NavEvent::Up
         | NavEvent::Down
         | NavEvent::Left
-        | NavEvent::Right => {}
+        | NavEvent::Right
+        | NavEvent::PlayPause => {}
     }
 }
 

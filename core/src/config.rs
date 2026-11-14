@@ -18,9 +18,14 @@ pub struct AppConfig {
     pub epg_path: PathBuf,
     pub sounds_dir: PathBuf,
     pub ui_dist_dir: PathBuf,
+    pub companion_dist_dir: PathBuf,
+    pub wallpapers_dir: PathBuf,
     pub port: u16,
     pub piped_url: String,
     pub media_dirs: Vec<PathBuf>,
+    pub tvheadend_url: Option<String>,
+    pub tvheadend_user: Option<String>,
+    pub tvheadend_pass: Option<String>,
 }
 
 impl AppConfig {
@@ -74,6 +79,15 @@ impl AppConfig {
     }
 
     pub fn for_mode(mode: RunMode) -> Self {
+        let tvheadend_url = env::var("MELANGE_TVHEADEND_URL")
+            .ok()
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .filter(|s| !s.is_empty());
+        let tvheadend_user = env::var("MELANGE_TVHEADEND_USER")
+            .ok()
+            .filter(|s| !s.is_empty());
+        let tvheadend_pass = env::var("MELANGE_TVHEADEND_PASS").ok();
+
         match mode {
             RunMode::Dev => {
                 let dev_dir = PathBuf::from("dev");
@@ -84,9 +98,14 @@ impl AppConfig {
                     epg_path: dev_dir.join("epg.xml"),
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
+                    companion_dist_dir: PathBuf::from("companion").join("dist"),
+                    wallpapers_dir: dev_dir.join("wallpapers"),
                     port: 9000,
                     piped_url: default_piped_url(),
                     media_dirs: vec![dev_dir.join("media")],
+                    tvheadend_url,
+                    tvheadend_user,
+                    tvheadend_pass,
                 }
             }
             RunMode::Desktop | RunMode::Kiosk => {
@@ -98,9 +117,14 @@ impl AppConfig {
                     epg_path: data_dir.join("epg.xml"),
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
+                    companion_dist_dir: PathBuf::from("companion").join("dist"),
+                    wallpapers_dir: data_dir.join("wallpapers"),
                     port: 9000,
                     piped_url: default_piped_url(),
                     media_dirs: default_media_dirs(),
+                    tvheadend_url,
+                    tvheadend_user,
+                    tvheadend_pass,
                 }
             }
         }

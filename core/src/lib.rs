@@ -11,11 +11,11 @@ pub use audio::{AudioEngine, SoundKind};
 pub use config::{AppConfig, RunMode};
 pub use db::{Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile, WatchHistoryEntry};
 pub use error::MelangeError;
-pub use input::{GamepadHandle, InputRouter, NavEvent};
+pub use input::{CecHandle, EvdevHandle, GamepadHandle, InputRouter, NavEvent};
 pub use player::{PlaybackState, PlayerBackend, PlayerController};
 pub use providers::{
     LocalMediaProvider, M3uXmltvProvider, MediaItem, MediathekProvider, OnDemandProvider,
-    SyncReport, YouTubeProvider,
+    SyncReport, TvheadendProvider, YouTubeProvider,
 };
 pub use server::{
     AppMode, ClientCommand, EpgNowNext, MelangeState, OverlayKind, PlaybackSnapshot,
