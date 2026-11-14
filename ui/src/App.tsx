@@ -84,6 +84,17 @@ export const App = () => {
 
     // Browser-only keyboard fallback when inspecting http://127.0.0.1:9000 outside melange-shell.
     const onKeyDown = (e: KeyboardEvent) => {
+      const noAccel = !e.ctrlKey && !e.altKey && !e.metaKey;
+      if (
+        e.key === "F11" ||
+        ((e.key === "f" || e.key === "F") &&
+          noAccel &&
+          melangeState().overlay !== "SearchKeyboard")
+      ) {
+        e.preventDefault();
+        sendCommand({ type: "ToggleFullscreen" });
+        return;
+      }
       const ev = mapBrowserKey(e.key);
       if (ev) {
         e.preventDefault();

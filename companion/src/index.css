@@ -9,12 +9,12 @@
   --melange-edge: #3d0706;
   --melange-ink: #160303;
 
-  --glass-surface: rgba(32, 4, 4, 0.42);
-  --glass-inner: rgba(20, 2, 2, 0.36);
-  --glass-blur: blur(28px) saturate(140%);
-  --hairline: rgba(255, 255, 255, 0.1);
-  --hairline-focus: rgba(255, 255, 255, 0.85);
-  --shadow-ambient: 0 16px 40px rgba(14, 2, 2, 0.42);
+  --glass-surface: rgba(15, 2, 2, 0.76);
+  --glass-inner: rgba(10, 1, 1, 0.62);
+  --glass-blur: blur(36px) saturate(150%);
+  --hairline: rgba(255, 255, 255, 0.14);
+  --hairline-focus: rgba(255, 255, 255, 0.88);
+  --shadow-ambient: 0 20px 48px rgba(8, 1, 1, 0.56);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-geometry: 180ms;
 }
@@ -22,7 +22,7 @@
 body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background-color: #240404;
+  background-color: #120303;
   color: #ffffff;
   font-family:
     'Plus Jakarta Sans',
@@ -51,7 +51,7 @@ body {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #240404;
+  background: #120303;
   contain: strict;
   isolation: isolate;
 }
@@ -88,10 +88,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  height: 2.25rem;
+  gap: 0.45rem;
+  height: 2rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: 12px;
+  font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   transition:
@@ -109,7 +110,7 @@ body {
 }
 
 .pill-primary {
-  padding: 0 1.25rem;
+  padding: 0 1rem;
   background: #ffffff;
   color: var(--melange-ink);
   border: none;
@@ -119,18 +120,18 @@ body {
 
 .pill-primary:focus-visible {
   box-shadow:
-    0 0 0 2.5px rgba(22, 3, 3, 0.45),
-    0 0 0 4px rgba(255, 255, 255, 0.9);
+    0 0 0 2px rgba(15, 2, 2, 0.72),
+    0 0 0 3.5px rgba(255, 255, 255, 0.92);
 }
 
 .pill-secondary {
   padding: 0 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  font-weight: 400;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(15, 2, 2, 0.58);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-weight: 500;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .pill-secondary:active,

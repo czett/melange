@@ -35,12 +35,12 @@ out vec4 fragColor;
 
 const float PI = 3.14159265359;
 
-const vec3 C_VOID  = vec3(0.095, 0.010, 0.012);
-const vec3 C_DEEP  = vec3(0.514, 0.086, 0.075); // #831613
+const vec3 C_VOID  = vec3(0.055, 0.006, 0.008);
+const vec3 C_DEEP  = vec3(0.420, 0.055, 0.050); // Deep moody garnet
 const vec3 C_CRIM  = vec3(0.882, 0.227, 0.149); // #E13A26
 const vec3 C_CORAL = vec3(1.000, 0.353, 0.259); // #FF5A42
 const vec3 C_PEACH = vec3(1.000, 0.620, 0.427); // #FF9E6D
-const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65
+const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65 (Baby Yellow light core)
 
 float hash11(float p) {
   p = fract(p * 0.1031);
@@ -72,27 +72,27 @@ vec3 sampleLightField(vec2 p, float t, vec2 stretch) {
 
   vec2 c1 = vec2(0.32 + 0.035 * sin(t * 0.19),       0.46 + 0.030 * cos(t * 0.15));
   vec2 c2 = vec2(0.50 + 0.040 * cos(t * 0.13),       0.40 + 0.035 * sin(t * 0.17));
-  vec2 c3 = vec2(0.38 + 0.030 * sin(t * 0.23 + 1.1), 0.38 + 0.025 * cos(t * 0.21));
+  vec2 c3 = vec2(0.40 + 0.030 * sin(t * 0.23 + 1.1), 0.41 + 0.025 * cos(t * 0.21));
   vec2 c4 = vec2(0.58 + 0.035 * cos(t * 0.16 + 2.4), 0.14 + 0.025 * sin(t * 0.14));
   vec2 c5 = vec2(0.76 + 0.030 * sin(t * 0.12 + 4.0), 0.78 + 0.030 * cos(t * 0.18));
 
-  float p1 = plume(wp, c1, vec2(0.38, 0.24), -0.42, stretch);
-  float p2 = plume(wp, c2, vec2(0.54, 0.17), -0.58, stretch);
-  float p3 = plume(wp, c3, vec2(0.22, 0.13), -0.32, stretch);
-  float p4 = plume(wp, c4, vec2(0.34, 0.17), -0.22, stretch);
-  float p5 = plume(wp, c5, vec2(0.40, 0.22), -0.28, stretch);
+  float p1 = plume(wp, c1, vec2(0.36, 0.23), -0.42, stretch);
+  float p2 = plume(wp, c2, vec2(0.52, 0.16), -0.58, stretch);
+  float p3 = plume(wp, c3, vec2(0.26, 0.15), -0.36, stretch);
+  float p4 = plume(wp, c4, vec2(0.32, 0.16), -0.22, stretch);
+  float p5 = plume(wp, c5, vec2(0.38, 0.20), -0.28, stretch);
 
-  float E = p1 * 1.05 + p2 * 0.85 + p3 * 0.72 + p4 * 0.68 + p5 * 0.58;
-  float C = p3 * 1.05 + p1 * 0.42 + p2 * 0.25;
+  float E = p1 * 0.96 + p2 * 0.84 + p3 * 0.78 + p4 * 0.52 + p5 * 0.44;
+  float C = p3 * 1.15 + p1 * 0.36 + p2 * 0.30;
 
-  float baseGrad = clamp(1.0 - length((p - vec2(0.46, 0.48)) * vec2(0.85, 1.15)) * 0.95, 0.0, 1.0);
-  vec3 col = mix(C_VOID, C_DEEP * 0.72, baseGrad);
-  col = mix(col, C_DEEP, smoothstep(0.05, 0.40, E));
-  col = mix(col, C_CRIM, smoothstep(0.28, 0.82, E));
-  col = mix(col, C_CORAL, smoothstep(0.72, 1.32, E));
+  float baseGrad = clamp(1.0 - length((p - vec2(0.46, 0.48)) * vec2(0.90, 1.18)) * 1.05, 0.0, 1.0);
+  vec3 col = mix(C_VOID, C_DEEP * 0.56, baseGrad);
+  col = mix(col, C_DEEP, smoothstep(0.08, 0.46, E));
+  col = mix(col, C_CRIM, smoothstep(0.36, 0.90, E));
+  col = mix(col, C_CORAL, smoothstep(0.82, 1.40, E));
 
-  vec3 warmCore = mix(C_PEACH, C_GOLD, 0.35);
-  col = mix(col, warmCore, smoothstep(0.82, 1.48, C) * u_warmIntensity);
+  vec3 warmCore = mix(C_PEACH, C_GOLD, 0.62);
+  col = mix(col, warmCore, smoothstep(0.58, 1.28, C) * u_warmIntensity);
   return col;
 }
 
@@ -146,9 +146,10 @@ void main() {
   glassCol += vec3(1.0, 0.86, 0.82) * ridgeMask * (0.035 + 0.14 * luma);
   glassCol *= 1.0 - troughMask * 0.22;
 
-  float vigRadial = smoothstep(0.46, 1.08, length((suv - vec2(0.48, 0.48)) * vec2(0.95, 1.10)));
-  float vigVert = smoothstep(0.18, 0.0, suv.y) * 0.30 + smoothstep(0.72, 1.0, suv.y) * 0.42;
-  glassCol *= 1.0 - clamp(vigRadial * 0.42 + vigVert, 0.0, 0.62);
+  float distCenter = length((suv - vec2(0.48, 0.48)) * vec2(0.95, 1.08));
+  float vigRadial = smoothstep(0.30, 0.86, distCenter);
+  float vigVert = smoothstep(0.24, 0.0, suv.y) * 0.36 + smoothstep(0.66, 1.0, suv.y) * 0.48;
+  glassCol *= 1.0 - clamp(vigRadial * 0.58 + vigVert * 0.82, 0.0, 0.78);
 
   float grain = (hash21(gl_FragCoord.xy) - 0.5) * 0.020;
   glassCol = clamp(glassCol + grain, 0.0, 1.0);
@@ -318,10 +319,10 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
     },
     render(timeSec: number, warmIntensity: number) {
       const base = offCtx.createLinearGradient(0, 0, offW, offH);
-      base.addColorStop(0, '#1c0303');
-      base.addColorStop(0.45, '#5e0b0a');
-      base.addColorStop(0.75, '#831613');
-      base.addColorStop(1, '#220404');
+      base.addColorStop(0, '#100202');
+      base.addColorStop(0.45, '#420807');
+      base.addColorStop(0.75, '#6b0e0c');
+      base.addColorStop(1, '#140202');
       offCtx.fillStyle = base;
       offCtx.fillRect(0, 0, offW, offH);
 
@@ -345,33 +346,33 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
       drawPlume(
         0.34 + 0.03 * Math.sin(timeSec * 0.19),
         0.46 + 0.03 * Math.cos(timeSec * 0.15),
-        0.95,
-        0.65,
-        'rgba(255, 90, 66, 0.86)',
-        'rgba(225, 58, 38, 0.45)'
+        0.92,
+        0.62,
+        'rgba(255, 90, 66, 0.72)',
+        'rgba(225, 58, 38, 0.36)'
       );
       drawPlume(
         0.52 + 0.035 * Math.cos(timeSec * 0.13),
         0.38 + 0.03 * Math.sin(timeSec * 0.17),
-        1.1,
-        0.48,
-        'rgba(225, 58, 38, 0.68)',
-        'rgba(131, 22, 19, 0.28)'
+        1.08,
+        0.46,
+        'rgba(225, 58, 38, 0.56)',
+        'rgba(131, 22, 19, 0.22)'
       );
       if (warmIntensity > 0.01) {
-        const a = Math.min(0.45, warmIntensity * 1.45).toFixed(2);
+        const a = Math.min(0.68, warmIntensity * 1.1).toFixed(2);
         drawPlume(
-          0.38 + 0.025 * Math.sin(timeSec * 0.23),
-          0.38 + 0.02 * Math.cos(timeSec * 0.21),
-          0.55,
-          0.35,
-          `rgba(255, 198, 128, ${a})`,
-          'rgba(255, 90, 66, 0.18)'
+          0.40 + 0.025 * Math.sin(timeSec * 0.23),
+          0.41 + 0.02 * Math.cos(timeSec * 0.21),
+          0.62,
+          0.38,
+          `rgba(254, 237, 101, ${a})`,
+          'rgba(255, 158, 109, 0.28)'
         );
       }
       offCtx.globalCompositeOperation = 'source-over';
 
-      ctx.fillStyle = '#1c0303';
+      ctx.fillStyle = '#100202';
       ctx.fillRect(0, 0, width, height);
 
       for (const reed of reeds) {
@@ -382,10 +383,10 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
         ctx.drawImage(offscreen, sx, sy, sw, Math.max(16, sh), reed.x, 0, reed.w, height);
 
         const lensGrad = ctx.createLinearGradient(reed.x, 0, reed.x + reed.w, 0);
-        lensGrad.addColorStop(0, 'rgba(255, 225, 215, 0.12)');
-        lensGrad.addColorStop(0.18, 'rgba(255, 255, 255, 0.03)');
+        lensGrad.addColorStop(0, 'rgba(255, 225, 215, 0.11)');
+        lensGrad.addColorStop(0.18, 'rgba(255, 255, 255, 0.025)');
         lensGrad.addColorStop(0.65, 'rgba(0, 0, 0, 0)');
-        lensGrad.addColorStop(1, 'rgba(18, 2, 2, 0.28)');
+        lensGrad.addColorStop(1, 'rgba(12, 1, 1, 0.32)');
         ctx.fillStyle = lensGrad;
         ctx.fillRect(reed.x, 0, reed.w, height);
       }
@@ -393,13 +394,13 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
       const vig = ctx.createRadialGradient(
         width * 0.48,
         height * 0.48,
-        width * 0.2,
+        width * 0.14,
         width * 0.5,
         height * 0.5,
-        Math.max(width, height) * 0.72
+        Math.max(width, height) * 0.64
       );
-      vig.addColorStop(0, 'rgba(22, 3, 3, 0)');
-      vig.addColorStop(1, 'rgba(18, 2, 2, 0.56)');
+      vig.addColorStop(0, 'rgba(14, 2, 2, 0)');
+      vig.addColorStop(1, 'rgba(10, 1, 1, 0.78)');
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, width, height);
     },
@@ -416,7 +417,7 @@ export function FlutedBackdrop(props: FlutedBackdropProps) {
   let lastFrameMs = 0;
   let elapsedSec = 0;
 
-  const warmValue = () => Math.max(0, Math.min(0.45, props.warmIntensity ?? 0.18));
+  const warmValue = () => Math.max(0, Math.min(0.85, props.warmIntensity ?? 0.58));
 
   const drawFrame = () => {
     renderer?.render(elapsedSec, warmValue());

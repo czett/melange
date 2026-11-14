@@ -27,7 +27,7 @@ export const FullEpg = () => {
       <div class="glass-card flex h-full max-h-[84vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px]">
         <header class="flex items-center justify-between border-b border-white/10 px-8 py-5">
           <div class="flex items-baseline gap-4">
-            <h1 class="text-[28px] font-normal leading-none tracking-[-0.035em] text-white">
+            <h1 class="pb-0.5 text-[28px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
               Program Guide
             </h1>
             <span class="text-[11px] tabular-nums text-white/45">

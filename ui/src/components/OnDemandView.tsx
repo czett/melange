@@ -22,17 +22,10 @@ function formatDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-/**
- * Typographic monogram for items without artwork (e.g. MediathekViewWeb). Uses the
- * broadcaster's initials, or a compact three-letter mark for single-token names.
- */
-function broadcasterMonogram(item: MediaItem): string {
-  const source = (item.channel_or_author || item.title || "M").trim();
-  const words = source.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return `${words[0][0]}${words[1][0]}`.toUpperCase();
-  }
-  return (words[0] ?? "M").slice(0, 3).toUpperCase();
+function categoryBadge(item: MediaItem, provider: OnDemandViewProps["provider"], fallback: string): string {
+  const raw = (item.channel_or_author || "").trim();
+  if (raw.length > 0) return raw;
+  return provider === "local" ? "LOCAL MEDIA" : fallback;
 }
 
 export function OnDemandView(props: OnDemandViewProps) {
@@ -140,7 +133,7 @@ export function OnDemandView(props: OnDemandViewProps) {
       <header class="mb-9 flex items-end justify-between gap-6">
         <div>
           <div class="eyebrow">{props.subtitle}</div>
-          <h1 class="mt-2 text-[40px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
+          <h1 class="mt-2 pb-0.5 text-[40px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
             {props.title}
           </h1>
         </div>
@@ -248,70 +241,92 @@ export function OnDemandView(props: OnDemandViewProps) {
                   type="button"
                   data-focus-radius="18px"
                   onClick={() => playItem(item)}
-                  class="glass-card glass-card-interactive flex flex-col overflow-hidden rounded-[18px] text-left"
+                  class="glass-card glass-card-interactive flex h-full flex-col overflow-hidden rounded-[18px] text-left"
                 >
-                  <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(20,2,2,0.34)]">
-                    <Show
-                      when={item.thumbnail_url}
-                      fallback={
-                        <div class="relative flex h-full w-full items-center justify-center overflow-hidden">
-                          <div
-                            class="absolute inset-0"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(20,2,2,0.22) 55%, rgba(12,1,1,0.38) 100%)"
-                            }}
-                          />
-                          <div
-                            class="absolute inset-0"
-                            style={{
-                              background:
-                                "radial-gradient(75% 80% at 22% 14%, rgba(255, 255, 255, 0.08) 0%, transparent 65%)"
-                            }}
-                          />
-                          <span class="relative select-none text-[42px] font-medium leading-none tracking-[-0.05em] text-white/90">
-                            {broadcasterMonogram(item)}
-                          </span>
-                          <span class="absolute bottom-3 left-4 max-w-[80%] truncate text-[9px] uppercase tracking-[0.2em] text-white/50">
-                            {item.channel_or_author || props.subtitle}
-                          </span>
-                        </div>
-                      }
-                    >
-                      {(thumb) => (
-                        <img
-                          src={thumb()}
-                          alt={item.title}
-                          class="h-full w-full object-cover"
-                          loading="lazy"
+                  <Show
+                    when={item.thumbnail_url}
+                    fallback={
+                      <div
+                        class="relative flex min-h-[192px] w-full flex-1 flex-col justify-between overflow-hidden p-5"
+                        style={{ background: "rgba(15, 2, 2, 0.78)" }}
+                      >
+                        {/* Subtle diagonal #831613 / #E13A26 editorial light accent */}
+                        <div
+                          class="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(132deg, rgba(225, 58, 38, 0.2) 0%, rgba(131, 22, 19, 0.16) 28%, rgba(15, 2, 2, 0) 62%)"
+                          }}
                         />
-                      )}
-                    </Show>
-                    <div
-                      class="pointer-events-none absolute inset-0"
-                      style={{
-                        background:
-                          "linear-gradient(180deg, transparent 55%, rgba(22,3,3,0.6) 100%)"
-                      }}
-                    />
-                    <Show when={item.duration_sec > 0}>
-                      <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(22,3,3,0.6)] tabular-nums text-white/85 backdrop-blur-md">
-                        {formatDuration(item.duration_sec)}
-                      </span>
-                    </Show>
-                  </div>
+                        <div
+                          class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full"
+                          style={{
+                            background:
+                              "radial-gradient(circle, rgba(225, 58, 38, 0.16) 0%, transparent 72%)"
+                          }}
+                        />
 
-                  <div class="flex flex-col gap-1 px-4 py-3.5">
-                    <div class="truncate text-[11px] text-white/50">
-                      {item.channel_or_author}
-                      <Show when={item.subtitle}>
-                        <span> · {item.subtitle}</span>
-                      </Show>
-                    </div>
-                    <div class="line-clamp-2 text-[13px] font-medium leading-snug tracking-[-0.01em] text-white">
-                      {item.title}
-                    </div>
-                  </div>
+                        <div class="relative flex items-center justify-between gap-2">
+                          <span class="chip max-w-[68%] truncate uppercase tracking-[0.12em] text-white/85">
+                            {categoryBadge(item, props.provider, props.subtitle)}
+                          </span>
+                          <Show when={item.duration_sec > 0}>
+                            <span class="chip shrink-0 tabular-nums text-white/75">
+                              {formatDuration(item.duration_sec)}
+                            </span>
+                          </Show>
+                        </div>
+
+                        <div class="relative mt-6 space-y-2">
+                          <div class="line-clamp-3 pb-0.5 text-[15px] font-medium leading-[1.3] tracking-[-0.015em] text-white">
+                            {item.title}
+                          </div>
+                          <Show when={item.subtitle || item.description}>
+                            <div class="line-clamp-2 text-[12px] leading-relaxed text-white/55">
+                              {item.subtitle || item.description}
+                            </div>
+                          </Show>
+                        </div>
+                      </div>
+                    }
+                  >
+                    {(thumb) => (
+                      <>
+                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(10,1,1,0.62)]">
+                          <img
+                            src={thumb()}
+                            alt={item.title}
+                            class="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                          <div
+                            class="pointer-events-none absolute inset-0"
+                            style={{
+                              background:
+                                "linear-gradient(180deg, transparent 55%, rgba(15,2,2,0.7) 100%)"
+                            }}
+                          />
+                          <Show when={item.duration_sec > 0}>
+                            <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(15,2,2,0.78)] tabular-nums text-white/85 backdrop-blur-md">
+                              {formatDuration(item.duration_sec)}
+                            </span>
+                          </Show>
+                        </div>
+
+                        <div class="flex flex-col gap-1 px-4 py-3.5">
+                          <div class="truncate text-[11px] text-white/50">
+                            {item.channel_or_author}
+                            <Show when={item.subtitle}>
+                              <span> · {item.subtitle}</span>
+                            </Show>
+                          </div>
+                          <div class="line-clamp-2 pb-0.5 text-[13px] font-medium leading-snug tracking-[-0.01em] text-white">
+                            {item.title}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </Show>
                 </button>
               )}
             </For>

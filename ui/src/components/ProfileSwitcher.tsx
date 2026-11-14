@@ -18,7 +18,7 @@ export const ProfileSwitcher = () => {
         <div class="flex items-start justify-between gap-4">
           <div>
             <div class="eyebrow">Who's watching</div>
-            <h2 class="mt-2 text-[28px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
+            <h2 class="mt-2 pb-0.5 text-[28px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
               Switch profile
             </h2>
             <p class="mt-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">

@@ -44,7 +44,7 @@ export function SettingsView(props: SettingsViewProps) {
       <div class="mx-auto mb-8 flex w-full max-w-5xl items-end justify-between">
         <div>
           <div class="eyebrow">System</div>
-          <h1 class="mt-2 text-[40px] font-normal leading-[1.05] tracking-[-0.035em] text-white">
+          <h1 class="mt-2 pb-0.5 text-[40px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
             Settings
           </h1>
         </div>

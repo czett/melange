@@ -12,8 +12,8 @@ export default {
           ink: "#160303"
         },
         garnet: {
-          glass: "rgba(32, 4, 4, 0.42)",
-          inner: "rgba(20, 2, 2, 0.36)"
+          glass: "rgba(15, 2, 2, 0.76)",
+          inner: "rgba(10, 1, 1, 0.62)"
         }
       },
       fontFamily: {

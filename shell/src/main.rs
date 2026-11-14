@@ -5,10 +5,13 @@ use std::rc::Rc;
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use gtk4::gdk::{Key, RGBA};
+use gtk4::gdk::{Key, ModifierType, RGBA};
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, EventControllerKey, GLArea, Overlay, PropagationPhase};
+use gtk4::{
+    Application, ApplicationWindow, CssProvider, EventControllerKey, GLArea, Overlay,
+    PropagationPhase, STYLE_PROVIDER_PRIORITY_APPLICATION,
+};
 use melange_core::{
     AppConfig, AppMode, AudioEngine, CecHandle, Database, EvdevHandle, GamepadHandle, InputRouter,
     M3uXmltvProvider, NavEvent, OverlayKind, PlayerBackend, PlayerController, RunMode, ShellCommand,
@@ -141,11 +144,33 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
         .title("melange")
         .default_width(1280)
         .default_height(720)
+        .decorated(false)
         .build();
+    window.set_decorated(false);
+
+    if let Some(display) = gtk4::gdk::Display::default() {
+        let provider = CssProvider::new();
+        provider.load_from_string(
+            "window, headerbar { background-color: #120303; color: #ffffff; border: none; box-shadow: none; }",
+        );
+        gtk4::style_context_add_provider_for_display(
+            &display,
+            &provider,
+            STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+
+    {
+        let state_fs = Arc::clone(&state_manager);
+        window.connect_fullscreened_notify(move |win| {
+            state_fs.set_fullscreen(win.is_fullscreen());
+        });
+    }
 
     if config.mode == RunMode::Kiosk {
         window.fullscreen();
         window.set_cursor_from_name(Some("none"));
+        state_manager.set_fullscreen(true);
     }
 
     let gl_area = GLArea::builder()
@@ -218,7 +243,19 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let key_controller = EventControllerKey::new();
     key_controller.set_propagation_phase(PropagationPhase::Capture);
     let router_keys = Rc::clone(&router);
-    key_controller.connect_key_pressed(move |_, key, _, _| {
+    let window_keys = window.clone();
+    let state_keys = Arc::clone(&state_manager);
+    key_controller.connect_key_pressed(move |_, key, _, mods| {
+        let no_accel =
+            !mods.intersects(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK);
+        let is_f11 = key == Key::F11;
+        let is_f_shortcut = matches!(key, Key::f | Key::F)
+            && no_accel
+            && state_keys.snapshot().overlay != OverlayKind::SearchKeyboard;
+        if is_f11 || is_f_shortcut {
+            toggle_window_fullscreen(&window_keys, &state_keys);
+            return glib::Propagation::Stop;
+        }
         if let Some(ev) = map_gtk_key(key) {
             router_keys.dispatch(ev);
             return glib::Propagation::Stop;
@@ -233,6 +270,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     // Poll NavEvent, ShellCommand, libmpv events & on-demand progress on GTK main loop without blocking.
     let ctrl_nav = Rc::clone(&controller);
     let state_nav = Arc::clone(&state_manager);
+    let window_cmd = window.clone();
     let db_path_loop = config.db_path.clone();
     let mut tick_count: u64 = 0;
     glib::timeout_add_local(Duration::from_millis(16), move || {
@@ -241,7 +279,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
             handle_nav_event(&ctrl_nav, &state_nav, ev);
         }
         while let Ok(cmd) = shell_cmd_rx.try_recv() {
-            handle_shell_command(&ctrl_nav, &state_nav, cmd);
+            handle_shell_command(&window_cmd, &ctrl_nav, &state_nav, cmd);
         }
 
         let mpv_err = {
@@ -325,7 +363,18 @@ impl ControllerSnapshot {
     }
 }
 
+fn toggle_window_fullscreen(window: &ApplicationWindow, state_manager: &StateManager) {
+    let next = !window.is_fullscreen();
+    if next {
+        window.fullscreen();
+    } else {
+        window.unfullscreen();
+    }
+    state_manager.set_fullscreen(next);
+}
+
 fn handle_shell_command(
+    window: &ApplicationWindow,
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
     state_manager: &StateManager,
     cmd: ShellCommand,
@@ -397,6 +446,9 @@ fn handle_shell_command(
                     error!(error = %err, "failed to toggle pause");
                 }
             }
+        }
+        ShellCommand::ToggleFullscreen => {
+            toggle_window_fullscreen(window, state_manager);
         }
     }
 }

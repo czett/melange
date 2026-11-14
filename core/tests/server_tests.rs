@@ -245,3 +245,23 @@ async fn play_media_switches_mode_to_live_tv_and_sets_player_osd() {
     assert!(snap.playback.current_media.is_none());
     assert_eq!(snap.playback.channel_id, Some(1));
 }
+
+#[tokio::test]
+async fn toggle_fullscreen_updates_state_and_forwards_shell_command() {
+    let (_host, state) = spawn_test_server().await;
+    assert!(!state.snapshot().is_fullscreen);
+
+    state.apply_client_command(ClientCommand::ToggleFullscreen);
+    assert!(state.snapshot().is_fullscreen);
+
+    state.apply_client_command(ClientCommand::ToggleFullscreen);
+    assert!(!state.snapshot().is_fullscreen);
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.attach_shell_sender(tx);
+    state.apply_client_command(ClientCommand::ToggleFullscreen);
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::ToggleFullscreen)
+    ));
+}

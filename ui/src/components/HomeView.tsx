@@ -245,19 +245,53 @@ export const HomeView = () => {
           <button
             ref={(el) =>
               onCleanup(
-                registerFocusable("home-profile", el, () =>
-                  sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
+                registerFocusable("home-fullscreen", el, () =>
+                  sendCommand({ type: "ToggleFullscreen" })
                 )
               )
             }
             type="button"
-            data-focus-id="home-profile"
+            data-focus-id="home-fullscreen"
             data-focus-radius="9999px"
-            onClick={() => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })}
-            title={`Profile: ${melangeState().active_profile?.name ?? "Default"}`}
-            class="pill pill-primary pill-icon text-xs font-medium"
+            onClick={() => sendCommand({ type: "ToggleFullscreen" })}
+            title={melangeState().is_fullscreen ? "Exit Fullscreen (F11)" : "Fullscreen (F11)"}
+            aria-label={melangeState().is_fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            class="pill pill-secondary pill-icon"
           >
-            {(melangeState().active_profile?.name ?? "D").slice(0, 1).toUpperCase()}
+            <Show
+              when={melangeState().is_fullscreen}
+              fallback={
+                <svg
+                  class="h-[14px] w-[14px]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                  <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                  <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                  <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              }
+            >
+              <svg
+                class="h-[14px] w-[14px]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+              </svg>
+            </Show>
           </button>
 
           <button
@@ -276,7 +310,7 @@ export const HomeView = () => {
             class="pill pill-secondary pill-icon"
           >
             <svg
-              class="h-[15px] w-[15px]"
+              class="h-[14px] w-[14px]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -287,6 +321,24 @@ export const HomeView = () => {
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
             </svg>
+          </button>
+
+          <button
+            ref={(el) =>
+              onCleanup(
+                registerFocusable("home-profile", el, () =>
+                  sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
+                )
+              )
+            }
+            type="button"
+            data-focus-id="home-profile"
+            data-focus-radius="9999px"
+            onClick={() => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })}
+            title={`Profile: ${melangeState().active_profile?.name ?? "Default"}`}
+            class="pill pill-primary pill-icon text-xs font-medium"
+          >
+            {(melangeState().active_profile?.name ?? "D").slice(0, 1).toUpperCase()}
           </button>
         </div>
       </header>
@@ -311,7 +363,7 @@ export const HomeView = () => {
             </Show>
           </div>
 
-          <h1 class="line-clamp-2 max-w-[14ch] text-[56px] font-medium leading-[1.02] tracking-[-0.04em] text-white xl:text-[60px]">
+          <h1 class="line-clamp-2 max-w-[14ch] pb-1.5 text-[56px] font-medium leading-[1.12] tracking-[-0.04em] text-white xl:text-[60px]">
             {heroTitle()}
           </h1>
 

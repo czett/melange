@@ -93,6 +93,7 @@ pub struct EpgNowNext {
 pub struct MelangeState {
     pub mode: AppMode,
     pub overlay: OverlayKind,
+    pub is_fullscreen: bool,
     pub active_profile: Option<Profile>,
     pub profiles: Vec<Profile>,
     pub channels: Vec<Channel>,
@@ -122,6 +123,7 @@ pub enum ClientCommand {
     PlayMedia { item: MediaItem, resume: bool },
     SeekRelative { offset_sec: f64 },
     TogglePause,
+    ToggleFullscreen,
 }
 
 #[derive(Debug, Clone)]
@@ -133,6 +135,7 @@ pub enum ShellCommand {
     PlayMedia { item: MediaItem, start_position_sec: f64 },
     SeekRelative { offset_sec: f64 },
     TogglePause,
+    ToggleFullscreen,
 }
 
 pub struct StateManager {
@@ -164,6 +167,7 @@ impl StateManager {
         let initial = MelangeState {
             mode: AppMode::Home,
             overlay: OverlayKind::None,
+            is_fullscreen: false,
             active_profile,
             profiles,
             channels,
@@ -315,6 +319,20 @@ impl StateManager {
             st.overlay = overlay;
         }
         self.broadcast_state();
+    }
+
+    pub fn set_fullscreen(&self, is_fullscreen: bool) {
+        let mut changed = false;
+        {
+            let mut st = self.state.write().expect("state lock");
+            if st.is_fullscreen != is_fullscreen {
+                st.is_fullscreen = is_fullscreen;
+                changed = true;
+            }
+        }
+        if changed {
+            self.broadcast_state();
+        }
     }
 
     pub fn handle_nav_event(&self, event: NavEvent) {
@@ -476,6 +494,22 @@ impl StateManager {
                 }
                 self.broadcast_state();
                 self.send_shell_command(ShellCommand::TogglePause);
+            }
+            ClientCommand::ToggleFullscreen => {
+                let has_shell = self
+                    .shell_cmd_tx
+                    .read()
+                    .map(|g| g.is_some())
+                    .unwrap_or(false);
+                if has_shell {
+                    self.send_shell_command(ShellCommand::ToggleFullscreen);
+                } else {
+                    {
+                        let mut st = self.state.write().expect("state lock");
+                        st.is_fullscreen = !st.is_fullscreen;
+                    }
+                    self.broadcast_state();
+                }
             }
         }
     }

@@ -10,6 +10,7 @@ import type {
 const EMPTY_STATE: MelangeState = {
   mode: "Home",
   overlay: "None",
+  is_fullscreen: false,
   active_profile: null,
   profiles: [],
   channels: [],

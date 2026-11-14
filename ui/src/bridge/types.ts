@@ -88,6 +88,7 @@ export interface PlaybackSnapshot {
 export interface MelangeState {
   mode: AppMode;
   overlay: OverlayKind;
+  is_fullscreen: boolean;
   active_profile: Profile | null;
   profiles: Profile[];
   channels: Channel[];
@@ -123,4 +124,5 @@ export type ClientCommand =
   | { type: "PlaySound"; sound: SoundKind }
   | { type: "PlayMedia"; item: MediaItem; resume: boolean }
   | { type: "SeekRelative"; offset_sec: number }
-  | { type: "TogglePause" };
+  | { type: "TogglePause" }
+  | { type: "ToggleFullscreen" };
