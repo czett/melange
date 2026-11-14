@@ -11,6 +11,7 @@ import { FocusRing } from "./components/FocusRing";
 import { FullEpg } from "./components/FullEpg";
 import { HomeView } from "./components/HomeView";
 import { PlaceholderModeView } from "./components/PlaceholderModeView";
+import { SettingsView } from "./components/SettingsView";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import { ZapBanner } from "./components/ZapBanner";
 import { handleSpatialNav, measureFocused } from "./spatial/nav";
@@ -101,11 +102,17 @@ export const App = () => {
       <Show
         when={
           melangeState().mode === "Mediathek" ||
-          melangeState().mode === "Media" ||
-          melangeState().mode === "Settings"
+          melangeState().mode === "Media"
         }
       >
         <PlaceholderModeView mode={melangeState().mode} />
+      </Show>
+
+      <Show when={melangeState().mode === "Settings"}>
+        <SettingsView
+          activeProfile={melangeState().active_profile}
+          channelCount={melangeState().channels.length}
+        />
       </Show>
 
       <ZapBanner />
