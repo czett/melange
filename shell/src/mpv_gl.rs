@@ -5,9 +5,10 @@ use gtk4::glib;
 use gtk4::prelude::*;
 use libloading::Library;
 use libmpv2::Mpv;
+use libmpv2::events::Event;
 use libmpv2::render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType};
 use melange_core::{MelangeError, PlayerBackend};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 const GL_FRAMEBUFFER_BINDING: u32 = 0x8CA6;
 
@@ -128,6 +129,16 @@ impl MpvPlayer {
             init.set_property("keep-open", "always")?;
             init.set_property("idle", "yes")?;
             init.set_property("ytdl", "yes")?;
+            init.set_property(
+                "ytdl-format",
+                "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
+            )?;
+            init.set_property("network-timeout", 15)?;
+            init.set_property(
+                "user-agent",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            )?;
+            init.set_property("msg-level", "all=warn")?;
             init.set_property("terminal", "no")?;
             Ok(())
         })
@@ -213,12 +224,46 @@ impl MpvPlayer {
             .map_err(|e| MelangeError::Player(format!("seek failed: {e}")))
     }
 
-    #[allow(dead_code)]
     pub fn playback_progress(&self) -> (f64, f64, bool) {
         let pos: f64 = self.mpv.get_property("time-pos").unwrap_or(0.0);
         let dur: f64 = self.mpv.get_property("duration").unwrap_or(0.0);
         let paused: bool = self.mpv.get_property("pause").unwrap_or(false);
         (pos.max(0.0), dur.max(0.0), paused)
+    }
+
+    pub fn poll_events(&mut self) -> Option<String> {
+        let mut last_error: Option<String> = None;
+        while let Some(ev) = self.mpv.wait_event(0.0) {
+            match ev {
+                Ok(Event::LogMessage {
+                    prefix,
+                    level,
+                    text,
+                    ..
+                }) => {
+                    let msg = text.trim();
+                    if !msg.is_empty() {
+                        if matches!(level, "fatal" | "error") {
+                            error!(prefix = %prefix, "libmpv: {msg}");
+                        } else {
+                            warn!(prefix = %prefix, "libmpv: {msg}");
+                        }
+                    }
+                }
+                Ok(Event::EndFile(reason)) => {
+                    if reason == libmpv2::mpv_end_file_reason::Error {
+                        let msg = "libmpv playback ended with error".to_string();
+                        error!("{msg}");
+                        last_error = Some(msg);
+                    }
+                }
+                Err(err) => {
+                    warn!(error = %err, "libmpv event error");
+                }
+                _ => {}
+            }
+        }
+        last_error
     }
 }
 

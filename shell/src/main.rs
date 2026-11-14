@@ -11,8 +11,8 @@ use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow, EventControllerKey, GLArea, Overlay, PropagationPhase};
 use melange_core::{
     AppConfig, AppMode, AudioEngine, CecHandle, Database, EvdevHandle, GamepadHandle, InputRouter,
-    M3uXmltvProvider, NavEvent, OverlayKind, PlayerController, RunMode, ShellCommand, StateManager,
-    TvheadendProvider, spawn_server_thread,
+    M3uXmltvProvider, NavEvent, OverlayKind, PlayerBackend, PlayerController, RunMode, ShellCommand,
+    StateManager, TvheadendProvider, spawn_server_thread,
 };
 use tracing::{error, info, warn};
 use webkit6::WebView;
@@ -222,17 +222,48 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     window.set_child(Some(&root_overlay));
     window.present();
 
-    // Poll NavEvent & ShellCommand queues on GTK main loop without blocking.
+    // Poll NavEvent, ShellCommand, libmpv events & on-demand progress on GTK main loop without blocking.
     let ctrl_nav = Rc::clone(&controller);
     let state_nav = Arc::clone(&state_manager);
-    let win_weak = window.downgrade();
+    let db_path_loop = config.db_path.clone();
+    let mut tick_count: u64 = 0;
     glib::timeout_add_local(Duration::from_millis(16), move || {
         while let Ok(ev) = nav_rx.try_recv() {
             state_nav.handle_nav_event(ev);
-            handle_nav_event(&ctrl_nav, &state_nav, &win_weak, ev);
+            handle_nav_event(&ctrl_nav, &state_nav, ev);
         }
         while let Ok(cmd) = shell_cmd_rx.try_recv() {
             handle_shell_command(&ctrl_nav, &state_nav, cmd);
+        }
+
+        let mpv_err = {
+            let mut ctrl = ctrl_nav.borrow_mut();
+            ctrl.backend_mut().poll_events()
+        };
+        if mpv_err.is_some() {
+            state_nav.clear_zapping();
+        }
+
+        tick_count = tick_count.wrapping_add(1);
+        if tick_count.is_multiple_of(31) {
+            let snap = state_nav.snapshot();
+            if let Some(ref item) = snap.playback.current_media {
+                let (pos, dur, paused) = {
+                    let ctrl = ctrl_nav.borrow();
+                    ctrl.backend().playback_progress()
+                };
+                state_nav.update_playback_progress(pos, dur, paused);
+
+                if tick_count.is_multiple_of(310)
+                    && pos > 1.0
+                    && let Some(profile) = snap.active_profile
+                    && let Ok(db) = Database::open(&db_path_loop)
+                    && db.upsert_watch_progress(profile.id, item, pos, dur).is_ok()
+                    && let Ok(entries) = db.list_continue_watching(profile.id, 20)
+                {
+                    state_nav.set_continue_watching(entries);
+                }
+            }
         }
         glib::ControlFlow::Continue
     });
@@ -336,12 +367,27 @@ fn handle_shell_command(
             }
         }
         ShellCommand::TogglePause => {
-            let res = {
-                let mut ctrl = controller.borrow_mut();
-                ctrl.toggle_pause()
-            };
-            if let Err(err) = res {
-                error!(error = %err, "failed to toggle pause");
+            let snap = state_manager.snapshot();
+            if snap.playback.current_media.is_some() {
+                let res = {
+                    let mut ctrl = controller.borrow_mut();
+                    ctrl.backend_mut().toggle_pause()
+                };
+                match res {
+                    Ok(paused) => {
+                        let (pos, dur, _) = controller.borrow().backend().playback_progress();
+                        state_manager.update_playback_progress(pos, dur, paused);
+                    }
+                    Err(err) => error!(error = %err, "failed to toggle on-demand pause"),
+                }
+            } else {
+                let res = {
+                    let mut ctrl = controller.borrow_mut();
+                    ctrl.toggle_pause()
+                };
+                if let Err(err) = res {
+                    error!(error = %err, "failed to toggle pause");
+                }
             }
         }
     }
@@ -350,7 +396,6 @@ fn handle_shell_command(
 fn handle_nav_event(
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
     state_manager: &StateManager,
-    win_weak: &glib::WeakRef<ApplicationWindow>,
     event: NavEvent,
 ) {
     match event {
@@ -400,10 +445,21 @@ fn handle_nav_event(
                     }
                     Some(ControllerSnapshot::from_controller(&ctrl))
                 } else if snap.mode == AppMode::LiveTv && snap.overlay == OverlayKind::None {
-                    if let Err(err) = ctrl.toggle_pause() {
-                        error!(error = %err, "toggle pause failed");
+                    if snap.playback.current_media.is_some() {
+                        match ctrl.backend_mut().toggle_pause() {
+                            Ok(paused) => {
+                                let (pos, dur, _) = ctrl.backend().playback_progress();
+                                state_manager.update_playback_progress(pos, dur, paused);
+                            }
+                            Err(err) => error!(error = %err, "toggle on-demand pause failed"),
+                        }
+                        None
+                    } else {
+                        if let Err(err) = ctrl.toggle_pause() {
+                            error!(error = %err, "toggle pause failed");
+                        }
+                        Some(ControllerSnapshot::from_controller(&ctrl))
                     }
-                    Some(ControllerSnapshot::from_controller(&ctrl))
                 } else {
                     None
                 }
@@ -412,23 +468,35 @@ fn handle_nav_event(
                 s.apply(state_manager);
             }
         }
-        NavEvent::Back => {
+        NavEvent::PlayPause => {
             let snap = state_manager.snapshot();
-            if snap.overlay == OverlayKind::None
-                && snap.mode == AppMode::LiveTv
-                && let Some(win) = win_weak.upgrade()
-                && win.is_fullscreen()
-            {
-                win.unfullscreen();
+            if snap.playback.current_media.is_some() {
+                let mut ctrl = controller.borrow_mut();
+                match ctrl.backend_mut().toggle_pause() {
+                    Ok(paused) => {
+                        let (pos, dur, _) = ctrl.backend().playback_progress();
+                        state_manager.update_playback_progress(pos, dur, paused);
+                    }
+                    Err(err) => error!(error = %err, "play/pause failed"),
+                }
+            } else {
+                let updated = {
+                    let mut ctrl = controller.borrow_mut();
+                    if let Err(err) = ctrl.toggle_pause() {
+                        error!(error = %err, "play/pause failed");
+                    }
+                    ControllerSnapshot::from_controller(&ctrl)
+                };
+                updated.apply(state_manager);
             }
         }
-        NavEvent::Home
+        NavEvent::Back
+        | NavEvent::Home
         | NavEvent::ToggleEpg
         | NavEvent::Up
         | NavEvent::Down
         | NavEvent::Left
-        | NavEvent::Right
-        | NavEvent::PlayPause => {}
+        | NavEvent::Right => {}
     }
 }
 
