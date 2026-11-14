@@ -3,11 +3,12 @@ use std::sync::Arc;
 
 use melange_core::providers::mediathek::parse_mediathek_response;
 use melange_core::providers::youtube::{
-    parse_piped_search_response, parse_piped_trending_response,
+    extract_video_id, parse_piped_search_response, parse_piped_trending_response,
+    parse_ytdlp_json_response,
 };
 use melange_core::{
     AudioEngine, Database, LocalMediaProvider, MediaItem, OnDemandProvider, StateManager,
-    serve_on_listener,
+    YouTubeProvider, serve_on_listener,
 };
 use tempfile::TempDir;
 use tokio::net::TcpListener;
@@ -163,4 +164,105 @@ async fn test_watch_history_and_rest_routes() {
         .await
         .expect("get local feed");
     assert_eq!(res_local.status(), 200);
+}
+
+#[test]
+fn test_ytdlp_json_parsing_and_video_id_extraction() {
+    let fixture = r#"{
+        "entries": [
+            {
+                "id": "N_vxQl7lFRA",
+                "url": "https://www.youtube.com/watch?v=N_vxQl7lFRA",
+                "title": "tagesschau 20:00 Uhr",
+                "description": "Nachrichten",
+                "duration": 904.4,
+                "channel": "tagesschau",
+                "uploader": "tagesschau",
+                "thumbnails": [
+                    { "url": "https://i.ytimg.com/vi/N_vxQl7lFRA/hqdefault.jpg" },
+                    { "url": "https://i.ytimg.com/vi/N_vxQl7lFRA/hq720.jpg" }
+                ],
+                "upload_date": "20261114"
+            }
+        ]
+    }"#;
+
+    let items = parse_ytdlp_json_response(fixture).expect("parse ytdlp");
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].id, "yt:N_vxQl7lFRA");
+    assert_eq!(items[0].provider, "youtube");
+    assert_eq!(items[0].title, "tagesschau 20:00 Uhr");
+    assert_eq!(items[0].channel_or_author, "tagesschau");
+    assert_eq!(items[0].duration_sec, 904);
+    assert_eq!(
+        items[0].thumbnail_url.as_deref(),
+        Some("https://i.ytimg.com/vi/N_vxQl7lFRA/hq720.jpg")
+    );
+    assert_eq!(
+        items[0].stream_url,
+        "https://www.youtube.com/watch?v=N_vxQl7lFRA"
+    );
+
+    assert_eq!(
+        extract_video_id("https://youtu.be/dQw4w9WgXcQ?t=10").as_deref(),
+        Some("dQw4w9WgXcQ")
+    );
+    assert_eq!(
+        extract_video_id("https://www.youtube.com/shorts/abcDEF123").as_deref(),
+        Some("abcDEF123")
+    );
+}
+
+#[tokio::test]
+async fn test_youtube_provider_fallback_chain() {
+    use axum::{Router, http::StatusCode, response::Html, routing::get};
+
+    // Primary mock returns 200 HTML (antibot page) on trending and 502 on search
+    let bad_app = Router::new()
+        .route(
+            "/trending",
+            get(|| async { Html("<html><body>captcha</body></html>") }),
+        )
+        .route("/search", get(|| async { StatusCode::BAD_GATEWAY }));
+    let bad_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let bad_addr = bad_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(bad_listener, bad_app).await;
+    });
+
+    // Secondary mock returns valid Piped JSON
+    let good_app = Router::new()
+        .route(
+            "/trending",
+            get(|| async {
+                r#"[{"url":"/watch?v=dQw4w9WgXcQ","title":"Fallback Trend","type":"stream","duration":212}]"#
+            }),
+        )
+        .route(
+            "/search",
+            get(|| async {
+                r#"{"items":[{"url":"/watch?v=aqz-KE-bpKQ","title":"Fallback Search","type":"stream","duration":634}]}"#
+            }),
+        );
+    let good_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let good_addr = good_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(good_listener, good_app).await;
+    });
+
+    let provider = YouTubeProvider::with_piped_urls(
+        vec![
+            format!("http://{bad_addr}"),
+            format!("http://{good_addr}"),
+        ],
+        false,
+    );
+
+    let feed = provider.feed().await.expect("feed fallback");
+    assert_eq!(feed.len(), 1);
+    assert_eq!(feed[0].title, "Fallback Trend");
+
+    let search = provider.search("blender").await.expect("search fallback");
+    assert_eq!(search.len(), 1);
+    assert_eq!(search[0].title, "Fallback Search");
 }

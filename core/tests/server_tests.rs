@@ -177,3 +177,71 @@ async fn websocket_snapshot_nav_broadcast_and_select_channel() {
         other => panic!("expected StateUpdate, got {other:?}"),
     }
 }
+
+#[tokio::test]
+async fn nav_back_transitions_overlays_and_modes_to_home() {
+    let (_host, state) = spawn_test_server().await;
+
+    // 1. LiveTv + FullEpg -> Back closes overlay -> Back returns to Home
+    state.set_mode(AppMode::LiveTv);
+    state.set_overlay(OverlayKind::FullEpg);
+    state.handle_nav_event(NavEvent::Back);
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::LiveTv);
+    assert_eq!(snap.overlay, OverlayKind::None);
+
+    state.handle_nav_event(NavEvent::Back);
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::Home);
+    assert_eq!(snap.overlay, OverlayKind::None);
+
+    // 2. SearchKeyboard overlay inside YouTube -> Back closes keyboard, second Back returns Home
+    state.set_mode(AppMode::YouTube);
+    state.set_overlay(OverlayKind::SearchKeyboard);
+    state.handle_nav_event(NavEvent::Back);
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::YouTube);
+    assert_eq!(snap.overlay, OverlayKind::None);
+
+    state.handle_nav_event(NavEvent::Back);
+    assert_eq!(state.snapshot().mode, AppMode::Home);
+
+    // 3. Mediathek, Media, Settings -> Back returns to Home
+    for mode in [AppMode::Mediathek, AppMode::Media, AppMode::Settings] {
+        state.set_mode(mode);
+        state.handle_nav_event(NavEvent::Back);
+        assert_eq!(state.snapshot().mode, AppMode::Home);
+    }
+}
+
+#[tokio::test]
+async fn play_media_switches_mode_to_live_tv_and_sets_player_osd() {
+    let (_host, state) = spawn_test_server().await;
+    state.set_mode(AppMode::YouTube);
+
+    let item = melange_core::MediaItem {
+        id: "yt:abc123".to_string(),
+        provider: "youtube".to_string(),
+        title: "Sample Video".to_string(),
+        subtitle: None,
+        description: None,
+        channel_or_author: "Channel".to_string(),
+        duration_sec: 120,
+        thumbnail_url: None,
+        stream_url: "https://www.youtube.com/watch?v=abc123".to_string(),
+        published_at: None,
+    };
+
+    state.apply_client_command(ClientCommand::PlayMedia { item, resume: false });
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::LiveTv);
+    assert_eq!(snap.overlay, OverlayKind::PlayerOsd);
+    assert!(snap.playback.current_media.is_some());
+    assert_eq!(snap.playback.title.as_deref(), Some("Sample Video"));
+
+    // SelectChannel clears current_media
+    state.apply_client_command(ClientCommand::SelectChannel { channel_id: 1 });
+    let snap = state.snapshot();
+    assert!(snap.playback.current_media.is_none());
+    assert_eq!(snap.playback.channel_id, Some(1));
+}

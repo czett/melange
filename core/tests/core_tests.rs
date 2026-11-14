@@ -226,3 +226,59 @@ fn input_router_and_graceful_audio_gamepad_degradation() {
     let gamepad = GamepadHandle::spawn(tx, audio);
     drop(gamepad);
 }
+
+#[test]
+fn m3u_resync_updates_stale_stream_urls_and_preserves_favorites() {
+    let dir = TempDir::new().expect("tempdir");
+    let m3u_path = dir.path().join("channels.m3u");
+    let epg_path = dir.path().join("epg.xml");
+    let db_path = dir.path().join("melange.db");
+
+    std::fs::write(
+        &m3u_path,
+        r#"#EXTM3U
+#EXTINF:-1 tvg-id="daserste.de" tvg-chno="1" group-title="Public",Das Erste HD
+https://old.invalid/daserste.m3u8
+#EXTINF:-1 tvg-id="arte.de" tvg-chno="3" group-title="Culture",ARTE HD
+https://old.invalid/arte.m3u8
+"#,
+    )
+    .expect("write initial m3u");
+
+    let db = Database::open(&db_path).expect("open db");
+    M3uXmltvProvider::sync_from_files(&db, &m3u_path, &epg_path).expect("initial sync");
+
+    let channels = db.list_channels().expect("list");
+    assert_eq!(channels[0].stream_url, "https://old.invalid/daserste.m3u8");
+    db.toggle_channel_favorite(channels[0].id)
+        .expect("favorite ch1");
+    db.reorder_channels(&[channels[1].id, channels[0].id])
+        .expect("reorder");
+
+    std::fs::write(
+        &m3u_path,
+        r#"#EXTM3U
+#EXTINF:-1 tvg-id="daserste.de" tvg-chno="1" group-title="Public",Das Erste HD
+https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master.m3u8
+#EXTINF:-1 tvg-id="arte.de" tvg-chno="3" group-title="Culture",ARTE HD
+https://artesimulcast.akamaized.net/hls/live/2030993/artelive_de/master.m3u8
+"#,
+    )
+    .expect("write updated m3u");
+
+    M3uXmltvProvider::sync_from_files(&db, &m3u_path, &epg_path).expect("resync");
+    let updated = db.list_channels().expect("list updated");
+    let ard = updated.iter().find(|c| c.number == 1).expect("ard");
+    let arte = updated.iter().find(|c| c.number == 3).expect("arte");
+    assert_eq!(
+        ard.stream_url,
+        "https://daserste-live.ard-mcdn.de/daserste/live/hls/de/master.m3u8"
+    );
+    assert_eq!(
+        arte.stream_url,
+        "https://artesimulcast.akamaized.net/hls/live/2030993/artelive_de/master.m3u8"
+    );
+    assert!(ard.is_favorite);
+    assert_eq!(updated[0].number, 3);
+    assert_eq!(updated[1].number, 1);
+}
