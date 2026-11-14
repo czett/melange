@@ -206,7 +206,8 @@ fn player_multi_digit_zapping() {
 #[test]
 fn input_router_and_graceful_audio_gamepad_degradation() {
     let audio = Arc::new(AudioEngine::new(Path::new("/nonexistent/melange/sounds")));
-    assert!(!audio.has_sample(SoundKind::Focus));
+    assert!(audio.has_sample(SoundKind::Focus));
+    assert!(!AudioEngine::noop().has_sample(SoundKind::Focus));
 
     let (tx, rx) = mpsc::channel();
     let router = InputRouter::new(Arc::clone(&audio), tx.clone());

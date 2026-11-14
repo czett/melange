@@ -5,6 +5,8 @@ use std::sync::Arc;
 use std::sync::mpsc::{self, Sender};
 use std::thread;
 
+use crate::assets::EmbeddedSounds;
+
 use rodio::{Decoder, OutputStream, Sink};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
@@ -46,11 +48,21 @@ impl AudioEngine {
             let path = sounds_dir.join(kind.filename());
             match std::fs::read(&path) {
                 Ok(bytes) => {
-                    debug!(path = %path.display(), bytes = bytes.len(), "preloaded ui sound");
+                    debug!(path = %path.display(), bytes = bytes.len(), "preloaded ui sound from disk");
                     samples.insert(kind, Arc::new(bytes));
                 }
-                Err(err) => {
-                    warn!(path = %path.display(), error = %err, "ui sound not loaded");
+                Err(_) => {
+                    if let Some(embedded) = EmbeddedSounds::get(kind.filename()) {
+                        let bytes = embedded.data.into_owned();
+                        debug!(
+                            sound = kind.filename(),
+                            bytes = bytes.len(),
+                            "preloaded ui sound from embedded assets"
+                        );
+                        samples.insert(kind, Arc::new(bytes));
+                    } else {
+                        warn!(path = %path.display(), "ui sound not found on disk or in embedded assets");
+                    }
                 }
             }
         }

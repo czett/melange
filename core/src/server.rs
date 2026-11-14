@@ -20,6 +20,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tracing::{debug, info, warn};
 
+use crate::assets::{EmbeddedCompanion, EmbeddedUi, serve_embedded_or_disk};
 use crate::audio::{AudioEngine, SoundKind};
 use crate::db::{Channel, EpgEntry, Profile, WatchHistoryEntry};
 use crate::error::MelangeError;
@@ -537,16 +538,34 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .route("/ws", get(ws_handler))
         .with_state(state);
 
-    let serve_dir = ServeDir::new(ui_dist_dir).append_index_html_on_directories(true);
-    let companion_dir =
-        ServeDir::new("companion/dist").append_index_html_on_directories(true);
+    let ui_dist_dir = ui_dist_dir.to_path_buf();
     let wallpapers_service = ServeDir::new(wallpapers_dir);
 
     api_router
-        .nest_service("/companion", companion_dir)
+        .route("/companion", get(companion_index_handler))
+        .route("/companion/{*path}", get(companion_asset_handler))
         .nest_service("/wallpapers", wallpapers_service)
-        .fallback_service(serve_dir)
+        .fallback(move |uri: axum::http::Uri| {
+            let ui_dir = ui_dist_dir.clone();
+            async move { serve_embedded_or_disk::<EmbeddedUi>(Some(&ui_dir), uri.path(), true).await }
+        })
         .layer(CorsLayer::permissive())
+}
+
+async fn companion_index_handler() -> impl IntoResponse {
+    serve_embedded_or_disk::<EmbeddedCompanion>(
+        Some(Path::new("companion/dist")),
+        "index.html",
+        true,
+    )
+    .await
+}
+
+async fn companion_asset_handler(
+    axum::extract::Path(path): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    serve_embedded_or_disk::<EmbeddedCompanion>(Some(Path::new("companion/dist")), &path, true)
+        .await
 }
 
 pub async fn serve_on_listener(
