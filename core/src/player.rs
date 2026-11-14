@@ -1,7 +1,9 @@
+use serde::{Deserialize, Serialize};
+
 use crate::db::Channel;
 use crate::error::MelangeError;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlaybackState {
     Idle,
     Buffering,

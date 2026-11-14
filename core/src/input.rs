@@ -5,6 +5,7 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use gilrs::{Axis, Button, EventType, Gilrs};
+use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
 use crate::audio::{AudioEngine, SoundKind};
@@ -12,7 +13,7 @@ use crate::audio::{AudioEngine, SoundKind};
 const DIRECTION_REPEAT_DEBOUNCE: Duration = Duration::from_millis(180);
 const STICK_THRESHOLD: f32 = 0.55;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NavEvent {
     Up,
     Down,

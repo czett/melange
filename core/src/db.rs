@@ -1,17 +1,18 @@
 use std::path::Path;
 
 use rusqlite::{Connection, OptionalExtension, params};
+use serde::{Deserialize, Serialize};
 
 use crate::error::MelangeError;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Profile {
     pub id: i64,
     pub name: String,
     pub created_at: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChannelInput {
     pub number: i64,
     pub tvg_id: String,
@@ -21,7 +22,7 @@ pub struct ChannelInput {
     pub stream_url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Channel {
     pub id: i64,
     pub number: i64,
@@ -32,7 +33,7 @@ pub struct Channel {
     pub stream_url: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EpgEntryInput {
     pub channel_tvg_id: String,
     pub title: String,
@@ -41,7 +42,7 @@ pub struct EpgEntryInput {
     pub stop_time: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EpgEntry {
     pub id: i64,
     pub channel_tvg_id: String,
@@ -240,6 +241,25 @@ impl Database {
              ORDER BY start_time ASC",
         )?;
         let rows = stmt.query_map(params![tvg_id], |row| {
+            Ok(EpgEntry {
+                id: row.get(0)?,
+                channel_tvg_id: row.get(1)?,
+                title: row.get(2)?,
+                description: row.get(3)?,
+                start_time: row.get(4)?,
+                stop_time: row.get(5)?,
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
+    }
+
+    pub fn list_all_epg(&self) -> Result<Vec<EpgEntry>, MelangeError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, channel_tvg_id, title, description, start_time, stop_time
+             FROM epg_cache
+             ORDER BY channel_tvg_id ASC, start_time ASC",
+        )?;
+        let rows = stmt.query_map([], |row| {
             Ok(EpgEntry {
                 id: row.get(0)?,
                 channel_tvg_id: row.get(1)?,

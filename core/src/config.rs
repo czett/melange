@@ -17,6 +17,8 @@ pub struct AppConfig {
     pub channels_path: PathBuf,
     pub epg_path: PathBuf,
     pub sounds_dir: PathBuf,
+    pub ui_dist_dir: PathBuf,
+    pub port: u16,
 }
 
 impl AppConfig {
@@ -30,18 +32,43 @@ impl AppConfig {
         S: AsRef<str>,
     {
         let mut mode = RunMode::Desktop;
-        for arg in args {
+        let mut port_override: Option<u16> = env::var("MELANGE_PORT")
+            .ok()
+            .and_then(|v| v.parse::<u16>().ok());
+
+        let mut iter = args.into_iter();
+        while let Some(arg) = iter.next() {
             match arg.as_ref() {
                 "--dev" => mode = RunMode::Dev,
                 "--desktop" => mode = RunMode::Desktop,
                 "--kiosk" => mode = RunMode::Kiosk,
+                "--port" => {
+                    let val = iter.next().ok_or_else(|| {
+                        MelangeError::Config("--port requires a numeric argument".to_string())
+                    })?;
+                    let parsed = val.as_ref().parse::<u16>().map_err(|_| {
+                        MelangeError::Config(format!("invalid port: {}", val.as_ref()))
+                    })?;
+                    port_override = Some(parsed);
+                }
+                other if other.starts_with("--port=") => {
+                    let val = &other["--port=".len()..];
+                    let parsed = val
+                        .parse::<u16>()
+                        .map_err(|_| MelangeError::Config(format!("invalid port: {val}")))?;
+                    port_override = Some(parsed);
+                }
                 other if other.starts_with("--") => {
                     return Err(MelangeError::Config(format!("unknown flag: {other}")));
                 }
                 _ => {}
             }
         }
-        Ok(Self::for_mode(mode))
+        let mut cfg = Self::for_mode(mode);
+        if let Some(port) = port_override {
+            cfg.port = port;
+        }
+        Ok(cfg)
     }
 
     pub fn for_mode(mode: RunMode) -> Self {
@@ -54,6 +81,8 @@ impl AppConfig {
                     channels_path: dev_dir.join("channels.m3u"),
                     epg_path: dev_dir.join("epg.xml"),
                     sounds_dir: PathBuf::from("assets").join("sounds"),
+                    ui_dist_dir: PathBuf::from("ui").join("dist"),
+                    port: 9000,
                 }
             }
             RunMode::Desktop | RunMode::Kiosk => {
@@ -64,6 +93,8 @@ impl AppConfig {
                     channels_path: data_dir.join("channels.m3u"),
                     epg_path: data_dir.join("epg.xml"),
                     sounds_dir: PathBuf::from("assets").join("sounds"),
+                    ui_dist_dir: PathBuf::from("ui").join("dist"),
+                    port: 9000,
                 }
             }
         }

@@ -6,9 +6,11 @@ use std::sync::mpsc::{self, Sender};
 use std::thread;
 
 use rodio::{Decoder, OutputStream, Sink};
+use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum SoundKind {
     Focus,
     Select,
