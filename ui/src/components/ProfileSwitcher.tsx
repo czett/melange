@@ -22,9 +22,20 @@ export const ProfileSwitcher = () => {
               Select a viewer profile for personalized history and channels
             </p>
           </div>
-          <span class="glass-pill rounded-full px-3 py-1 text-xs font-medium text-white/70">
-            ESC to close
-          </span>
+          <button
+            ref={(el) =>
+              onCleanup(
+                registerFocusable("profile-close", el, () =>
+                  sendCommand({ type: "SetOverlay", overlay: "None" })
+                )
+              )
+            }
+            type="button"
+            onClick={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
+            class="glass-card rounded-full px-4 py-1.5 text-xs font-medium text-white"
+          >
+            ← Back
+          </button>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-3">

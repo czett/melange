@@ -35,7 +35,20 @@ export const FullEpg = () => {
           <div class="flex items-center gap-3 text-xs text-white/60">
             <span class="glass-pill rounded-full px-3 py-1">Arrows Navigate</span>
             <span class="glass-pill rounded-full px-3 py-1">Enter Tune</span>
-            <span class="glass-pill rounded-full px-3 py-1">E / Esc Close</span>
+            <button
+              ref={(el) =>
+                onCleanup(
+                  registerFocusable("epg-close", el, () =>
+                    sendCommand({ type: "SetOverlay", overlay: "None" })
+                  )
+                )
+              }
+              type="button"
+              onClick={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
+              class="glass-card rounded-full px-4 py-1.5 text-xs font-medium text-white"
+            >
+              ← Back
+            </button>
           </div>
         </header>
 

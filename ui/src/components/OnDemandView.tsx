@@ -1,7 +1,7 @@
-import { For, Show, createEffect, createSignal } from "solid-js";
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import type { MediaItem } from "../bridge/types";
-import { sendCommand } from "../bridge/ws";
-import { registerFocusable } from "../spatial/nav";
+import { melangeState, sendCommand } from "../bridge/ws";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 import { OnScreenKeyboard } from "./OnScreenKeyboard";
 
 interface OnDemandViewProps {
@@ -25,34 +25,60 @@ function formatDuration(sec: number): string {
 export function OnDemandView(props: OnDemandViewProps) {
   const [items, setItems] = createSignal<MediaItem[]>([]);
   const [loading, setLoading] = createSignal(false);
+  const [errorMsg, setErrorMsg] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal("");
-  const [keyboardOpen, setKeyboardOpen] = createSignal(false);
+
+  const keyboardOpen = () => melangeState().overlay === "SearchKeyboard";
+
+  const openKeyboard = () => {
+    sendCommand({ type: "SetOverlay", overlay: "SearchKeyboard" });
+  };
+
+  const closeKeyboard = () => {
+    sendCommand({ type: "SetOverlay", overlay: "None" });
+    requestAnimationFrame(() => ensureValidFocus("od-search"));
+  };
 
   const loadFeed = async (provider: string) => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await fetch(`/api/ondemand/feed?provider=${encodeURIComponent(provider)}`);
       if (res.ok) {
         const data = (await res.json()) as MediaItem[];
         setItems(data);
       } else {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) detail = errJson.error;
+        } catch {
+          // ignore
+        }
+        setErrorMsg(detail);
         setItems([]);
       }
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Network error");
       setItems([]);
     } finally {
       setLoading(false);
+      requestAnimationFrame(() => {
+        const first = items()[0];
+        ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
+      });
     }
   };
 
   const runSearch = async (q: string) => {
-    setKeyboardOpen(false);
+    sendCommand({ type: "SetOverlay", overlay: "None" });
     const trimmed = q.trim();
     if (!trimmed) {
       await loadFeed(props.provider);
       return;
     }
     setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await fetch(
         `/api/ondemand/search?provider=${encodeURIComponent(props.provider)}&q=${encodeURIComponent(trimmed)}`,
@@ -61,14 +87,31 @@ export function OnDemandView(props: OnDemandViewProps) {
         const data = (await res.json()) as MediaItem[];
         setItems(data);
       } else {
+        let detail = `HTTP ${res.status}`;
+        try {
+          const errJson = (await res.json()) as { error?: string };
+          if (errJson?.error) detail = errJson.error;
+        } catch {
+          // ignore
+        }
+        setErrorMsg(detail);
         setItems([]);
       }
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Network error");
       setItems([]);
     } finally {
       setLoading(false);
+      requestAnimationFrame(() => {
+        const first = items()[0];
+        ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
+      });
     }
   };
+
+  onMount(() => {
+    requestAnimationFrame(() => ensureValidFocus("od-back"));
+  });
 
   createEffect(() => {
     setQuery("");
@@ -89,8 +132,8 @@ export function OnDemandView(props: OnDemandViewProps) {
 
         <div class="flex items-center gap-3">
           <button
-            ref={(el) => registerFocusable("od-search", el, () => setKeyboardOpen(true))}
-            onClick={() => setKeyboardOpen(true)}
+            ref={(el) => onCleanup(registerFocusable("od-search", el, openKeyboard))}
+            onClick={openKeyboard}
             class="glass-card px-5 py-2.5 rounded-full text-sm text-white/85 flex items-center gap-2 min-w-[14rem] justify-between"
           >
             <span class="truncate">{query() ? `Search: ${query()}` : "Search..."}</span>
@@ -98,7 +141,9 @@ export function OnDemandView(props: OnDemandViewProps) {
           </button>
 
           <button
-            ref={(el) => registerFocusable("od-refresh", el, () => void loadFeed(props.provider))}
+            ref={(el) =>
+              onCleanup(registerFocusable("od-refresh", el, () => void loadFeed(props.provider)))
+            }
             onClick={() => void loadFeed(props.provider)}
             class="glass-card px-4 py-2.5 rounded-full text-sm text-white/85"
           >
@@ -106,11 +151,11 @@ export function OnDemandView(props: OnDemandViewProps) {
           </button>
 
           <button
-            ref={(el) => registerFocusable("od-back", el, props.onBack)}
+            ref={(el) => onCleanup(registerFocusable("od-back", el, props.onBack))}
             onClick={props.onBack}
-            class="glass-card px-5 py-2.5 rounded-full text-sm text-white/85"
+            class="glass-card px-5 py-2.5 rounded-full text-sm font-medium text-white"
           >
-            Home
+            ← Back
           </button>
         </div>
       </div>
@@ -120,7 +165,16 @@ export function OnDemandView(props: OnDemandViewProps) {
           <div class="text-white/60 text-sm py-12">Loading {props.title}...</div>
         </Show>
 
-        <Show when={!loading() && items().length === 0}>
+        <Show when={!loading() && errorMsg()}>
+          {(err) => (
+            <div class="glass-panel rounded-3xl p-8 text-white/80 max-w-xl border border-red-400/25">
+              <div class="text-lg font-medium text-red-300 mb-1">Failed to load {props.title}</div>
+              <div class="text-sm text-white/65">{err()}</div>
+            </div>
+          )}
+        </Show>
+
+        <Show when={!loading() && !errorMsg() && items().length === 0}>
           <div class="glass-panel rounded-3xl p-8 text-white/70 max-w-xl">
             <div class="text-lg font-medium text-white mb-1">No items available</div>
             <div class="text-sm text-white/60">
@@ -136,7 +190,9 @@ export function OnDemandView(props: OnDemandViewProps) {
             <For each={items()}>
               {(item) => (
                 <button
-                  ref={(el) => registerFocusable(`od-item-${item.id}`, el, () => playItem(item))}
+                  ref={(el) =>
+                    onCleanup(registerFocusable(`od-item-${item.id}`, el, () => playItem(item)))
+                  }
                   onClick={() => playItem(item)}
                   class="glass-card rounded-2xl overflow-hidden text-left flex flex-col group transition-transform"
                 >
@@ -188,7 +244,7 @@ export function OnDemandView(props: OnDemandViewProps) {
           value={query()}
           onChange={setQuery}
           onSubmit={(q) => void runSearch(q)}
-          onClose={() => setKeyboardOpen(false)}
+          onClose={closeKeyboard}
         />
       </Show>
     </div>

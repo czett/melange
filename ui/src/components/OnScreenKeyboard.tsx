@@ -1,5 +1,5 @@
-import { For } from "solid-js";
-import { registerFocusable } from "../spatial/nav";
+import { For, onCleanup, onMount } from "solid-js";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 
 interface OnScreenKeyboardProps {
   value: string;
@@ -19,6 +19,10 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
   const appendChar = (ch: string) => props.onChange(props.value + ch.toLowerCase());
   const backspace = () => props.onChange(props.value.slice(0, -1));
   const clear = () => props.onChange("");
+
+  onMount(() => {
+    requestAnimationFrame(() => ensureValidFocus("osk-key-Q"));
+  });
 
   return (
     <div class="fixed inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-xl p-6">
@@ -43,7 +47,9 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
                 <For each={row}>
                   {(key) => (
                     <button
-                      ref={(el) => registerFocusable(`osk-key-${key}`, el, () => appendChar(key))}
+                      ref={(el) =>
+                        onCleanup(registerFocusable(`osk-key-${key}`, el, () => appendChar(key)))
+                      }
                       onClick={() => appendChar(key)}
                       class="glass-card w-12 h-12 rounded-xl text-base font-semibold text-white flex items-center justify-center hover:bg-white/20"
                     >
@@ -57,35 +63,41 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
 
           <div class="flex justify-center gap-2.5 pt-2">
             <button
-              ref={(el) => registerFocusable("osk-space", el, () => props.onChange(props.value + " "))}
+              ref={(el) =>
+                onCleanup(
+                  registerFocusable("osk-space", el, () => props.onChange(props.value + " "))
+                )
+              }
               onClick={() => props.onChange(props.value + " ")}
               class="glass-card px-8 h-12 rounded-xl text-sm font-medium text-white"
             >
               Space
             </button>
             <button
-              ref={(el) => registerFocusable("osk-backspace", el, backspace)}
+              ref={(el) => onCleanup(registerFocusable("osk-backspace", el, backspace))}
               onClick={backspace}
               class="glass-card px-5 h-12 rounded-xl text-sm font-medium text-white"
             >
               Backspace
             </button>
             <button
-              ref={(el) => registerFocusable("osk-clear", el, clear)}
+              ref={(el) => onCleanup(registerFocusable("osk-clear", el, clear))}
               onClick={clear}
               class="glass-card px-5 h-12 rounded-xl text-sm font-medium text-white/80"
             >
               Clear
             </button>
             <button
-              ref={(el) => registerFocusable("osk-submit", el, () => props.onSubmit(props.value))}
+              ref={(el) =>
+                onCleanup(registerFocusable("osk-submit", el, () => props.onSubmit(props.value)))
+              }
               onClick={() => props.onSubmit(props.value)}
               class="px-7 h-12 rounded-xl text-sm font-semibold bg-white text-black"
             >
               Search
             </button>
             <button
-              ref={(el) => registerFocusable("osk-cancel", el, props.onClose)}
+              ref={(el) => onCleanup(registerFocusable("osk-cancel", el, props.onClose))}
               onClick={props.onClose}
               class="glass-card px-5 h-12 rounded-xl text-sm font-medium text-white/75"
             >

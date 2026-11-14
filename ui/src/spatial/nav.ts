@@ -57,20 +57,32 @@ export function setFocus(id: string, pushHistory = true): void {
 
 export function ensureValidFocus(preferredId?: string): void {
   const current = focusedId();
-  if (current && targets.has(current)) {
-    measureFocused();
-    return;
+  if (current) {
+    const t = targets.get(current);
+    if (t && t.el.isConnected) {
+      const r = t.el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        measureFocused();
+        return;
+      }
+    }
   }
-  if (preferredId && targets.has(preferredId)) {
-    setFocus(preferredId, false);
-    return;
+  if (preferredId) {
+    const t = targets.get(preferredId);
+    if (t && t.el.isConnected) {
+      setFocus(preferredId, false);
+      return;
+    }
   }
-  const first = targets.keys().next().value ?? null;
-  if (first) {
-    setFocus(first, false);
-  } else {
-    setFocusRect((r) => ({ ...r, visible: false }));
+  for (const [id, t] of targets.entries()) {
+    if (!t.el.isConnected) continue;
+    const r = t.el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      setFocus(id, false);
+      return;
+    }
   }
+  setFocusRect((r) => ({ ...r, visible: false }));
 }
 
 export function measureFocused(): void {
@@ -112,13 +124,6 @@ export function handleSpatialNav(ev: NavEvent): boolean {
   }
 
   if (ev === "Back") {
-    while (historyStack.length > 0) {
-      const prev = historyStack.pop()!;
-      if (targets.has(prev)) {
-        setFocus(prev, false);
-        return true;
-      }
-    }
     return false;
   }
 

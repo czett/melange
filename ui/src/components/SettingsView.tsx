@@ -1,4 +1,6 @@
-import { Show, createSignal, onMount } from "solid-js";
+import { Show, createSignal, onCleanup, onMount } from "solid-js";
+import { sendCommand } from "../bridge/ws";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 
 interface Profile {
   id: number;
@@ -18,8 +20,15 @@ interface SettingsViewProps {
 
 export function SettingsView(props: SettingsViewProps) {
   const [info, setInfo] = createSignal<CompanionInfo | null>(null);
+  let backBtn!: HTMLButtonElement;
+
+  const goBack = () => sendCommand({ type: "SetMode", mode: "Home" });
 
   onMount(async () => {
+    const cleanup = registerFocusable("settings-back", backBtn, goBack);
+    onCleanup(cleanup);
+    requestAnimationFrame(() => ensureValidFocus("settings-back"));
+
     try {
       const resp = await fetch("/api/companion/info");
       if (resp.ok) {
@@ -31,8 +40,24 @@ export function SettingsView(props: SettingsViewProps) {
   });
 
   return (
-    <div class="fixed inset-0 z-20 flex items-center justify-center bg-zinc-950/90 backdrop-blur-xl p-10 text-zinc-100">
-      <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="fixed inset-0 z-20 flex flex-col bg-zinc-950/90 backdrop-blur-xl p-10 text-zinc-100">
+      <div class="w-full max-w-5xl mx-auto flex items-center justify-between mb-6">
+        <div>
+          <div class="text-xs uppercase tracking-[0.25em] text-zinc-400">System</div>
+          <h1 class="text-3xl font-semibold tracking-tight mt-1">Settings</h1>
+        </div>
+        <button
+          ref={backBtn}
+          type="button"
+          data-focus-id="settings-back"
+          onClick={goBack}
+          class="glass-card px-5 py-2.5 rounded-full text-sm font-medium text-white"
+        >
+          ← Back
+        </button>
+      </div>
+
+      <div class="w-full max-w-5xl mx-auto my-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         <div class="rounded-3xl bg-zinc-900/90 border border-white/10 p-8 flex flex-col items-center text-center space-y-5">
           <h2 class="text-2xl font-semibold tracking-tight">Smartphone Companion</h2>
           <p class="text-sm text-zinc-400">

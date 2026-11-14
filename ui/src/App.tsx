@@ -10,9 +10,10 @@ import {
 import { FocusRing } from "./components/FocusRing";
 import { FullEpg } from "./components/FullEpg";
 import { HomeView } from "./components/HomeView";
-import { PlaceholderModeView } from "./components/PlaceholderModeView";
-import { SettingsView } from "./components/SettingsView";
+import { OnDemandView } from "./components/OnDemandView";
+import { PlayerOsd } from "./components/PlayerOsd";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
+import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
 import { handleSpatialNav, measureFocused } from "./spatial/nav";
 
@@ -52,12 +53,26 @@ export const App = () => {
     const unsubNav = onNavEvent((ev) => {
       const state = melangeState();
       const hasInteractiveUi =
-        state.mode !== "LiveTv" || state.overlay === "FullEpg" || state.overlay === "ProfileSwitcher";
+        state.mode !== "LiveTv" ||
+        state.overlay === "FullEpg" ||
+        state.overlay === "ProfileSwitcher" ||
+        state.overlay === "PlayerOsd" ||
+        state.overlay === "SearchKeyboard";
 
       if (hasInteractiveUi) {
         const handled = handleSpatialNav(ev);
-        if (!handled && ev === "Back" && state.overlay !== "None") {
+        if (!handled && ev === "Back") {
+          if (state.overlay !== "None") {
+            sendCommand({ type: "SetOverlay", overlay: "None" });
+          } else if (state.mode !== "Home") {
+            sendCommand({ type: "SetMode", mode: "Home" });
+          }
+        }
+      } else if (ev === "Back") {
+        if (state.overlay !== "None") {
           sendCommand({ type: "SetOverlay", overlay: "None" });
+        } else {
+          sendCommand({ type: "SetMode", mode: "Home" });
         }
       }
     });
@@ -91,7 +106,11 @@ export const App = () => {
   const showFocusRing = () =>
     melangeState().mode !== "LiveTv" ||
     melangeState().overlay === "FullEpg" ||
-    melangeState().overlay === "ProfileSwitcher";
+    melangeState().overlay === "ProfileSwitcher" ||
+    melangeState().overlay === "PlayerOsd" ||
+    melangeState().overlay === "SearchKeyboard";
+
+  const goHome = () => sendCommand({ type: "SetMode", mode: "Home" });
 
   return (
     <div class="relative h-screen w-screen overflow-hidden bg-transparent">
@@ -99,13 +118,31 @@ export const App = () => {
         <HomeView />
       </Show>
 
-      <Show
-        when={
-          melangeState().mode === "Mediathek" ||
-          melangeState().mode === "Media"
-        }
-      >
-        <PlaceholderModeView mode={melangeState().mode} />
+      <Show when={melangeState().mode === "Mediathek"}>
+        <OnDemandView
+          provider="mediathek"
+          title="Mediathek"
+          subtitle="ARD / ZDF"
+          onBack={goHome}
+        />
+      </Show>
+
+      <Show when={melangeState().mode === "YouTube"}>
+        <OnDemandView
+          provider="youtube"
+          title="YouTube"
+          subtitle="On Demand"
+          onBack={goHome}
+        />
+      </Show>
+
+      <Show when={melangeState().mode === "Media"}>
+        <OnDemandView
+          provider="local"
+          title="Media"
+          subtitle="Local Library"
+          onBack={goHome}
+        />
       </Show>
 
       <Show when={melangeState().mode === "Settings"}>
@@ -116,6 +153,7 @@ export const App = () => {
       </Show>
 
       <ZapBanner />
+      <PlayerOsd />
 
       <Show when={melangeState().overlay === "FullEpg"}>
         <FullEpg />

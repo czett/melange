@@ -6,7 +6,8 @@ export type OverlayKind =
   | "MiniEpg"
   | "FullEpg"
   | "ProfileSwitcher"
-  | "PlayerOsd";
+  | "PlayerOsd"
+  | "SearchKeyboard";
 
 export type PlaybackState = "Idle" | "Buffering" | "Playing" | "Paused";
 
@@ -15,6 +16,8 @@ export type SoundKind = "focus" | "select" | "back" | "zap";
 export interface Profile {
   id: number;
   name: string;
+  avatar?: string;
+  wallpaper_path?: string | null;
   created_at: string;
 }
 

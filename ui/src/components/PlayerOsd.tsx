@@ -1,6 +1,6 @@
 import { Show, createEffect, onCleanup } from "solid-js";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { registerFocusable } from "../spatial/nav";
+import { ensureValidFocus, registerFocusable } from "../spatial/nav";
 
 function formatTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -34,6 +34,7 @@ export function PlayerOsd() {
   createEffect(() => {
     if (visible()) {
       resetHideTimer();
+      requestAnimationFrame(() => ensureValidFocus("osd-toggle-pause"));
     } else if (hideTimer !== undefined) {
       window.clearTimeout(hideTimer);
       hideTimer = undefined;
@@ -79,25 +80,38 @@ export function PlayerOsd() {
 
             <div class="flex items-center gap-2.5 shrink-0">
               <button
-                ref={(el) => registerFocusable("osd-seek-back", el, () => seek(-15))}
+                ref={(el) => onCleanup(registerFocusable("osd-seek-back", el, () => seek(-15)))}
                 onClick={() => seek(-15)}
                 class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white"
               >
                 -15s
               </button>
               <button
-                ref={(el) => registerFocusable("osd-toggle-pause", el, togglePause)}
+                ref={(el) => onCleanup(registerFocusable("osd-toggle-pause", el, togglePause))}
                 onClick={togglePause}
                 class="px-5 py-2 rounded-full text-sm font-semibold bg-white text-black"
               >
                 {playback().paused ? "Play" : "Pause"}
               </button>
               <button
-                ref={(el) => registerFocusable("osd-seek-fwd", el, () => seek(30))}
+                ref={(el) => onCleanup(registerFocusable("osd-seek-fwd", el, () => seek(30)))}
                 onClick={() => seek(30)}
                 class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white"
               >
                 +30s
+              </button>
+              <button
+                ref={(el) =>
+                  onCleanup(
+                    registerFocusable("osd-back", el, () =>
+                      sendCommand({ type: "SetMode", mode: "Home" })
+                    )
+                  )
+                }
+                onClick={() => sendCommand({ type: "SetMode", mode: "Home" })}
+                class="glass-card px-4 py-2 rounded-full text-sm font-medium text-white/85"
+              >
+                ← Back
               </button>
             </div>
           </div>
