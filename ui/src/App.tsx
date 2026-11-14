@@ -11,6 +11,7 @@ import { FlutedBackdrop } from "./components/FlutedBackdrop";
 import { FocusRing } from "./components/FocusRing";
 import { FullEpg } from "./components/FullEpg";
 import { HomeView } from "./components/HomeView";
+import { LeaveMenu } from "./components/LeaveMenu";
 import { OnDemandView } from "./components/OnDemandView";
 import { PlayerOsd } from "./components/PlayerOsd";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
@@ -18,7 +19,7 @@ import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
 import { handleSpatialNav, measureFocused } from "./spatial/nav";
 
-function mapBrowserKey(key: string): NavEvent | null {
+function mapBrowserKey(key: string, searchKeyboardOpen: boolean): NavEvent | null {
   switch (key) {
     case "ArrowUp":
       return "Up";
@@ -34,14 +35,14 @@ function mapBrowserKey(key: string): NavEvent | null {
       return "Back";
     case "h":
     case "H":
-      return "Home";
+      return searchKeyboardOpen ? null : "Home";
     case "e":
     case "E":
-      return "ToggleEpg";
+      return searchKeyboardOpen ? null : "ToggleEpg";
     case "PageUp":
-      return "ChannelUp";
+      return searchKeyboardOpen ? null : "ChannelUp";
     case "PageDown":
-      return "ChannelDown";
+      return searchKeyboardOpen ? null : "ChannelDown";
     default:
       return null;
   }
@@ -58,7 +59,8 @@ export const App = () => {
         state.overlay === "FullEpg" ||
         state.overlay === "ProfileSwitcher" ||
         state.overlay === "PlayerOsd" ||
-        state.overlay === "SearchKeyboard";
+        state.overlay === "SearchKeyboard" ||
+        state.overlay === "LeaveMenu";
 
       if (hasInteractiveUi) {
         const handled = handleSpatialNav(ev);
@@ -67,6 +69,8 @@ export const App = () => {
             sendCommand({ type: "SetOverlay", overlay: "None" });
           } else if (state.mode !== "Home") {
             sendCommand({ type: "SetMode", mode: "Home" });
+          } else {
+            sendCommand({ type: "SetOverlay", overlay: "LeaveMenu" });
           }
         }
       } else if (ev === "Back") {
@@ -85,17 +89,16 @@ export const App = () => {
     // Browser-only keyboard fallback when inspecting http://127.0.0.1:9000 outside melange-shell.
     const onKeyDown = (e: KeyboardEvent) => {
       const noAccel = !e.ctrlKey && !e.altKey && !e.metaKey;
+      const searchOpen = melangeState().overlay === "SearchKeyboard";
       if (
         e.key === "F11" ||
-        ((e.key === "f" || e.key === "F") &&
-          noAccel &&
-          melangeState().overlay !== "SearchKeyboard")
+        ((e.key === "f" || e.key === "F") && noAccel && !searchOpen)
       ) {
         e.preventDefault();
         sendCommand({ type: "ToggleFullscreen" });
         return;
       }
-      const ev = mapBrowserKey(e.key);
+      const ev = mapBrowserKey(e.key, searchOpen);
       if (ev) {
         e.preventDefault();
         emitLocalNavEvent(ev);
@@ -126,7 +129,9 @@ export const App = () => {
   // backdrop (plus ProfileSwitcher if opened over LiveTv), so background TV credits
   // never bleed through behind hero headlines. Only LiveTv reveals the raw libmpv feed.
   const showBackdrop = () =>
-    melangeState().mode !== "LiveTv" || melangeState().overlay === "ProfileSwitcher";
+    melangeState().mode !== "LiveTv" ||
+    melangeState().overlay === "ProfileSwitcher" ||
+    melangeState().overlay === "LeaveMenu";
 
   const backdropOpacity = () => (showBackdrop() ? "1" : "0");
 
@@ -138,12 +143,23 @@ export const App = () => {
     melangeState().overlay === "FullEpg" ||
     melangeState().overlay === "ProfileSwitcher" ||
     melangeState().overlay === "PlayerOsd" ||
-    melangeState().overlay === "SearchKeyboard";
+    melangeState().overlay === "SearchKeyboard" ||
+    melangeState().overlay === "LeaveMenu";
 
   const goHome = () => sendCommand({ type: "SetMode", mode: "Home" });
 
+  const handleStageClick = () => {
+    const state = melangeState();
+    if (state.mode !== "LiveTv" || state.overlay !== "None") return;
+    const nextOverlay = state.playback.current_media ? "PlayerOsd" : "ZapBanner";
+    sendCommand({ type: "SetOverlay", overlay: nextOverlay });
+  };
+
   return (
-    <div class="relative h-screen w-screen overflow-hidden bg-transparent text-white">
+    <div
+      class="relative h-screen w-screen overflow-hidden bg-transparent text-white"
+      onClick={handleStageClick}
+    >
       {/* Optical irregular fluted-glass light field (100% opaque outside LiveTv) */}
       <FlutedBackdrop
         active={showBackdrop()}
@@ -229,6 +245,10 @@ export const App = () => {
 
       <Show when={melangeState().overlay === "ProfileSwitcher"}>
         <ProfileSwitcher />
+      </Show>
+
+      <Show when={melangeState().overlay === "LeaveMenu"}>
+        <LeaveMenu />
       </Show>
 
       <Show when={showFocusRing()}>

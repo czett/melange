@@ -244,17 +244,27 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     key_controller.set_propagation_phase(PropagationPhase::Capture);
     let router_keys = Rc::clone(&router);
     let window_keys = window.clone();
+    let webview_keys = webview.clone();
     let state_keys = Arc::clone(&state_manager);
     key_controller.connect_key_pressed(move |_, key, _, mods| {
-        let no_accel =
-            !mods.intersects(ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK);
+        let no_accel = !mods.intersects(
+            ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK,
+        );
+        let overlay = state_keys.snapshot().overlay;
         let is_f11 = key == Key::F11;
-        let is_f_shortcut = matches!(key, Key::f | Key::F)
-            && no_accel
-            && state_keys.snapshot().overlay != OverlayKind::SearchKeyboard;
+        let is_f_shortcut =
+            matches!(key, Key::f | Key::F) && no_accel && overlay != OverlayKind::SearchKeyboard;
         if is_f11 || is_f_shortcut {
             toggle_window_fullscreen(&window_keys, &state_keys);
             return glib::Propagation::Stop;
+        }
+        if overlay == OverlayKind::SearchKeyboard {
+            if let Some(ev) = map_gtk_key_for_search(key) {
+                router_keys.dispatch(ev);
+                return glib::Propagation::Stop;
+            }
+            let _ = webview_keys.grab_focus();
+            return glib::Propagation::Proceed;
         }
         if let Some(ev) = map_gtk_key(key) {
             router_keys.dispatch(ev);
@@ -266,11 +276,14 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
 
     window.set_child(Some(&root_overlay));
     window.present();
+    let _ = webview.grab_focus();
 
     // Poll NavEvent, ShellCommand, libmpv events & on-demand progress on GTK main loop without blocking.
     let ctrl_nav = Rc::clone(&controller);
     let state_nav = Arc::clone(&state_manager);
+    let app_cmd = app.clone();
     let window_cmd = window.clone();
+    let webview_cmd = webview.clone();
     let db_path_loop = config.db_path.clone();
     let mut tick_count: u64 = 0;
     glib::timeout_add_local(Duration::from_millis(16), move || {
@@ -279,7 +292,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
             handle_nav_event(&ctrl_nav, &state_nav, ev);
         }
         while let Ok(cmd) = shell_cmd_rx.try_recv() {
-            handle_shell_command(&window_cmd, &ctrl_nav, &state_nav, cmd);
+            handle_shell_command(&app_cmd, &window_cmd, &webview_cmd, &ctrl_nav, &state_nav, cmd);
         }
 
         let mpv_err = {
@@ -374,7 +387,9 @@ fn toggle_window_fullscreen(window: &ApplicationWindow, state_manager: &StateMan
 }
 
 fn handle_shell_command(
+    app: &Application,
     window: &ApplicationWindow,
+    webview: &WebView,
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
     state_manager: &StateManager,
     cmd: ShellCommand,
@@ -401,7 +416,12 @@ fn handle_shell_command(
                 snap.apply(state_manager);
             }
         }
-        ShellCommand::SetMode { .. } | ShellCommand::SetOverlay { .. } => {}
+        ShellCommand::SetMode { .. } => {}
+        ShellCommand::SetOverlay { overlay } => {
+            if overlay == OverlayKind::SearchKeyboard {
+                let _ = webview.grab_focus();
+            }
+        }
         ShellCommand::PlayMedia {
             item,
             start_position_sec,
@@ -449,6 +469,10 @@ fn handle_shell_command(
         }
         ShellCommand::ToggleFullscreen => {
             toggle_window_fullscreen(window, state_manager);
+        }
+        ShellCommand::QuitApp => {
+            info!("quitting melange-shell");
+            app.quit();
         }
     }
 }
@@ -560,6 +584,18 @@ fn handle_nav_event(
     }
 }
 
+fn map_gtk_key_for_search(key: Key) -> Option<NavEvent> {
+    match key {
+        Key::Up => Some(NavEvent::Up),
+        Key::Down => Some(NavEvent::Down),
+        Key::Left => Some(NavEvent::Left),
+        Key::Right => Some(NavEvent::Right),
+        Key::Return | Key::KP_Enter => Some(NavEvent::Select),
+        Key::Escape => Some(NavEvent::Back),
+        _ => None,
+    }
+}
+
 fn map_gtk_key(key: Key) -> Option<NavEvent> {
     match key {
         Key::Up => Some(NavEvent::Up),
@@ -600,5 +636,25 @@ mod tests {
             .to_str()
             .expect("LC_NUMERIC should be valid UTF-8");
         assert_eq!(locale, "C");
+    }
+
+    #[test]
+    fn search_keyboard_yields_printable_keys_and_preserves_nav_keys() {
+        assert_eq!(map_gtk_key_for_search(Key::Up), Some(NavEvent::Up));
+        assert_eq!(map_gtk_key_for_search(Key::Down), Some(NavEvent::Down));
+        assert_eq!(map_gtk_key_for_search(Key::Left), Some(NavEvent::Left));
+        assert_eq!(map_gtk_key_for_search(Key::Right), Some(NavEvent::Right));
+        assert_eq!(map_gtk_key_for_search(Key::Return), Some(NavEvent::Select));
+        assert_eq!(map_gtk_key_for_search(Key::Escape), Some(NavEvent::Back));
+
+        // Keys that globally map to NavEvent shortcuts must yield (None) during SearchKeyboard
+        assert_eq!(map_gtk_key_for_search(Key::h), None);
+        assert_eq!(map_gtk_key_for_search(Key::H), None);
+        assert_eq!(map_gtk_key_for_search(Key::e), None);
+        assert_eq!(map_gtk_key_for_search(Key::E), None);
+        assert_eq!(map_gtk_key_for_search(Key::_0), None);
+        assert_eq!(map_gtk_key_for_search(Key::_5), None);
+        assert_eq!(map_gtk_key_for_search(Key::BackSpace), None);
+        assert_eq!(map_gtk_key_for_search(Key::space), None);
     }
 }

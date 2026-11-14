@@ -18,10 +18,10 @@ export const ProfileSwitcher = () => {
         <div class="flex items-start justify-between gap-4">
           <div>
             <div class="eyebrow">Who's watching</div>
-            <h2 class="mt-2 pb-0.5 text-[28px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
+            <h2 class="mt-2 pb-0.5 text-[28px] font-medium leading-[1.12] tracking-[-0.035em] text-white">
               Switch profile
             </h2>
-            <p class="mt-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+            <p class="mt-2 max-w-[44ch] text-[13px] font-normal leading-relaxed text-white/[0.82]">
               Personal history, favourites and wallpaper follow each profile.
             </p>
           </div>
@@ -78,11 +78,11 @@ export const ProfileSwitcher = () => {
                       <div class="text-[13px] font-medium tracking-[-0.01em] text-white">
                         {profile.name}
                       </div>
-                      <div class="text-[11px] text-white/45">Local profile</div>
+                      <div class="text-[12px] font-normal text-white/[0.78]">Local profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>
-                    <span class="inline-flex items-center gap-1.5 text-[11px] text-white/70">
+                    <span class="inline-flex items-center gap-1.5 text-[12px] font-medium text-white/[0.85]">
                       <span class="nav-dot" />
                       Active
                     </span>

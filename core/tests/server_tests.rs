@@ -265,3 +265,29 @@ async fn toggle_fullscreen_updates_state_and_forwards_shell_command() {
         Ok(melange_core::ShellCommand::ToggleFullscreen)
     ));
 }
+
+#[tokio::test]
+async fn nav_back_on_home_opens_leave_menu_and_quit_app_signals_shell() {
+    let (_host, state) = spawn_test_server().await;
+    assert_eq!(state.snapshot().mode, AppMode::Home);
+    assert_eq!(state.snapshot().overlay, OverlayKind::None);
+
+    // Back on Home with no overlay opens LeaveMenu
+    state.handle_nav_event(NavEvent::Back);
+    assert_eq!(state.snapshot().mode, AppMode::Home);
+    assert_eq!(state.snapshot().overlay, OverlayKind::LeaveMenu);
+
+    // Second Back closes LeaveMenu back to None
+    state.handle_nav_event(NavEvent::Back);
+    assert_eq!(state.snapshot().mode, AppMode::Home);
+    assert_eq!(state.snapshot().overlay, OverlayKind::None);
+
+    // ClientCommand::QuitApp forwards ShellCommand::QuitApp to shell
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.attach_shell_sender(tx);
+    state.apply_client_command(ClientCommand::QuitApp);
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::QuitApp)
+    ));
+}

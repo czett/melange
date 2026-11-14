@@ -77,7 +77,7 @@ export function PlayerOsd() {
                 <span class="live-dot" />
                 <span>{playback().subtitle ?? "On Demand"}</span>
               </div>
-              <div class="mt-1.5 truncate text-[22px] font-normal leading-tight tracking-[-0.03em] text-white">
+              <div class="mt-1.5 truncate text-[22px] font-medium leading-tight tracking-[-0.03em] text-white">
                 {playback().title ?? "Playing"}
               </div>
             </div>
@@ -129,7 +129,7 @@ export function PlayerOsd() {
           </div>
 
           <div class="flex items-center gap-4">
-            <span class="w-14 text-right text-[11px] tabular-nums text-white/70">
+            <span class="w-14 text-right text-[12px] font-normal tabular-nums text-white/[0.85]">
               {formatTime(playback().position_sec)}
             </span>
             <div class="progress-track flex-1">
@@ -138,7 +138,7 @@ export function PlayerOsd() {
                 style={{ width: `${progressPct()}%` }}
               />
             </div>
-            <span class="w-14 text-[11px] tabular-nums text-white/45">
+            <span class="w-14 text-[12px] font-normal tabular-nums text-white/[0.75]">
               {formatTime(playback().duration_sec)}
             </span>
           </div>

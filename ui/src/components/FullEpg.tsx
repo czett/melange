@@ -27,10 +27,10 @@ export const FullEpg = () => {
       <div class="glass-card flex h-full max-h-[84vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px]">
         <header class="flex items-center justify-between border-b border-white/10 px-8 py-5">
           <div class="flex items-baseline gap-4">
-            <h1 class="pb-0.5 text-[28px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
+            <h1 class="pb-0.5 text-[28px] font-medium leading-[1.12] tracking-[-0.035em] text-white">
               Program Guide
             </h1>
-            <span class="text-[11px] tabular-nums text-white/45">
+            <span class="text-[12px] font-normal tabular-nums text-white/[0.78]">
               {melangeState().channels.length} channels
             </span>
           </div>
@@ -95,7 +95,7 @@ export const FullEpg = () => {
                           <span class="live-dot" />
                         </Show>
                       </div>
-                      <span class="text-[11px] text-white/45">{ch.group_title}</span>
+                      <span class="text-[12px] font-normal text-white/[0.78]">{ch.group_title}</span>
                     </div>
                   </button>
 
@@ -122,12 +122,12 @@ export const FullEpg = () => {
                             class="glass-inner flex min-w-[235px] flex-1 flex-col justify-between rounded-[14px] px-4 py-3 text-left"
                           >
                             <div>
-                              <div class="flex items-center justify-between gap-2 text-[11px] tabular-nums text-white/50">
+                              <div class="flex items-center justify-between gap-2 text-[12px] font-normal tabular-nums text-white/[0.82]">
                                 <span>
                                   {formatXmltvTime(prog.start_time)} — {formatXmltvTime(prog.stop_time)}
                                 </span>
                                 <Show when={idx() === 0}>
-                                  <span class="inline-flex items-center gap-1.5 text-white/80">
+                                  <span class="inline-flex items-center gap-1.5 font-medium text-white">
                                     <span class="live-dot" />
                                     Now
                                   </span>
@@ -136,7 +136,7 @@ export const FullEpg = () => {
                               <div class="mt-1.5 truncate text-[13px] font-medium text-white">
                                 {prog.title}
                               </div>
-                              <div class="mt-0.5 line-clamp-1 text-[11px] text-white/50">
+                              <div class="mt-0.5 line-clamp-1 text-[12px] font-normal text-white/[0.78]">
                                 {prog.description}
                               </div>
                             </div>

@@ -133,7 +133,7 @@ export function OnDemandView(props: OnDemandViewProps) {
       <header class="mb-9 flex items-end justify-between gap-6">
         <div>
           <div class="eyebrow">{props.subtitle}</div>
-          <h1 class="mt-2 pb-0.5 text-[40px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
+          <h1 class="mt-2 pb-0.5 text-[40px] font-medium leading-[1.12] tracking-[-0.035em] text-white">
             {props.title}
           </h1>
         </div>
@@ -282,7 +282,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                             {item.title}
                           </div>
                           <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-2 text-[12px] leading-relaxed text-white/55">
+                            <div class="line-clamp-2 text-[12px] font-normal leading-relaxed text-white/[0.80]">
                               {item.subtitle || item.description}
                             </div>
                           </Show>
@@ -314,7 +314,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                         </div>
 
                         <div class="flex flex-col gap-1 px-4 py-3.5">
-                          <div class="truncate text-[11px] text-white/50">
+                          <div class="truncate text-[12px] font-normal text-white/[0.78]">
                             {item.channel_or_author}
                             <Show when={item.subtitle}>
                               <span> · {item.subtitle}</span>

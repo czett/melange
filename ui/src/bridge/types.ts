@@ -7,7 +7,8 @@ export type OverlayKind =
   | "FullEpg"
   | "ProfileSwitcher"
   | "PlayerOsd"
-  | "SearchKeyboard";
+  | "SearchKeyboard"
+  | "LeaveMenu";
 
 export type PlaybackState = "Idle" | "Buffering" | "Playing" | "Paused";
 
@@ -125,4 +126,5 @@ export type ClientCommand =
   | { type: "PlayMedia"; item: MediaItem; resume: boolean }
   | { type: "SeekRelative"; offset_sec: number }
   | { type: "TogglePause" }
-  | { type: "ToggleFullscreen" };
+  | { type: "ToggleFullscreen" }
+  | { type: "QuitApp" };

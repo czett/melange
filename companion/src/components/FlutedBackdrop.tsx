@@ -36,11 +36,10 @@ out vec4 fragColor;
 const float PI = 3.14159265359;
 
 const vec3 C_VOID  = vec3(0.055, 0.006, 0.008);
-const vec3 C_DEEP  = vec3(0.420, 0.055, 0.050); // Deep moody garnet
+const vec3 C_DEEP  = vec3(0.369, 0.043, 0.039); // #5E0B0A deep garnet edges
 const vec3 C_CRIM  = vec3(0.882, 0.227, 0.149); // #E13A26
-const vec3 C_CORAL = vec3(1.000, 0.353, 0.259); // #FF5A42
-const vec3 C_PEACH = vec3(1.000, 0.620, 0.427); // #FF9E6D
-const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65 (Baby Yellow light core)
+const vec3 C_CORAL = vec3(1.000, 0.420, 0.259); // #FF6B42
+const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65 (Baby Yellow highlight core)
 
 float hash11(float p) {
   p = fract(p * 0.1031);
@@ -86,13 +85,16 @@ vec3 sampleLightField(vec2 p, float t, vec2 stretch) {
   float C = p3 * 1.15 + p1 * 0.36 + p2 * 0.30;
 
   float baseGrad = clamp(1.0 - length((p - vec2(0.46, 0.48)) * vec2(0.90, 1.18)) * 1.05, 0.0, 1.0);
-  vec3 col = mix(C_VOID, C_DEEP * 0.56, baseGrad);
-  col = mix(col, C_DEEP, smoothstep(0.08, 0.46, E));
-  col = mix(col, C_CRIM, smoothstep(0.36, 0.90, E));
-  col = mix(col, C_CORAL, smoothstep(0.82, 1.40, E));
+  vec3 col = mix(C_VOID, C_DEEP * 0.65, baseGrad);
+  col = mix(col, C_DEEP, smoothstep(0.06, 0.42, E));
+  col = mix(col, C_CRIM, smoothstep(0.32, 0.86, E));
+  col = mix(col, C_CORAL, smoothstep(0.76, 1.32, E));
 
-  vec3 warmCore = mix(C_PEACH, C_GOLD, 0.62);
-  col = mix(col, warmCore, smoothstep(0.58, 1.28, C) * u_warmIntensity);
+  float coreMask = smoothstep(0.46, 1.24, C);
+  float peakMask = smoothstep(0.84, 1.44, C);
+  float warmGain = clamp(u_warmIntensity / 0.58, 0.0, 1.25);
+  col = mix(col, mix(C_CORAL, C_GOLD, 0.58), clamp(coreMask * u_warmIntensity, 0.0, 1.0));
+  col = mix(col, C_GOLD, clamp(peakMask * 0.94 * warmGain, 0.0, 0.96));
   return col;
 }
 
@@ -320,9 +322,9 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
     render(timeSec: number, warmIntensity: number) {
       const base = offCtx.createLinearGradient(0, 0, offW, offH);
       base.addColorStop(0, '#100202');
-      base.addColorStop(0.45, '#420807');
-      base.addColorStop(0.75, '#6b0e0c');
-      base.addColorStop(1, '#140202');
+      base.addColorStop(0.42, '#3a0605');
+      base.addColorStop(0.72, '#5e0b0a');
+      base.addColorStop(1, '#100202');
       offCtx.fillStyle = base;
       offCtx.fillRect(0, 0, offW, offH);
 
@@ -334,7 +336,7 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
         const grad = offCtx.createRadialGradient(0, 0, 0, 0, 0, r);
         grad.addColorStop(0, c0);
         grad.addColorStop(0.48, c1);
-        grad.addColorStop(1, 'rgba(131, 22, 19, 0)');
+        grad.addColorStop(1, 'rgba(94, 11, 10, 0)');
         offCtx.fillStyle = grad;
         offCtx.beginPath();
         offCtx.arc(0, 0, r, 0, Math.PI * 2);
@@ -348,26 +350,26 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): BackdropRenderer | n
         0.46 + 0.03 * Math.cos(timeSec * 0.15),
         0.92,
         0.62,
-        'rgba(255, 90, 66, 0.72)',
-        'rgba(225, 58, 38, 0.36)'
+        'rgba(255, 107, 66, 0.72)',
+        'rgba(225, 58, 38, 0.38)'
       );
       drawPlume(
         0.52 + 0.035 * Math.cos(timeSec * 0.13),
         0.38 + 0.03 * Math.sin(timeSec * 0.17),
         1.08,
         0.46,
-        'rgba(225, 58, 38, 0.56)',
-        'rgba(131, 22, 19, 0.22)'
+        'rgba(225, 58, 38, 0.58)',
+        'rgba(94, 11, 10, 0.24)'
       );
       if (warmIntensity > 0.01) {
-        const a = Math.min(0.68, warmIntensity * 1.1).toFixed(2);
+        const a = Math.min(0.92, warmIntensity * 1.45).toFixed(2);
         drawPlume(
           0.40 + 0.025 * Math.sin(timeSec * 0.23),
           0.41 + 0.02 * Math.cos(timeSec * 0.21),
-          0.62,
-          0.38,
+          0.60,
+          0.36,
           `rgba(254, 237, 101, ${a})`,
-          'rgba(255, 158, 109, 0.28)'
+          'rgba(255, 107, 66, 0.42)'
         );
       }
       offCtx.globalCompositeOperation = 'source-over';

@@ -9,12 +9,18 @@
   --melange-edge: #3d0706;
   --melange-ink: #160303;
 
-  --glass-surface: rgba(15, 2, 2, 0.76);
+  --glass-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(14, 2, 2, 0.78) 100%
+  );
   --glass-inner: rgba(10, 1, 1, 0.62);
-  --glass-blur: blur(36px) saturate(150%);
+  --glass-blur: blur(44px) saturate(165%);
   --hairline: rgba(255, 255, 255, 0.14);
   --hairline-focus: rgba(255, 255, 255, 0.88);
-  --shadow-ambient: 0 20px 48px rgba(8, 1, 1, 0.56);
+  --shadow-ambient:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 24px 64px rgba(0, 0, 0, 0.55);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-geometry: 180ms;
 }
@@ -178,10 +184,10 @@ body {
   height: 2.75rem;
   padding: 0 0.75rem;
   border-radius: 9999px;
-  background: rgba(32, 4, 4, 0.46);
+  background: var(--glass-surface);
   border: 1px solid var(--hairline);
-  backdrop-filter: blur(36px) saturate(140%);
-  -webkit-backdrop-filter: blur(36px) saturate(140%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-ambient);
 }
 
@@ -195,8 +201,9 @@ body {
   border-radius: 9999px;
   background: transparent;
   font-size: 0.75rem;
+  font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.78);
   transition:
     color 150ms ease,
     background-color 150ms ease;
@@ -240,11 +247,11 @@ body {
 }
 
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 @media (prefers-reduced-motion: reduce) {

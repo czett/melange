@@ -25,6 +25,28 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
       setFocus("osk-key-Q", false);
       ensureValidFocus("osk-key-Q");
     });
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (e.key === "Backspace") {
+        e.preventDefault();
+        e.stopPropagation();
+        backspace();
+        setFocus("osk-submit", false);
+        return;
+      }
+
+      if (e.key.length === 1 && !/[\u0000-\u001F\u007F]/.test(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        props.onChange(props.value + e.key);
+        setFocus("osk-submit", false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    onCleanup(() => window.removeEventListener("keydown", onKeyDown));
   });
 
   return (
@@ -32,7 +54,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
       <div class="glass-card flex w-full max-w-3xl flex-col gap-5 rounded-[24px] p-7">
         <div class="flex items-center justify-between gap-4">
           <div class="eyebrow">Search</div>
-          <div class="chip">D-pad + OK</div>
+          <div class="chip">Type or D-pad + OK</div>
         </div>
 
         <div class="glass-inner flex min-h-[3.25rem] items-center justify-between rounded-2xl px-5 py-3 text-lg font-normal tracking-[-0.02em] text-white">

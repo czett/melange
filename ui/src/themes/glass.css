@@ -17,20 +17,34 @@
 
   /* Ink */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.65);
-  --text-muted: rgba(255, 255, 255, 0.45);
+  --text-secondary: rgba(255, 255, 255, 0.82);
+  --text-muted: rgba(255, 255, 255, 0.65);
 
-  /* Smoky garnet frosted glass */
-  --glass-surface: rgba(15, 2, 2, 0.76);
-  --glass-surface-home: rgba(15, 2, 2, 0.72);
-  --glass-surface-focus: rgba(24, 4, 4, 0.86);
+  /* Optical smoky garnet frosted glass */
+  --glass-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(14, 2, 2, 0.78) 100%
+  );
+  --glass-surface-home: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(14, 2, 2, 0.76) 100%
+  );
+  --glass-surface-focus: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.11) 0%,
+    rgba(24, 4, 4, 0.86) 100%
+  );
   --glass-inner: rgba(10, 1, 1, 0.62);
-  --glass-inner-focus: rgba(255, 255, 255, 0.09);
+  --glass-inner-focus: rgba(255, 255, 255, 0.1);
   --modal-scrim: rgba(8, 1, 1, 0.84);
-  --glass-blur: blur(36px) saturate(150%);
+  --glass-blur: blur(44px) saturate(165%);
   --hairline: rgba(255, 255, 255, 0.14);
   --hairline-focus: rgba(255, 255, 255, 0.88);
-  --shadow-ambient: 0 20px 48px rgba(8, 1, 1, 0.56);
+  --shadow-ambient:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 24px 64px rgba(0, 0, 0, 0.55);
 
   /* Motion */
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
@@ -69,7 +83,7 @@
 
 /* ───────────────────────── Surfaces ───────────────────────── */
 
-/* Primary smoky garnet frosted card */
+/* Primary optical smoky garnet frosted card */
 .glass-card {
   position: relative;
   background: var(--glass-surface);
@@ -88,7 +102,7 @@
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     border-color 160ms ease,
-    background-color 160ms ease;
+    background 160ms ease;
 }
 
 .glass-card-interactive[data-focused="true"] {
@@ -237,10 +251,10 @@
   height: 1.5rem;
   padding: 0 0.625rem;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -261,10 +275,11 @@
   height: 2.375rem;
   padding: 0 0.75rem;
   border-radius: 9999px;
-  background: rgba(15, 2, 2, 0.62);
+  background: var(--glass-surface);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(36px) saturate(150%);
-  -webkit-backdrop-filter: blur(36px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-ambient);
 }
 
 .nav-link {
@@ -277,8 +292,9 @@
   border-radius: 9999px;
   background: transparent;
   font-size: 0.75rem;
+  font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.78);
   transition:
     color 160ms ease,
     background-color 160ms ease;
@@ -385,11 +401,15 @@
 }
 
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.hero-text-shadow {
+  text-shadow: 0 1px 14px rgba(14, 2, 2, 0.55);
 }
 
 /* ───────────────────────── Fallback spatial focus reticle ───────────────────────── */

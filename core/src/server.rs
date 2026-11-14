@@ -49,6 +49,7 @@ pub enum OverlayKind {
     ProfileSwitcher,
     PlayerOsd,
     SearchKeyboard,
+    LeaveMenu,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -124,6 +125,7 @@ pub enum ClientCommand {
     SeekRelative { offset_sec: f64 },
     TogglePause,
     ToggleFullscreen,
+    QuitApp,
 }
 
 #[derive(Debug, Clone)]
@@ -136,6 +138,7 @@ pub enum ShellCommand {
     SeekRelative { offset_sec: f64 },
     TogglePause,
     ToggleFullscreen,
+    QuitApp,
 }
 
 pub struct StateManager {
@@ -372,6 +375,10 @@ impl StateManager {
                     st.mode = AppMode::Home;
                     changed = true;
                 }
+                NavEvent::Back => {
+                    st.overlay = OverlayKind::LeaveMenu;
+                    changed = true;
+                }
                 _ => {}
             }
         }
@@ -510,6 +517,9 @@ impl StateManager {
                     }
                     self.broadcast_state();
                 }
+            }
+            ClientCommand::QuitApp => {
+                self.send_shell_command(ShellCommand::QuitApp);
             }
         }
     }

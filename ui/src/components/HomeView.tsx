@@ -346,15 +346,15 @@ export const HomeView = () => {
       {/* Main stage: editorial hero (left) + smoky schedule card & bottom-right CTAs (right) */}
       <main class="my-auto grid grid-cols-12 items-end gap-12 py-4">
         <section class="col-span-7 flex flex-col justify-end">
-          <div class="mb-4 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
-            <span class="tabular-nums text-white/85">{formattedTime()}</span>
-            <span class="text-white/25">/</span>
+          <div class="hero-text-shadow mb-4 flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[0.14em] text-white/[0.82]">
+            <span class="tabular-nums text-white">{formattedTime()}</span>
+            <span class="text-white/40">/</span>
             <span>{formattedDate()}</span>
             <Show when={heroContext()}>
               {(ctx) => (
                 <>
-                  <span class="text-white/25">/</span>
-                  <span class="inline-flex items-center gap-1.5 text-white/85">
+                  <span class="text-white/40">/</span>
+                  <span class="inline-flex items-center gap-1.5 text-white">
                     <span class="live-dot" />
                     {ctx()}
                   </span>
@@ -363,11 +363,11 @@ export const HomeView = () => {
             </Show>
           </div>
 
-          <h1 class="line-clamp-2 max-w-[14ch] pb-1.5 text-[56px] font-medium leading-[1.12] tracking-[-0.04em] text-white xl:text-[60px]">
+          <h1 class="hero-text-shadow line-clamp-2 max-w-[14ch] pb-1.5 text-[56px] font-medium leading-[1.12] tracking-[-0.04em] text-white xl:text-[60px]">
             {heroTitle()}
           </h1>
 
-          <p class="mt-4 line-clamp-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+          <p class="hero-text-shadow mt-4 line-clamp-2 max-w-[44ch] text-[14px] font-normal leading-relaxed text-white/[0.84]">
             {heroDescription()}
           </p>
         </section>
@@ -376,7 +376,7 @@ export const HomeView = () => {
           <div class="glass-card glass-card-home rounded-[22px] p-4">
             <div class="mb-3.5 flex items-center justify-between px-1">
               <span class="eyebrow">Live &amp; Up Next</span>
-              <span class="text-[11px] tabular-nums text-white/45">
+              <span class="text-[12px] font-normal tabular-nums text-white/[0.78]">
                 {melangeState().channels.length} channels
               </span>
             </div>
@@ -385,7 +385,7 @@ export const HomeView = () => {
               <For
                 each={scheduleChannels()}
                 fallback={
-                  <div class="glass-inner rounded-2xl p-4 text-xs text-white/55">
+                  <div class="glass-inner rounded-2xl p-4 text-[13px] font-normal text-white/[0.82]">
                     No live channels configured yet.
                   </div>
                 }
@@ -418,29 +418,29 @@ export const HomeView = () => {
                     >
                       <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0 truncate text-[13px] text-white">
-                          <span class="mr-2 tabular-nums text-white/45">{ch.number}</span>
+                          <span class="mr-2 font-medium tabular-nums text-white/75">{ch.number}</span>
                           <span class="font-medium">{ch.name}</span>
                           <Show when={nowProg()?.title}>
-                            <span class="ml-2 text-white/55">{nowProg()!.title}</span>
+                            <span class="ml-2 font-normal text-white/[0.82]">{nowProg()!.title}</span>
                           </Show>
                         </div>
                         <Show
                           when={isActive()}
                           fallback={
-                            <span class="shrink-0 text-[11px] text-white/45">{ch.group_title}</span>
+                            <span class="shrink-0 text-[12px] font-normal text-white/[0.78]">{ch.group_title}</span>
                           }
                         >
-                          <span class="inline-flex shrink-0 items-center gap-1.5 text-[11px] text-white/85">
+                          <span class="inline-flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-white">
                             <span class="live-dot" />
                             Live
                           </span>
                         </Show>
                       </div>
 
-                      <div class="flex items-center gap-3 text-[13px] tabular-nums tracking-[-0.01em] text-white/90">
+                      <div class="flex items-center gap-3 text-[13px] font-medium tabular-nums tracking-[-0.01em] text-white/95">
                         <span>{startStr()}</span>
                         <span class="h-px flex-1 bg-white/15" />
-                        <span class="text-[11px] text-white/50">{durStr()}</span>
+                        <span class="text-[12px] font-normal text-white/[0.82]">{durStr()}</span>
                         <span class="h-px flex-1 bg-white/15" />
                         <span>{stopStr()}</span>
                       </div>
@@ -524,10 +524,10 @@ export const HomeView = () => {
                   class="strip-item flex flex-col items-start rounded-[14px] px-3 py-3 text-left"
                 >
                   <HairlineIcon kind={item.icon} />
-                  <div class="mt-3 w-full truncate text-xs font-medium tracking-[-0.01em] text-white">
+                  <div class="hero-text-shadow mt-3 w-full truncate text-[13px] font-medium tracking-[-0.01em] text-white">
                     {item.title}
                   </div>
-                  <div class="mt-0.5 line-clamp-2 w-full text-[11px] leading-snug text-white/50">
+                  <div class="hero-text-shadow mt-0.5 line-clamp-2 w-full text-[12px] font-normal leading-snug text-white/[0.82]">
                     {item.meta}
                   </div>
                 </button>

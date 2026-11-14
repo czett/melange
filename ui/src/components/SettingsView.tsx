@@ -44,7 +44,7 @@ export function SettingsView(props: SettingsViewProps) {
       <div class="mx-auto mb-8 flex w-full max-w-5xl items-end justify-between">
         <div>
           <div class="eyebrow">System</div>
-          <h1 class="mt-2 pb-0.5 text-[40px] font-normal leading-[1.12] tracking-[-0.035em] text-white">
+          <h1 class="mt-2 pb-0.5 text-[40px] font-medium leading-[1.12] tracking-[-0.035em] text-white">
             Settings
           </h1>
         </div>
@@ -63,8 +63,8 @@ export function SettingsView(props: SettingsViewProps) {
       <div class="mx-auto my-auto grid w-full max-w-5xl grid-cols-1 gap-6 md:grid-cols-2">
         <div class="glass-card flex flex-col items-center gap-6 rounded-[22px] p-8 text-center">
           <div>
-            <h2 class="text-xl font-normal tracking-[-0.02em] text-white">Smartphone Companion</h2>
-            <p class="mx-auto mt-2 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+            <h2 class="text-xl font-medium tracking-[-0.02em] text-white">Smartphone Companion</h2>
+            <p class="mx-auto mt-2 max-w-[44ch] text-[13px] font-normal leading-relaxed text-white/[0.82]">
               Scan with your phone camera to control melange, reorder channels, or upload a custom
               wallpaper.
             </p>
@@ -95,7 +95,7 @@ export function SettingsView(props: SettingsViewProps) {
             <h3 class="eyebrow">Active Providers</h3>
             <div class="grid grid-cols-2 gap-2.5">
               <div class="glass-inner rounded-2xl p-4">
-                <div class="flex items-center gap-2 text-[11px] text-white/55">
+                <div class="flex items-center gap-2 text-[12px] font-normal text-white/[0.78]">
                   <span class="live-dot" />
                   <span>Live TV</span>
                 </div>
@@ -104,7 +104,7 @@ export function SettingsView(props: SettingsViewProps) {
                 </div>
               </div>
               <div class="glass-inner rounded-2xl p-4">
-                <div class="flex items-center gap-2 text-[11px] text-white/55">
+                <div class="flex items-center gap-2 text-[12px] font-normal text-white/[0.78]">
                   <span class="nav-dot" />
                   <span>On Demand</span>
                 </div>
