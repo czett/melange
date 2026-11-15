@@ -1234,7 +1234,7 @@ async fn test_youtube_continuation_and_playlists_http_routes() {
 
             let browse_id = body["browseId"].as_str().unwrap_or("");
             match browse_id {
-                "FEplaylist_aggregation" => axum::Json(serde_json::json!({
+                "FEmy_youtube" => axum::Json(serde_json::json!({
                     "contents": {
                         "tileRenderer": {
                             "contentId": "WL",
@@ -1313,6 +1313,7 @@ async fn test_youtube_continuation_and_playlists_http_routes() {
     state.set_youtube_provider(Arc::new(YouTubeProvider::with_endpoints(
         YouTubeEndpoints {
             innertube_base_url: format!("http://{mock_addr}"),
+            data_api_base_url: format!("http://{mock_addr}/v3"),
             ..Default::default()
         },
         vec![],
@@ -1387,8 +1388,18 @@ async fn test_youtube_continuation_and_playlists_http_routes() {
         .await
         .unwrap();
     assert!(!playlists_resp.requires_auth);
-    assert_eq!(playlists_resp.playlists.len(), 1);
-    assert_eq!(playlists_resp.playlists[0].playlist_id, "WL");
+    assert!(
+        playlists_resp
+            .playlists
+            .iter()
+            .any(|p| p.playlist_id == "WL")
+    );
+    assert!(
+        playlists_resp
+            .playlists
+            .iter()
+            .any(|p| p.playlist_id == "LL")
+    );
 
     let wl_detail: YouTubeFeedResponse = client
         .get(format!(
@@ -1465,4 +1476,336 @@ fn test_playback_speed_quality_commands_and_direct_seek_nav() {
         ShellCommand::SeekRelative { offset_sec } => assert_eq!(offset_sec, 10.0),
         other => panic!("expected SeekRelative(10), got {other:?}"),
     }
+}
+
+#[tokio::test]
+async fn test_youtube_subscriptions_and_playlists_data_api_v3_and_tvhtml5() {
+    use axum::{
+        Router,
+        extract::Query,
+        http::{HeaderMap, StatusCode},
+        response::IntoResponse,
+        routing::{get, post},
+    };
+    use melange_core::YouTubeAccount;
+    use melange_core::providers::youtube::{
+        YouTubeEndpoints, YouTubeFeedResponse, parse_iso8601_duration,
+    };
+    use std::collections::HashMap;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    assert_eq!(parse_iso8601_duration("PT1H2M3S"), 3723);
+    assert_eq!(parse_iso8601_duration("PT12M30S"), 750);
+
+    let saw_web_with_bearer = Arc::new(AtomicBool::new(false));
+    let saw_web_flag = Arc::clone(&saw_web_with_bearer);
+
+    let mock_google = Router::new()
+        .route(
+            "/youtubei/v1/browse",
+            post(move |headers: HeaderMap, axum::Json(body): axum::Json<serde_json::Value>| {
+                let saw_web_flag = Arc::clone(&saw_web_flag);
+                async move {
+                    let client_id = headers
+                        .get("x-youtube-client-name")
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("");
+                    let has_auth = headers.contains_key("authorization");
+                    if has_auth && client_id == "1" {
+                        saw_web_flag.store(true, Ordering::SeqCst);
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            axum::Json(serde_json::json!({ "error": "WEB header with TV OAuth" })),
+                        )
+                            .into_response();
+                    }
+
+                    let browse_id = body["browseId"].as_str().unwrap_or("");
+                    match browse_id {
+                        // Simulate Innertube FEsubscriptions returning 400 (forcing Data API v3 fallback)
+                        "FEsubscriptions" => (
+                            StatusCode::BAD_REQUEST,
+                            axum::Json(serde_json::json!({ "error": "invalid request" })),
+                        )
+                            .into_response(),
+                        "VLWL" => axum::Json(serde_json::json!({
+                            "header": {
+                                "playlistHeaderRenderer": {
+                                    "title": { "simpleText": "Watch Later" }
+                                }
+                            },
+                            "contents": {
+                                "playlistVideoRenderer": {
+                                    "videoId": "wlVid99",
+                                    "title": { "simpleText": "Watch Later Item" },
+                                    "longBylineText": {
+                                        "runs": [{
+                                            "text": "Arte Doc",
+                                            "navigationEndpoint": {
+                                                "browseEndpoint": { "browseId": "UCarte1234567890" }
+                                            }
+                                        }]
+                                    },
+                                    "lengthText": { "simpleText": "20:00" }
+                                }
+                            }
+                        }))
+                        .into_response(),
+                        _ => axum::Json(serde_json::json!({})).into_response(),
+                    }
+                }
+            }),
+        )
+        .route(
+            "/v3/subscriptions",
+            get(|headers: HeaderMap| async move {
+                assert!(headers.get("authorization").is_some());
+                axum::Json(serde_json::json!({
+                    "items": [
+                        {
+                            "snippet": {
+                                "title": "Arte Documentary",
+                                "resourceId": { "channelId": "UCarte1234567890" },
+                                "thumbnails": {
+                                    "high": { "url": "https://yt3.ggpht.com/arte-avatar.jpg" }
+                                }
+                            }
+                        },
+                        {
+                            "snippet": {
+                                "title": "ZDFheute",
+                                "resourceId": { "channelId": "UCzdf12345678901" },
+                                "thumbnails": {
+                                    "medium": { "url": "https://yt3.ggpht.com/zdf-avatar.jpg" }
+                                }
+                            }
+                        }
+                    ]
+                }))
+            }),
+        )
+        .route(
+            "/v3/playlists",
+            get(|headers: HeaderMap| async move {
+                assert!(headers.get("authorization").is_some());
+                axum::Json(serde_json::json!({
+                    "items": [
+                        {
+                            "id": "PLcustomDoc01",
+                            "snippet": {
+                                "title": "Science Docs",
+                                "thumbnails": {
+                                    "high": { "url": "https://i.ytimg.com/vi/doc01/hqdefault.jpg" }
+                                }
+                            },
+                            "contentDetails": { "itemCount": 7 }
+                        }
+                    ]
+                }))
+            }),
+        )
+        .route(
+            "/v3/playlistItems",
+            get(|Query(params): Query<HashMap<String, String>>| async move {
+                let pid = params.get("playlistId").map(String::as_str).unwrap_or("");
+                match pid {
+                    "UUarte1234567890" => axum::Json(serde_json::json!({
+                        "items": [
+                            {
+                                "snippet": {
+                                    "title": "Deep Sea Volcanoes",
+                                    "videoOwnerChannelTitle": "Arte Documentary",
+                                    "videoOwnerChannelId": "UCarte1234567890",
+                                    "thumbnails": {
+                                        "high": { "url": "https://i.ytimg.com/vi/arteVid1/hqdefault.jpg" }
+                                    }
+                                },
+                                "contentDetails": {
+                                    "videoId": "arteVid1",
+                                    "videoPublishedAt": "2026-11-10T18:00:00Z"
+                                }
+                            }
+                        ]
+                    }))
+                    .into_response(),
+                    "UUzdf12345678901" => axum::Json(serde_json::json!({
+                        "items": [
+                            {
+                                "snippet": {
+                                    "title": "Abendnachrichten Live",
+                                    "videoOwnerChannelTitle": "ZDFheute",
+                                    "videoOwnerChannelId": "UCzdf12345678901",
+                                    "thumbnails": {
+                                        "high": { "url": "https://i.ytimg.com/vi/zdfVid1/hqdefault.jpg" }
+                                    }
+                                },
+                                "contentDetails": {
+                                    "videoId": "zdfVid1",
+                                    "videoPublishedAt": "2026-11-11T19:00:00Z"
+                                }
+                            }
+                        ]
+                    }))
+                    .into_response(),
+                    "PLcustomDoc01" => axum::Json(serde_json::json!({
+                        "items": [
+                            {
+                                "snippet": {
+                                    "title": "Cosmic Horizons",
+                                    "videoOwnerChannelTitle": "Arte Documentary",
+                                    "videoOwnerChannelId": "UCarte1234567890",
+                                    "thumbnails": {
+                                        "high": { "url": "https://i.ytimg.com/vi/cosmo1/hqdefault.jpg" }
+                                    }
+                                },
+                                "contentDetails": {
+                                    "videoId": "cosmo1",
+                                    "videoPublishedAt": "2026-11-01T12:00:00Z"
+                                }
+                            }
+                        ]
+                    }))
+                    .into_response(),
+                    // Watch Later ("WL") is unavailable via Data API v3, triggering TVHTML5 VLWL fallback
+                    "WL" => (
+                        StatusCode::NOT_FOUND,
+                        axum::Json(serde_json::json!({ "error": "not found" })),
+                    )
+                        .into_response(),
+                    _ => axum::Json(serde_json::json!({ "items": [] })).into_response(),
+                }
+            }),
+        )
+        .route(
+            "/v3/videos",
+            get(|Query(params): Query<HashMap<String, String>>| async move {
+                let ids = params.get("id").map(String::as_str).unwrap_or("");
+                let items: Vec<serde_json::Value> = ids
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(|id| {
+                        serde_json::json!({
+                            "id": id,
+                            "contentDetails": { "duration": "PT45M10S" }
+                        })
+                    })
+                    .collect();
+                axum::Json(serde_json::json!({ "items": items }))
+            }),
+        );
+
+    let mock_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let mock_addr = mock_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(mock_listener, mock_google).await;
+    });
+
+    let tmp = TempDir::new().unwrap();
+    let db_path = tmp.path().join("melange.db");
+    let db = Database::open(&db_path).unwrap();
+    let profiles = db.list_profiles().unwrap();
+    let pid = profiles[0].id;
+    db.upsert_youtube_account(&YouTubeAccount {
+        profile_id: pid,
+        access_token: "tv-oauth-bearer".to_string(),
+        refresh_token: "refresh-tok".to_string(),
+        expires_at: melange_core::providers::youtube::now_unix_secs() + 3600,
+        account_name: "Couch User".to_string(),
+        account_avatar_url: None,
+        updated_at: String::new(),
+    })
+    .unwrap();
+
+    let state = StateManager::new(profiles, vec![], vec![], Arc::new(AudioEngine::noop()));
+    state.attach_db_path(db_path);
+    state.set_youtube_provider(Arc::new(YouTubeProvider::with_endpoints(
+        YouTubeEndpoints {
+            innertube_base_url: format!("http://{mock_addr}"),
+            data_api_base_url: format!("http://{mock_addr}/v3"),
+            ..Default::default()
+        },
+        vec![],
+        false,
+    )));
+
+    let app_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let app_addr = app_listener.local_addr().unwrap();
+    let ui_dir = tmp.path().to_path_buf();
+    tokio::spawn(async move {
+        let _ = serve_on_listener(app_listener, state, &ui_dir).await;
+    });
+
+    let client = reqwest::Client::new();
+
+    // 1. Subscriptions: even when FEsubscriptions returns 400, Data API v3 populates channels + recent uploads
+    let subs: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=subscriptions"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(subs.source, "youtube-data-api");
+    assert_eq!(subs.channels.len(), 2);
+    assert_eq!(subs.channels[0].channel_id, "UCarte1234567890");
+    assert_eq!(subs.items.len(), 2);
+    assert_eq!(subs.items[0].id, "yt:zdfVid1"); // newest published_at first
+    assert_eq!(subs.items[0].duration_sec, 2710);
+    assert_eq!(
+        subs.items[0].channel_id.as_deref(),
+        Some("UCzdf12345678901")
+    );
+
+    // 2. Playlists: Data API v3 playlists + standard WL/LL entries
+    let playlists: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=playlists"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(playlists.source, "youtube-data-api");
+    assert_eq!(playlists.playlists.len(), 3);
+    assert_eq!(playlists.playlists[0].playlist_id, "WL");
+    assert_eq!(playlists.playlists[1].playlist_id, "LL");
+    assert_eq!(playlists.playlists[2].playlist_id, "PLcustomDoc01");
+    assert_eq!(playlists.playlists[2].item_count.as_deref(), Some("7 videos"));
+
+    // 3. Custom playlist items via Data API v3
+    let pl_items: YouTubeFeedResponse = client
+        .get(format!(
+            "http://{app_addr}/api/youtube/feed?tab=playlist&playlist_id=PLcustomDoc01"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(pl_items.items.len(), 1);
+    assert_eq!(pl_items.items[0].id, "yt:cosmo1");
+    assert_eq!(pl_items.items[0].duration_sec, 2710);
+
+    // 4. Watch Later ("WL") falls back cleanly to TVHTML5 VLWL
+    let wl_items: YouTubeFeedResponse = client
+        .get(format!(
+            "http://{app_addr}/api/youtube/feed?tab=playlist&playlist_id=WL"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(wl_items.items.len(), 1);
+    assert_eq!(wl_items.items[0].id, "yt:wlVid99");
+    assert_eq!(
+        wl_items.items[0].channel_id.as_deref(),
+        Some("UCarte1234567890")
+    );
+
+    // Never sent WEB client headers with an OAuth bearer token
+    assert!(!saw_web_with_bearer.load(Ordering::SeqCst));
 }

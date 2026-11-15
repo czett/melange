@@ -2,7 +2,6 @@ import {
   For,
   Show,
   createEffect,
-  createMemo,
   createSignal,
   onCleanup,
   onMount
@@ -52,6 +51,42 @@ function formatDuration(sec: number): string {
     return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function extractYouTubeVideoId(item: MediaItem): string | null {
+  if (item.id.startsWith("yt:")) {
+    const id = item.id.slice(3).trim();
+    if (id) return id;
+  }
+  const match = item.stream_url.match(/[?&]v=([^&]+)/);
+  return match?.[1] ?? null;
+}
+
+function resolvedThumbnailUrl(
+  item: MediaItem,
+  provider: OnDemandViewProps["provider"]
+): string | null {
+  if (item.thumbnail_url && item.thumbnail_url.trim().length > 0) {
+    return item.thumbnail_url;
+  }
+  if (provider === "youtube") {
+    const vid = extractYouTubeVideoId(item);
+    if (vid) {
+      return `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+    }
+  }
+  return null;
+}
+
+function handleThumbError(img: HTMLImageElement, item: MediaItem) {
+  if (img.dataset.fallbackApplied === "1") return;
+  const vid = extractYouTubeVideoId(item);
+  if (!vid) return;
+  const fallback = `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+  if (img.src !== fallback) {
+    img.dataset.fallbackApplied = "1";
+    img.src = fallback;
+  }
 }
 
 interface PosterTheme {
@@ -569,81 +604,79 @@ export function OnDemandView(props: OnDemandViewProps) {
     onCleanup(unsubBack);
   });
 
-  createEffect(() => {
+  createEffect((prev?: { provider: OnDemandViewProps["provider"]; profileId: number | undefined }) => {
     const provider = props.provider;
-    void melangeState().active_profile?.id;
+    const profileId = melangeState().active_profile?.id;
+    if (prev && prev.provider === provider && prev.profileId === profileId) {
+      return prev;
+    }
     setQuery("");
     setActiveChannel(null);
     setActivePlaylist(null);
     setYtTab("foryou");
     void loadFeed(provider);
+    return { provider, profileId };
   });
 
   const playItem = (item: MediaItem) => {
     sendCommand({ type: "PlayMedia", item, resume: true });
   };
 
-  const providerTabs = createMemo<SegmentedItem[]>(() => [
+  const ytSubTab = () => (!activeChannel() && !activePlaylist() ? ytTab() : "");
+
+  const providerTabs: SegmentedItem[] = [
     {
       id: "mediathek",
       focusId: "od-tab-mediathek",
       label: "Mediathek",
-      active: props.provider === "mediathek",
       onSelect: () => sendCommand({ type: "SetMode", mode: "Mediathek" })
     },
     {
       id: "youtube",
       focusId: "od-tab-youtube",
       label: "YouTube",
-      active: props.provider === "youtube",
       onSelect: () => sendCommand({ type: "SetMode", mode: "YouTube" })
     },
     {
       id: "local",
       focusId: "od-tab-local",
       label: "Media",
-      active: props.provider === "local",
       onSelect: () => sendCommand({ type: "SetMode", mode: "Media" })
     }
-  ]);
+  ];
 
-  const youtubeTabs = createMemo<SegmentedItem[]>(() => [
+  const youtubeTabs: SegmentedItem[] = [
     {
       id: "foryou",
       focusId: "yt-sub-foryou",
       label: "For You",
-      active: !activeChannel() && !activePlaylist() && ytTab() === "foryou",
       onSelect: () => selectYouTubeTab("foryou")
     },
     {
       id: "subscriptions",
       focusId: "yt-sub-subscriptions",
       label: "Subscriptions",
-      active: !activeChannel() && !activePlaylist() && ytTab() === "subscriptions",
       onSelect: () => selectYouTubeTab("subscriptions")
     },
     {
       id: "playlists",
       focusId: "yt-sub-playlists",
       label: "Playlists",
-      active: !activeChannel() && !activePlaylist() && ytTab() === "playlists",
       onSelect: () => selectYouTubeTab("playlists")
     },
     {
       id: "history",
       focusId: "yt-sub-history",
       label: "History",
-      active: !activeChannel() && !activePlaylist() && ytTab() === "history",
       onSelect: () => selectYouTubeTab("history")
     },
     {
       id: "search",
       focusId: "yt-sub-search",
-      label: query() ? `Search: ${query()}` : "Search",
-      active: !activeChannel() && !activePlaylist() && ytTab() === "search",
+      label: () => (query() ? `Search: ${query()}` : "Search"),
       onSelect: () => selectYouTubeTab("search")
     }
-  ]);
+  ];
 
   const showingPlaylistsGrid = () =>
     props.provider === "youtube" &&
@@ -675,9 +708,9 @@ export function OnDemandView(props: OnDemandViewProps) {
       <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div class="flex flex-col gap-3">
           <div class="flex flex-wrap items-center gap-3">
-            <SegmentedPill items={providerTabs()} />
+            <SegmentedPill items={providerTabs} activeId={props.provider} />
             <Show when={props.provider === "youtube" && !activeChannel() && !activePlaylist()}>
-              <SegmentedPill items={youtubeTabs()} />
+              <SegmentedPill items={youtubeTabs} activeId={ytSubTab()} />
             </Show>
             <Show when={props.provider === "youtube" && activeChannel()}>
               <HapticTile
@@ -937,13 +970,13 @@ export function OnDemandView(props: OnDemandViewProps) {
                   variant="card"
                   radius="18px"
                   onSelect={() => openPlaylist(pl.playlist_id, pl.title)}
-                  class="flex h-full flex-col overflow-hidden rounded-[18px] text-left"
+                  class="flex h-full flex-col justify-between overflow-hidden rounded-[18px] text-left"
                 >
                   <Show
                     when={pl.thumbnail_url}
                     fallback={
                       <div
-                        class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14]"
+                        class="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.14]"
                         style={{
                           background: "linear-gradient(155deg, #991B1B 0%, #141218 100%)"
                         }}
@@ -962,7 +995,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                     }
                   >
                     {(thumb) => (
-                      <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
+                      <div class="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
                         <img
                           src={thumb()}
                           alt={pl.title}
@@ -987,7 +1020,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                     )}
                   </Show>
 
-                  <div class="flex flex-col gap-1 px-4 py-3.5">
+                  <div class="flex flex-1 flex-col justify-between gap-1.5 px-4 py-3.5">
                     <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
                       {pl.title}
                     </div>
@@ -1004,49 +1037,95 @@ export function OnDemandView(props: OnDemandViewProps) {
         <Show when={!loading() && !showingPlaylistsGrid() && items().length > 0}>
           <div class="grid grid-cols-2 gap-5 pb-6 md:grid-cols-3 lg:grid-cols-4">
             <For each={items()}>
-              {(item) => (
-                <div class="flex flex-col gap-1.5">
-                  <HapticTile
-                    id={`od-item-${item.id}`}
-                    variant="card"
-                    radius="18px"
-                    onSelect={() => playItem(item)}
-                    class="flex h-full flex-col overflow-hidden rounded-[18px] text-left"
+              {(item) => {
+                const thumbSrc = () => resolvedThumbnailUrl(item, props.provider);
+                const showChannelFooter = () =>
+                  props.provider === "youtube" && Boolean(item.channel_id) && !activeChannel();
+                return (
+                  <GlassPanel
+                    variant="surface"
+                    class="flex h-full flex-col justify-between rounded-[18px]"
                   >
-                    <Show
-                      when={item.thumbnail_url}
-                      fallback={(() => {
-                        const theme = editorialPosterTheme(item, props.provider);
-                        return (
+                    <HapticTile
+                      id={`od-item-${item.id}`}
+                      variant="card"
+                      radius="18px"
+                      onSelect={() => playItem(item)}
+                      class="flex flex-1 flex-col justify-between overflow-hidden rounded-[18px] border-0 bg-transparent text-left shadow-none"
+                    >
+                      <Show
+                        when={thumbSrc()}
+                        fallback={(() => {
+                          const theme = editorialPosterTheme(item, props.provider);
+                          return (
+                            <>
+                              <div
+                                class="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.14]"
+                                style={{ background: theme.background }}
+                              >
+                                <div
+                                  class="pointer-events-none absolute inset-0"
+                                  style={{ background: theme.glow }}
+                                />
+                                <div
+                                  class="pointer-events-none absolute inset-x-0 top-0 h-px"
+                                  style={{
+                                    background:
+                                      "linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.28), rgba(255,255,255,0.06))"
+                                  }}
+                                />
+
+                                <Show when={item.duration_sec > 0}>
+                                  <span class="absolute right-2.5 top-2.5 z-10 rounded-full border border-white/20 bg-black/35 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/95 backdrop-blur-md">
+                                    {formatDuration(item.duration_sec)}
+                                  </span>
+                                </Show>
+
+                                <span class="relative z-10 select-none px-4 text-center text-2xl font-bold tracking-tight text-white/90">
+                                  {theme.wordmark}
+                                </span>
+                              </div>
+
+                              <div class="flex flex-1 flex-col justify-between gap-1.5 px-4 py-3.5">
+                                <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
+                                  {item.title}
+                                </div>
+                                <div class="truncate text-[12px] font-medium text-white/80">
+                                  {item.channel_or_author || props.title}
+                                  <Show when={item.subtitle}>
+                                    <span> · {item.subtitle}</span>
+                                  </Show>
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      >
+                        {(thumb) => (
                           <>
-                            <div
-                              class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14]"
-                              style={{ background: theme.background }}
-                            >
+                            <div class="relative flex aspect-video w-full shrink-0 items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
+                              <img
+                                src={thumb()}
+                                alt={item.title}
+                                class="h-full w-full object-cover"
+                                loading="lazy"
+                                onError={(e) => handleThumbError(e.currentTarget, item)}
+                              />
                               <div
                                 class="pointer-events-none absolute inset-0"
-                                style={{ background: theme.glow }}
-                              />
-                              <div
-                                class="pointer-events-none absolute inset-x-0 top-0 h-px"
                                 style={{
                                   background:
-                                    "linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.28), rgba(255,255,255,0.06))"
+                                    "linear-gradient(180deg, transparent 56%, rgba(8, 10, 14, 0.54) 100%)"
                                 }}
                               />
-
                               <Show when={item.duration_sec > 0}>
-                                <span class="absolute right-2.5 top-2.5 z-10 rounded-full border border-white/20 bg-black/35 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/95 backdrop-blur-md">
+                                <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/[0.12] bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
                                   {formatDuration(item.duration_sec)}
                                 </span>
                               </Show>
-
-                              <span class="relative z-10 select-none px-4 text-center text-2xl font-bold tracking-tight text-white/90">
-                                {theme.wordmark}
-                              </span>
                             </div>
 
-                            <div class="flex flex-col gap-1 px-4 py-3.5">
+                            <div class="flex flex-1 flex-col justify-between gap-1.5 px-4 py-3.5">
                               <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
                                 {item.title}
                               </div>
@@ -1058,64 +1137,29 @@ export function OnDemandView(props: OnDemandViewProps) {
                               </div>
                             </div>
                           </>
-                        );
-                      })()}
-                    >
-                      {(thumb) => (
-                        <>
-                          <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
-                            <img
-                              src={thumb()}
-                              alt={item.title}
-                              class="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                            <div
-                              class="pointer-events-none absolute inset-0"
-                              style={{
-                                background:
-                                  "linear-gradient(180deg, transparent 56%, rgba(8, 10, 14, 0.54) 100%)"
-                              }}
-                            />
-                            <Show when={item.duration_sec > 0}>
-                              <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/[0.12] bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
-                                {formatDuration(item.duration_sec)}
-                              </span>
-                            </Show>
-                          </div>
-
-                          <div class="flex flex-col gap-1 px-4 py-3.5">
-                            <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
-                              {item.title}
-                            </div>
-                            <div class="truncate text-[12px] font-medium text-white/80">
-                              {item.channel_or_author || props.title}
-                              <Show when={item.subtitle}>
-                                <span> · {item.subtitle}</span>
-                              </Show>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </Show>
-                  </HapticTile>
-
-                  <Show when={props.provider === "youtube" && item.channel_id && !activeChannel()}>
-                    <HapticTile
-                      id={`od-ch-${item.id}`}
-                      variant="pill"
-                      radius="9999px"
-                      onSelect={() =>
-                        openChannel(item.channel_id!, item.channel_or_author || "Channel")
-                      }
-                      class="h-7 w-full justify-between px-3 text-[11.5px] text-white/80"
-                    >
-                      <span class="truncate">{item.channel_or_author}</span>
-                      <span class="shrink-0 opacity-70">Channel ›</span>
+                        )}
+                      </Show>
                     </HapticTile>
-                  </Show>
-                </div>
-              )}
+
+                    <Show when={showChannelFooter()}>
+                      <div class="border-t border-white/[0.08] px-3 py-2">
+                        <HapticTile
+                          id={`od-ch-${item.id}`}
+                          variant="pill"
+                          radius="9999px"
+                          onSelect={() =>
+                            openChannel(item.channel_id!, item.channel_or_author || "Channel")
+                          }
+                          class="h-7 w-full justify-between px-3 text-[11.5px] text-white/85"
+                        >
+                          <span class="truncate">{item.channel_or_author}</span>
+                          <span class="shrink-0 opacity-70">Channel ›</span>
+                        </HapticTile>
+                      </div>
+                    </Show>
+                  </GlassPanel>
+                );
+              }}
             </For>
           </div>
         </Show>

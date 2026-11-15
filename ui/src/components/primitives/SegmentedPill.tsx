@@ -4,8 +4,8 @@ import { registerFocusable, setFocus, setInputModality, type NavNeighbors } from
 export interface SegmentedItem {
   id: string;
   focusId: string;
-  label: string;
-  active: boolean;
+  label: string | (() => string);
+  active?: boolean | (() => boolean);
   onSelect: () => void;
   badge?: string;
   neighbors?: NavNeighbors;
@@ -13,6 +13,7 @@ export interface SegmentedItem {
 
 export interface SegmentedPillProps {
   items: SegmentedItem[];
+  activeId?: string;
   trailingAction?: {
     focusId: string;
     label: string;
@@ -43,7 +44,7 @@ function createPressHelper() {
   return { trigger, clear };
 }
 
-function SegmentButton(props: { item: SegmentedItem }) {
+function SegmentButton(props: { item: SegmentedItem; activeId?: string }) {
   let btnRef!: HTMLButtonElement;
   const press = createPressHelper();
 
@@ -60,6 +61,18 @@ function SegmentButton(props: { item: SegmentedItem }) {
     });
   });
 
+  const isActive = () => {
+    if (props.activeId !== undefined) {
+      return props.activeId === props.item.id;
+    }
+    return typeof props.item.active === "function"
+      ? props.item.active()
+      : Boolean(props.item.active);
+  };
+
+  const labelText = () =>
+    typeof props.item.label === "function" ? props.item.label() : props.item.label;
+
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
     setInputModality("pointer");
@@ -75,11 +88,11 @@ function SegmentButton(props: { item: SegmentedItem }) {
       data-focus-id={props.item.focusId}
       data-focus-self="true"
       data-focus-radius="9999px"
-      data-active={props.item.active ? "true" : undefined}
+      data-active={isActive() ? "true" : undefined}
       onClick={handleClick}
       class="segmented-item"
     >
-      <span>{props.item.label}</span>
+      <span>{labelText()}</span>
       <Show when={props.item.badge}>
         {(badge) => (
           <span class="segmented-badge rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none">
@@ -94,7 +107,9 @@ function SegmentButton(props: { item: SegmentedItem }) {
 export function SegmentedPill(props: SegmentedPillProps) {
   return (
     <div class={`segmented-pill ${props.class ?? ""}`}>
-      <For each={props.items}>{(item) => <SegmentButton item={item} />}</For>
+      <For each={props.items}>
+        {(item) => <SegmentButton item={item} activeId={props.activeId} />}
+      </For>
 
       <Show when={props.trailingAction}>
         {(action) => {

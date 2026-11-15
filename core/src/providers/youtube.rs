@@ -100,6 +100,7 @@ pub struct YouTubeEndpoints {
     pub oauth_device_code_url: String,
     pub oauth_token_url: String,
     pub innertube_base_url: String,
+    pub data_api_base_url: String,
     pub sponsorblock_base_url: String,
     pub client_id: String,
     pub client_secret: String,
@@ -121,6 +122,7 @@ impl Default for YouTubeEndpoints {
             oauth_device_code_url: "https://oauth2.googleapis.com/device/code".to_string(),
             oauth_token_url: "https://oauth2.googleapis.com/token".to_string(),
             innertube_base_url: "https://www.youtube.com".to_string(),
+            data_api_base_url: "https://www.googleapis.com/youtube/v3".to_string(),
             sponsorblock_base_url: "https://sponsor.ajay.app".to_string(),
             client_id,
             client_secret,
@@ -581,6 +583,26 @@ impl YouTubeProvider {
         Ok((full.items, full.channels, full.header_title))
     }
 
+    pub async fn innertube_browse_tv_only(
+        &self,
+        browse_id: &str,
+        params: Option<&str>,
+        access_token: Option<&str>,
+        filter_shorts: bool,
+    ) -> Result<InnertubeBrowseResult, MelangeError> {
+        let mut body = json!({
+            "context": self.innertube_tv_context(),
+            "browseId": browse_id,
+        });
+        if let Some(p) = params {
+            body["params"] = Value::String(p.to_string());
+        }
+        let text = self
+            .innertube_post("browse", body, access_token, false)
+            .await?;
+        parse_innertube_browse_full(&text, filter_shorts)
+    }
+
     pub async fn innertube_browse_full(
         &self,
         browse_id: &str,
@@ -604,10 +626,18 @@ impl YouTubeProvider {
                 }
             }
             Err(err) => {
-                debug!(browse_id, error = %err, "TVHTML5 browse failed, trying WEB context");
+                if access_token.is_some()
+                    && browse_id.starts_with("FE")
+                    && browse_id != "FEwhat_to_watch"
+                    && browse_id != "FEtrending"
+                {
+                    return Err(err);
+                }
+                debug!(browse_id, error = %err, "TVHTML5 browse failed, trying unauthenticated WEB context");
             }
         }
 
+        // Never attach TVHTML5 OAuth bearer tokens to WEB client requests (causes HTTP 400).
         let mut web_body = json!({
             "context": self.innertube_web_context(),
             "browseId": browse_id,
@@ -616,7 +646,7 @@ impl YouTubeProvider {
             web_body["params"] = Value::String(p.to_string());
         }
         let text = self
-            .innertube_post("browse", web_body, access_token, true)
+            .innertube_post("browse", web_body, None, true)
             .await?;
         parse_innertube_browse_full(&text, filter_shorts)
     }
@@ -635,11 +665,14 @@ impl YouTubeProvider {
         match self.innertube_post("browse", tv_body, access_token, false).await {
             Ok(text) => {
                 let parsed = parse_innertube_browse_full(&text, filter_shorts)?;
-                if !parsed.is_empty() {
+                if !parsed.is_empty() || access_token.is_some() {
                     return Ok(parsed);
                 }
             }
             Err(err) => {
+                if access_token.is_some() {
+                    return Err(err);
+                }
                 debug!(error = %err, "TVHTML5 continuation browse failed, trying WEB context");
             }
         }
@@ -649,7 +682,7 @@ impl YouTubeProvider {
             "continuation": continuation,
         });
         let text = self
-            .innertube_post("browse", web_body, access_token, true)
+            .innertube_post("browse", web_body, None, true)
             .await?;
         parse_innertube_browse_full(&text, filter_shorts)
     }
@@ -677,9 +710,362 @@ impl YouTubeProvider {
             "params": SEARCH_VIDEOS_PARAMS,
         });
         let text = self
-            .innertube_post("search", web_body, access_token, true)
+            .innertube_post("search", web_body, None, true)
             .await?;
         parse_innertube_search_response(&text)
+    }
+
+    async fn data_api_get(&self, path_and_query: &str, access_token: &str) -> Result<Value, MelangeError> {
+        let base = self.endpoints.data_api_base_url.trim_end_matches('/');
+        let url = format!("{base}/{path_and_query}");
+        let resp = self
+            .client
+            .get(&url)
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube data api request failed: {e}")))?;
+
+        let status = resp.status();
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube data api read failed: {e}")))?;
+        if !status.is_success() {
+            return Err(MelangeError::Player(format!(
+                "youtube data api HTTP {status}: {text}"
+            )));
+        }
+        serde_json::from_str(&text)
+            .map_err(|e| MelangeError::Parse(format!("youtube data api json: {e}")))
+    }
+
+    async fn fetch_data_api_subscriptions(
+        &self,
+        access_token: &str,
+    ) -> Result<Vec<YouTubeChannelChip>, MelangeError> {
+        let root = self
+            .data_api_get(
+                "subscriptions?part=snippet&mine=true&maxResults=50&order=alphabetical",
+                access_token,
+            )
+            .await?;
+        let Some(items) = root.get("items").and_then(Value::as_array) else {
+            return Ok(Vec::new());
+        };
+        let mut seen = HashSet::new();
+        let mut channels = Vec::new();
+        for item in items {
+            let Some(snippet) = item.get("snippet") else {
+                continue;
+            };
+            let Some(channel_id) = snippet
+                .get("resourceId")
+                .and_then(|r| r.get("channelId"))
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+            else {
+                continue;
+            };
+            if !seen.insert(channel_id.to_string()) {
+                continue;
+            }
+            let title = snippet
+                .get("title")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Channel")
+                .to_string();
+            let avatar_url = extract_data_api_thumbnail(snippet.get("thumbnails"));
+            channels.push(YouTubeChannelChip {
+                channel_id: channel_id.to_string(),
+                title,
+                avatar_url,
+            });
+        }
+        Ok(channels)
+    }
+
+    async fn fetch_data_api_playlists(
+        &self,
+        access_token: &str,
+        page_token: Option<&str>,
+    ) -> Result<(Vec<YouTubePlaylistItem>, Option<String>), MelangeError> {
+        let mut query = "playlists?part=snippet,contentDetails&mine=true&maxResults=50".to_string();
+        if let Some(pt) = page_token.map(str::trim).filter(|s| !s.is_empty()) {
+            query.push_str("&pageToken=");
+            query.push_str(&urlencoding_simple(pt));
+        }
+        let root = self.data_api_get(&query, access_token).await?;
+        let next_page = root
+            .get("nextPageToken")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string);
+
+        let mut playlists = Vec::new();
+        if let Some(items) = root.get("items").and_then(Value::as_array) {
+            for item in items {
+                let Some(id) = item
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                else {
+                    continue;
+                };
+                let snippet = item.get("snippet");
+                let title = snippet
+                    .and_then(|s| s.get("title"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("Playlist")
+                    .to_string();
+                let thumbnail_url = extract_data_api_thumbnail(
+                    snippet.and_then(|s| s.get("thumbnails")),
+                );
+                let item_count = item
+                    .get("contentDetails")
+                    .and_then(|c| c.get("itemCount"))
+                    .and_then(Value::as_u64)
+                    .map(|n| {
+                        if n == 1 {
+                            "1 video".to_string()
+                        } else {
+                            format!("{n} videos")
+                        }
+                    });
+                playlists.push(YouTubePlaylistItem {
+                    playlist_id: id.to_string(),
+                    title,
+                    item_count,
+                    thumbnail_url,
+                });
+            }
+        }
+        Ok((playlists, next_page))
+    }
+
+    async fn fetch_data_api_playlist_items(
+        &self,
+        playlist_id: &str,
+        access_token: &str,
+        page_token: Option<&str>,
+        max_results: usize,
+    ) -> Result<(Vec<MediaItem>, Option<String>), MelangeError> {
+        let mut query = format!(
+            "playlistItems?part=snippet,contentDetails&playlistId={}&maxResults={}",
+            urlencoding_simple(playlist_id),
+            max_results.clamp(1, 50)
+        );
+        if let Some(pt) = page_token.map(str::trim).filter(|s| !s.is_empty()) {
+            query.push_str("&pageToken=");
+            query.push_str(&urlencoding_simple(pt));
+        }
+        let root = self.data_api_get(&query, access_token).await?;
+        let next_page = root
+            .get("nextPageToken")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string);
+
+        let mut items = Vec::new();
+        let mut video_ids = Vec::new();
+        let mut seen = HashSet::new();
+
+        if let Some(raw_items) = root.get("items").and_then(Value::as_array) {
+            for entry in raw_items {
+                let snippet = entry.get("snippet");
+                let content_details = entry.get("contentDetails");
+                let Some(video_id) = content_details
+                    .and_then(|c| c.get("videoId"))
+                    .and_then(Value::as_str)
+                    .or_else(|| {
+                        snippet
+                            .and_then(|s| s.get("resourceId"))
+                            .and_then(|r| r.get("videoId"))
+                            .and_then(Value::as_str)
+                    })
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                else {
+                    continue;
+                };
+                if !seen.insert(video_id.to_string()) {
+                    continue;
+                }
+                let title = snippet
+                    .and_then(|s| s.get("title"))
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or(video_id)
+                    .to_string();
+                let thumbs = snippet.and_then(|s| s.get("thumbnails"));
+                if (title == "Private video" || title == "Deleted video") && thumbs.is_none() {
+                    continue;
+                }
+
+                let channel_or_author = snippet
+                    .and_then(|s| {
+                        s.get("videoOwnerChannelTitle")
+                            .or_else(|| s.get("channelTitle"))
+                    })
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("YouTube")
+                    .to_string();
+                let channel_id = snippet
+                    .and_then(|s| {
+                        s.get("videoOwnerChannelId")
+                            .or_else(|| s.get("channelId"))
+                    })
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| s.starts_with("UC"))
+                    .map(ToString::to_string);
+                let published_at = content_details
+                    .and_then(|c| c.get("videoPublishedAt"))
+                    .and_then(Value::as_str)
+                    .or_else(|| snippet.and_then(|s| s.get("publishedAt")).and_then(Value::as_str))
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(ToString::to_string);
+                let thumbnail_url = extract_data_api_thumbnail(thumbs)
+                    .or_else(|| Some(format!("https://i.ytimg.com/vi/{video_id}/hqdefault.jpg")));
+
+                video_ids.push(video_id.to_string());
+                items.push(MediaItem {
+                    id: format!("yt:{video_id}"),
+                    provider: "youtube".to_string(),
+                    title,
+                    subtitle: published_at.as_deref().map(short_iso_date),
+                    description: snippet
+                        .and_then(|s| s.get("description"))
+                        .and_then(Value::as_str)
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(ToString::to_string),
+                    channel_or_author,
+                    channel_id,
+                    duration_sec: 0,
+                    thumbnail_url,
+                    stream_url: format!("https://www.youtube.com/watch?v={video_id}"),
+                    published_at,
+                });
+            }
+        }
+
+        if !video_ids.is_empty() {
+            let joined = video_ids.join(",");
+            if let Ok(durations) = self.fetch_data_api_video_durations(&joined, access_token).await {
+                for item in &mut items {
+                    if let Some(vid) = item.id.strip_prefix("yt:")
+                        && let Some(&dur) = durations.get(vid)
+                    {
+                        item.duration_sec = dur;
+                    }
+                }
+            }
+        }
+
+        Ok((items, next_page))
+    }
+
+    async fn fetch_data_api_video_durations(
+        &self,
+        comma_ids: &str,
+        access_token: &str,
+    ) -> Result<HashMap<String, u64>, MelangeError> {
+        let query = format!("videos?part=contentDetails&id={comma_ids}");
+        let root = self.data_api_get(&query, access_token).await?;
+        let mut out = HashMap::new();
+        if let Some(items) = root.get("items").and_then(Value::as_array) {
+            for item in items {
+                if let Some(id) = item.get("id").and_then(Value::as_str)
+                    && let Some(iso) = item
+                        .get("contentDetails")
+                        .and_then(|c| c.get("duration"))
+                        .and_then(Value::as_str)
+                {
+                    out.insert(id.to_string(), parse_iso8601_duration(iso));
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    async fn fetch_recent_uploads_for_channels(
+        &self,
+        channels: &[YouTubeChannelChip],
+        access_token: &str,
+    ) -> Vec<MediaItem> {
+        let futs = channels.iter().take(10).map(|ch| async move {
+            if let Some(suffix) = ch.channel_id.strip_prefix("UC") {
+                let uploads_id = format!("UU{suffix}");
+                if let Ok((mut items, _)) = self
+                    .fetch_data_api_playlist_items(&uploads_id, access_token, None, 4)
+                    .await
+                    && !items.is_empty()
+                {
+                    for item in &mut items {
+                        if item.channel_id.is_none() {
+                            item.channel_id = Some(ch.channel_id.clone());
+                        }
+                        if item.channel_or_author == "YouTube" {
+                            item.channel_or_author = ch.title.clone();
+                        }
+                    }
+                    return items;
+                }
+            }
+
+            if let Ok(res) = self
+                .innertube_browse_full(&ch.channel_id, Some(CHANNEL_VIDEOS_PARAMS), None, true)
+                .await
+            {
+                return res
+                    .items
+                    .into_iter()
+                    .take(4)
+                    .map(|mut item| {
+                        if item.channel_id.is_none() {
+                            item.channel_id = Some(ch.channel_id.clone());
+                        }
+                        if item.channel_or_author == "YouTube" {
+                            item.channel_or_author = ch.title.clone();
+                        }
+                        item
+                    })
+                    .collect();
+            }
+            Vec::new()
+        });
+
+        let per_channel = futures_util::future::join_all(futs).await;
+        let mut combined = Vec::new();
+        let mut seen = HashSet::new();
+        let max_len = per_channel.iter().map(Vec::len).max().unwrap_or(0);
+        for idx in 0..max_len {
+            for ch_items in &per_channel {
+                if let Some(item) = ch_items.get(idx)
+                    && seen.insert(item.id.clone())
+                {
+                    combined.push(item.clone());
+                }
+            }
+        }
+        // Sort newest-first when ISO published_at timestamps are available
+        if combined.iter().any(|i| i.published_at.as_deref().is_some_and(|p| p.contains('T'))) {
+            combined.sort_by(|a, b| b.published_at.cmp(&a.published_at));
+        }
+        combined
     }
 
     pub async fn fetch_continuation_with_account(
@@ -693,6 +1079,43 @@ impl YouTubeProvider {
             return Err(MelangeError::Parse("empty continuation token".to_string()));
         }
         let token = account.map(|a| a.access_token.as_str());
+
+        if let Some(page_tok) = clean.strip_prefix("ytapi:playlists:") {
+            let tok = token.ok_or_else(|| {
+                MelangeError::Config("youtube auth required for playlists continuation".to_string())
+            })?;
+            let (playlists, next_page) = self.fetch_data_api_playlists(tok, Some(page_tok)).await?;
+            return Ok(YouTubeFeedResponse {
+                items: Vec::new(),
+                channels: Vec::new(),
+                playlists,
+                channel_title: None,
+                next_continuation: next_page.map(|p| format!("ytapi:playlists:{p}")),
+                requires_auth: false,
+                source: "youtube-data-api".to_string(),
+            });
+        }
+
+        if let Some(rest) = clean.strip_prefix("ytapi:playlist:")
+            && let Some((playlist_id, page_tok)) = rest.split_once(':')
+        {
+            let tok = token.ok_or_else(|| {
+                MelangeError::Config("youtube auth required for playlist continuation".to_string())
+            })?;
+            let (items, next_page) = self
+                .fetch_data_api_playlist_items(playlist_id, tok, Some(page_tok), 50)
+                .await?;
+            return Ok(YouTubeFeedResponse {
+                items,
+                channels: Vec::new(),
+                playlists: Vec::new(),
+                channel_title: None,
+                next_continuation: next_page.map(|p| format!("ytapi:playlist:{playlist_id}:{p}")),
+                requires_auth: false,
+                source: "youtube-data-api".to_string(),
+            });
+        }
+
         let parsed = self
             .innertube_browse_continuation(clean, token, filter_shorts)
             .await?;
@@ -722,7 +1145,7 @@ impl YouTubeProvider {
             YouTubeFeedTab::ForYou => {
                 if let Some(tok) = token {
                     match self
-                        .innertube_browse_full("FEwhat_to_watch", None, Some(tok), true)
+                        .innertube_browse_tv_only("FEwhat_to_watch", None, Some(tok), true)
                         .await
                     {
                         Ok(res) if !res.items.is_empty() => {
@@ -801,21 +1224,82 @@ impl YouTubeProvider {
                     });
                 };
 
-                let mut res = self
-                    .innertube_browse_full("FEsubscriptions", None, Some(tok), true)
-                    .await?;
-                if res.channels.is_empty() {
-                    res.channels = derive_channel_chips(&res.items);
+                // Strictly use TVHTML5 client context for FEsubscriptions (never WEB with TV token).
+                let tv_res = self
+                    .innertube_browse_tv_only("FEsubscriptions", None, Some(tok), true)
+                    .await;
+
+                match tv_res {
+                    Ok(mut res) if !res.items.is_empty() => {
+                        if res.channels.is_empty() {
+                            if let Ok(api_channels) = self.fetch_data_api_subscriptions(tok).await
+                                && !api_channels.is_empty()
+                            {
+                                res.channels = api_channels;
+                            } else {
+                                res.channels = derive_channel_chips(&res.items);
+                            }
+                        }
+                        Ok(YouTubeFeedResponse {
+                            items: res.items,
+                            channels: res.channels,
+                            playlists: Vec::new(),
+                            channel_title: None,
+                            next_continuation: res.next_continuation,
+                            requires_auth: false,
+                            source: "innertube-auth".to_string(),
+                        })
+                    }
+                    Ok(mut res) => {
+                        if let Ok(api_channels) = self.fetch_data_api_subscriptions(tok).await
+                            && !api_channels.is_empty()
+                        {
+                            let uploads = self
+                                .fetch_recent_uploads_for_channels(&api_channels, tok)
+                                .await;
+                            return Ok(YouTubeFeedResponse {
+                                items: uploads,
+                                channels: api_channels,
+                                playlists: Vec::new(),
+                                channel_title: None,
+                                next_continuation: None,
+                                requires_auth: false,
+                                source: "youtube-data-api".to_string(),
+                            });
+                        }
+                        if res.channels.is_empty() {
+                            res.channels = derive_channel_chips(&res.items);
+                        }
+                        Ok(YouTubeFeedResponse {
+                            items: res.items,
+                            channels: res.channels,
+                            playlists: Vec::new(),
+                            channel_title: None,
+                            next_continuation: res.next_continuation,
+                            requires_auth: false,
+                            source: "innertube-auth".to_string(),
+                        })
+                    }
+                    Err(tv_err) => {
+                        debug!(error = %tv_err, "TVHTML5 FEsubscriptions failed; falling back to YouTube Data API v3");
+                        let api_channels = self.fetch_data_api_subscriptions(tok).await?;
+                        let uploads = if api_channels.is_empty() {
+                            Vec::new()
+                        } else {
+                            self.fetch_recent_uploads_for_channels(&api_channels, tok)
+                                .await
+                        };
+                        Ok(YouTubeFeedResponse {
+                            items: uploads,
+                            channels: api_channels,
+                            playlists: Vec::new(),
+                            channel_title: None,
+                            next_continuation: None,
+                            requires_auth: false,
+                            source: "youtube-data-api".to_string(),
+                        })
+                    }
                 }
-                Ok(YouTubeFeedResponse {
-                    items: res.items,
-                    channels: res.channels,
-                    playlists: Vec::new(),
-                    channel_title: None,
-                    next_continuation: res.next_continuation,
-                    requires_auth: false,
-                    source: "innertube-auth".to_string(),
-                })
             }
             YouTubeFeedTab::Playlists => {
                 let Some(tok) = token else {
@@ -830,44 +1314,110 @@ impl YouTubeProvider {
                     });
                 };
 
-                let mut res = self
-                    .innertube_browse_full("FEplaylist_aggregation", None, Some(tok), true)
-                    .await?;
-                if res.playlists.is_empty() {
-                    // Fallback to WEB context if TVHTML5 returned no playlists
-                    let web_body = json!({
-                        "context": self.innertube_web_context(),
-                        "browseId": "FEplaylist_aggregation",
-                    });
-                    if let Ok(text) = self.innertube_post("browse", web_body, Some(tok), true).await
-                        && let Ok(web_res) = parse_innertube_browse_full(&text, true)
-                        && !web_res.playlists.is_empty()
-                    {
-                        res = web_res;
+                match self.fetch_data_api_playlists(tok, None).await {
+                    Ok((api_playlists, next_page)) => {
+                        let mut merged = Vec::new();
+                        let mut seen = HashSet::new();
+                        for (sys_id, sys_title) in [("WL", "Watch Later"), ("LL", "Liked Videos")] {
+                            if !api_playlists.iter().any(|p| p.playlist_id == sys_id)
+                                && seen.insert(sys_id.to_string())
+                            {
+                                merged.push(YouTubePlaylistItem {
+                                    playlist_id: sys_id.to_string(),
+                                    title: sys_title.to_string(),
+                                    item_count: None,
+                                    thumbnail_url: None,
+                                });
+                            }
+                        }
+                        for pl in api_playlists {
+                            if seen.insert(pl.playlist_id.clone()) {
+                                merged.push(pl);
+                            }
+                        }
+                        Ok(YouTubeFeedResponse {
+                            items: Vec::new(),
+                            channels: Vec::new(),
+                            playlists: merged,
+                            channel_title: None,
+                            next_continuation: next_page.map(|p| format!("ytapi:playlists:{p}")),
+                            requires_auth: false,
+                            source: "youtube-data-api".to_string(),
+                        })
+                    }
+                    Err(api_err) => {
+                        debug!(error = %api_err, "YouTube Data API v3 playlists failed; trying TVHTML5 FEmy_youtube");
+                        let res = self
+                            .innertube_browse_tv_only("FEmy_youtube", None, Some(tok), true)
+                            .await?;
+                        let mut merged = res.playlists;
+                        for (sys_id, sys_title) in [("WL", "Watch Later"), ("LL", "Liked Videos")] {
+                            if !merged.iter().any(|p| p.playlist_id == sys_id) {
+                                merged.push(YouTubePlaylistItem {
+                                    playlist_id: sys_id.to_string(),
+                                    title: sys_title.to_string(),
+                                    item_count: None,
+                                    thumbnail_url: None,
+                                });
+                            }
+                        }
+                        Ok(YouTubeFeedResponse {
+                            items: Vec::new(),
+                            channels: Vec::new(),
+                            playlists: merged,
+                            channel_title: None,
+                            next_continuation: res.next_continuation,
+                            requires_auth: false,
+                            source: "innertube-auth".to_string(),
+                        })
                     }
                 }
-                Ok(YouTubeFeedResponse {
-                    items: Vec::new(),
-                    channels: Vec::new(),
-                    playlists: res.playlists,
-                    channel_title: None,
-                    next_continuation: res.next_continuation,
-                    requires_auth: false,
-                    source: "innertube-auth".to_string(),
-                })
             }
             YouTubeFeedTab::Playlist(playlist_id) => {
                 let clean_id = playlist_id.trim();
                 if clean_id.is_empty() {
                     return Err(MelangeError::Parse("empty playlist_id".to_string()));
                 }
-                let browse_id = if clean_id.starts_with("VL") {
+                let raw_id = clean_id.strip_prefix("VL").unwrap_or(clean_id);
+                let vl_id = if clean_id.starts_with("VL") {
                     clean_id.to_string()
                 } else {
                     format!("VL{clean_id}")
                 };
+
+                if let Some(tok) = token {
+                    if let Ok((items, next_page)) = self
+                        .fetch_data_api_playlist_items(raw_id, tok, None, 50)
+                        .await
+                        && !items.is_empty()
+                    {
+                        return Ok(YouTubeFeedResponse {
+                            items,
+                            channels: Vec::new(),
+                            playlists: Vec::new(),
+                            channel_title: None,
+                            next_continuation: next_page
+                                .map(|p| format!("ytapi:playlist:{raw_id}:{p}")),
+                            requires_auth: false,
+                            source: "youtube-data-api".to_string(),
+                        });
+                    }
+                    let res = self
+                        .innertube_browse_tv_only(&vl_id, None, Some(tok), false)
+                        .await?;
+                    return Ok(YouTubeFeedResponse {
+                        items: res.items,
+                        channels: res.channels,
+                        playlists: Vec::new(),
+                        channel_title: res.header_title,
+                        next_continuation: res.next_continuation,
+                        requires_auth: false,
+                        source: "innertube-auth".to_string(),
+                    });
+                }
+
                 let res = self
-                    .innertube_browse_full(&browse_id, None, token, false)
+                    .innertube_browse_full(&vl_id, None, None, false)
                     .await?;
                 Ok(YouTubeFeedResponse {
                     items: res.items,
@@ -876,11 +1426,7 @@ impl YouTubeProvider {
                     channel_title: res.header_title,
                     next_continuation: res.next_continuation,
                     requires_auth: false,
-                    source: if token.is_some() {
-                        "innertube-auth".to_string()
-                    } else {
-                        "innertube-guest".to_string()
-                    },
+                    source: "innertube-guest".to_string(),
                 })
             }
             YouTubeFeedTab::History => {
@@ -888,7 +1434,7 @@ impl YouTubeProvider {
                 let mut next_continuation = None;
                 if let Some(tok) = token {
                     match self
-                        .innertube_browse_full("FEhistory", None, Some(tok), true)
+                        .innertube_browse_tv_only("FEhistory", None, Some(tok), true)
                         .await
                     {
                         Ok(res) => {
@@ -1994,6 +2540,116 @@ fn parse_channel_list_renderer(renderer: &Value) -> Option<YouTubeChannelChip> {
     })
 }
 
+fn extract_browse_uc_id(node: &Value) -> Option<String> {
+    if let Some(id) = node
+        .get("browseId")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| id.starts_with("UC"))
+    {
+        return Some(id.to_string());
+    }
+    if let Some(id) = find_object_by_key(node, "browseEndpoint")
+        .and_then(|b| b.get("browseId"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|id| id.starts_with("UC"))
+    {
+        return Some(id.to_string());
+    }
+    None
+}
+
+fn extract_channel_id_from_renderer(node: &Value) -> Option<String> {
+    for key in ["longBylineText", "shortBylineText", "ownerText"] {
+        if let Some(obj) = node.get(key)
+            && let Some(id) = extract_browse_uc_id(obj)
+        {
+            return Some(id);
+        }
+    }
+    for key in [
+        "channelId",
+        "externalChannelId",
+        "ownerChannelId",
+        "videoOwnerChannelId",
+    ] {
+        if let Some(id) = node
+            .get(key)
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|id| id.starts_with("UC"))
+        {
+            return Some(id.to_string());
+        }
+    }
+    for key in [
+        "channelThumbnailSupportedRenderers",
+        "channelThumbnail",
+        "onSelectCommand",
+        "navigationEndpoint",
+        "menu",
+    ] {
+        if let Some(obj) = node.get(key)
+            && let Some(id) = extract_browse_uc_id(obj)
+        {
+            return Some(id);
+        }
+    }
+    extract_browse_uc_id(node)
+}
+
+fn extract_data_api_thumbnail(thumbs: Option<&Value>) -> Option<String> {
+    let obj = thumbs?.as_object()?;
+    for key in ["maxres", "standard", "high", "medium", "default"] {
+        if let Some(url) = obj
+            .get(key)
+            .and_then(|v| v.get("url"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            return Some(url.to_string());
+        }
+    }
+    None
+}
+
+fn short_iso_date(iso: &str) -> String {
+    iso.split('T').next().unwrap_or(iso).trim().to_string()
+}
+
+pub fn parse_iso8601_duration(iso: &str) -> u64 {
+    let trimmed = iso.trim();
+    let Some(rest) = trimmed.strip_prefix('P') else {
+        return 0;
+    };
+    let mut total: u64 = 0;
+    let mut num = String::new();
+    let mut in_time = false;
+    for ch in rest.chars() {
+        if ch == 'T' {
+            in_time = true;
+            num.clear();
+            continue;
+        }
+        if ch.is_ascii_digit() {
+            num.push(ch);
+            continue;
+        }
+        let val = num.parse::<u64>().unwrap_or(0);
+        num.clear();
+        match (in_time, ch) {
+            (false, 'D') => total += val * 86_400,
+            (true, 'H') => total += val * 3_600,
+            (true, 'M') => total += val * 60,
+            (true, 'S') => total += val,
+            _ => {}
+        }
+    }
+    total
+}
+
 fn parse_tile_renderer(
     tile: &Value,
     filter_shorts: bool,
@@ -2080,14 +2736,7 @@ fn parse_tile_renderer(
         None
     };
 
-    let channel_id = line_channel_id.or_else(|| {
-        find_object_by_key(tile, "browseEndpoint")
-            .and_then(|b| b.get("browseId"))
-            .and_then(Value::as_str)
-            .map(str::trim)
-            .filter(|id| id.starts_with("UC"))
-            .map(ToString::to_string)
-    });
+    let channel_id = line_channel_id.or_else(|| extract_channel_id_from_renderer(tile));
 
     let header = tile
         .get("header")
@@ -2157,13 +2806,7 @@ fn parse_web_video_renderer(
         .and_then(extract_yt_text)
         .or_else(|| fallback_channel.map(ToString::to_string))
         .unwrap_or_else(|| "YouTube".to_string());
-    let channel_id = author_obj
-        .and_then(|a| find_object_by_key(a, "browseEndpoint"))
-        .and_then(|b| b.get("browseId"))
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|id| id.starts_with("UC"))
-        .map(ToString::to_string);
+    let channel_id = extract_channel_id_from_renderer(renderer);
 
     let views = renderer
         .get("shortViewCountText")
