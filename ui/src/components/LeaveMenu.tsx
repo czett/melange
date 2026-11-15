@@ -36,30 +36,30 @@ export const LeaveMenu = () => {
     >
       <GlassPanel
         variant="heavy"
-        class="relative w-full max-w-md rounded-[24px] bg-[#141418]/[0.65] p-7"
+        class="relative w-full max-w-md rounded-[24px] p-7"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <div>
-          <div class="text-[13px] font-medium text-white/65">Session</div>
-          <h2 class="view-title mt-1 text-[28px]">Leave melange?</h2>
-          <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/70">
+          <div class="text-[12px] font-medium text-white/[0.62]">Session</div>
+          <h2 class="view-title mt-1 text-[26px]">Leave melange?</h2>
+          <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
             Stay to keep watching, switch window fullscreen, or quit the application cleanly.
           </p>
         </div>
 
-        <div class="mt-7 grid grid-cols-1 gap-2.5">
+        <div class="mt-6 grid grid-cols-1 gap-2.5">
           <HapticTile
             id="leave-stay"
             variant="row"
             radius="16px"
             onSelect={closeMenu}
-            class="flex items-center justify-between rounded-2xl bg-white/[0.10] px-4 py-3.5 text-left"
+            class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Stay in Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/65">
+              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
                 Return to the home screen
               </div>
             </div>
@@ -71,13 +71,13 @@ export const LeaveMenu = () => {
             variant="row"
             radius="16px"
             onSelect={toggleFullscreenAndClose}
-            class="flex items-center justify-between rounded-2xl bg-white/[0.10] px-4 py-3.5 text-left"
+            class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Toggle Fullscreen
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/65">
+              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
                 {melangeState().is_fullscreen ? "Exit fullscreen window" : "Expand to fullscreen"}
               </div>
             </div>
@@ -89,13 +89,13 @@ export const LeaveMenu = () => {
             variant="row"
             radius="16px"
             onSelect={quitMelange}
-            class="flex items-center justify-between rounded-2xl bg-white/[0.10] px-4 py-3.5 text-left"
+            class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Quit Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/65">
+              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
                 Close the player and exit
               </div>
             </div>

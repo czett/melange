@@ -48,7 +48,11 @@ export const FullEpg = () => {
       const slotDate = new Date(base.getTime() + offsetMin * 60_000);
       return {
         isNow: idx === 0,
-        label: slotDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+        label: slotDate.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false
+        })
       };
     });
   });
@@ -83,15 +87,14 @@ export const FullEpg = () => {
       class="fixed inset-0 z-40 flex items-center justify-center p-8 xl:p-12"
       onClick={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
     >
-      <GlassPanel
-        variant="heavy"
-        class="flex h-full max-h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white/[0.16] bg-[#141418]/[0.72] backdrop-blur-3xl"
+      <div
+        class="flex h-full max-h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white/[0.14] bg-[#101217]/88 shadow-[0_24px_64px_rgba(0,0,0,0.58)] backdrop-blur-3xl"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <header class="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] px-7 py-5">
           <div class="flex items-baseline gap-3.5">
-            <h1 class="view-title text-[26px]">Program Guide</h1>
-            <span class="text-[13px] font-medium tabular-nums text-white/60">
+            <h1 class="view-title text-[24px]">Program Guide</h1>
+            <span class="text-[12px] font-medium tabular-nums text-white/[0.62]">
               {visibleChannels().length} channels
             </span>
           </div>
@@ -106,22 +109,21 @@ export const FullEpg = () => {
               variant="pill"
               radius="9999px"
               onSelect={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
-              class="text-white"
             >
               ← Back
             </HapticTile>
           </div>
         </header>
 
-        {/* Clean architectural time header ruler */}
-        <div class="flex shrink-0 items-center border-b border-white/[0.08] bg-white/[0.03]">
-          <div class="w-60 shrink-0 border-r border-white/[0.08] px-5 py-2.5 text-[12px] font-medium text-white/60">
+        {/* Timeline ruler */}
+        <div class="flex shrink-0 items-center border-b border-white/[0.08] bg-black/25">
+          <div class="w-60 shrink-0 border-r border-white/[0.08] px-5 py-2.5 text-[12px] font-semibold text-white/[0.62]">
             Channel
           </div>
           <div class="grid flex-1 grid-cols-4 divide-x divide-white/[0.08]">
             <For each={rulerSlots()}>
               {(slot) => (
-                <div class="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium tabular-nums text-white/70">
+                <div class="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium tabular-nums text-white/75">
                   <Show when={slot.isNow}>
                     <span class="live-dot" />
                   </Show>
@@ -132,7 +134,7 @@ export const FullEpg = () => {
           </div>
         </div>
 
-        {/* Unified Apple-style translucent glass EPG grid */}
+        {/* Dark-glass timeline grid with crisp 1px cell dividers & 2px white focus rim */}
         <div class="no-scrollbar flex-1 divide-y divide-white/[0.08] overflow-y-auto">
           <For each={visibleChannels()}>
             {(ch) => {
@@ -141,82 +143,97 @@ export const FullEpg = () => {
 
               return (
                 <div class="flex items-stretch">
-                  <HapticTile
-                    id={`epg-ch-${ch.id}`}
-                    variant="epg"
-                    radius="0px"
-                    active={isPlaying()}
-                    onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
-                    class={`flex w-60 shrink-0 items-center gap-3.5 border-0 border-r border-white/[0.08] px-5 py-3.5 text-left ${
-                      isPlaying() ? "bg-white/[0.11]" : "bg-white/[0.04]"
+                  <div
+                    class={`w-60 shrink-0 border-r border-white/[0.08] ${
+                      isPlaying() ? "bg-white/[0.06]" : "bg-black/15"
                     }`}
                   >
-                    <span class="flex h-8 min-w-[2.15rem] shrink-0 items-center justify-center rounded-[10px] bg-white px-2 text-[12px] font-bold tabular-nums text-[#111113] shadow-sm">
-                      {ch.number}
-                    </span>
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-2">
-                        <span class="truncate text-[13.5px] font-semibold text-white">
-                          {ch.name}
-                        </span>
-                        <Show when={isPlaying()}>
-                          <span class="live-dot" />
-                        </Show>
-                      </div>
-                      <span class="block truncate text-[12px] font-medium text-white/60">
-                        {ch.group_title}
+                    <HapticTile
+                      id={`epg-ch-${ch.id}`}
+                      variant="epg"
+                      radius="10px"
+                      active={isPlaying()}
+                      onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
+                      class="flex h-full w-full items-center gap-3.5 rounded-[10px] px-4 py-3 text-left"
+                    >
+                      <span
+                        class={`flex h-8 min-w-[2.15rem] shrink-0 items-center justify-center rounded-[9px] px-2 text-[12px] font-semibold tabular-nums ${
+                          isPlaying()
+                            ? "bg-white text-[#111318]"
+                            : "bg-white/[0.08] text-white"
+                        }`}
+                      >
+                        {ch.number}
                       </span>
-                    </div>
-                  </HapticTile>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                          <span class="truncate text-[14px] font-semibold text-white">
+                            {ch.name}
+                          </span>
+                          <Show when={isPlaying()}>
+                            <span class="live-dot" />
+                          </Show>
+                        </div>
+                        <span class="block truncate text-[12px] font-medium text-white/[0.62]">
+                          {ch.group_title || "Live TV"}
+                        </span>
+                      </div>
+                    </HapticTile>
+                  </div>
 
                   <div class="no-scrollbar flex flex-1 divide-x divide-white/[0.08] overflow-x-auto">
                     <For each={programs()}>
                       {(prog, idx) => (
-                        <HapticTile
-                          id={`epg-prog-${ch.id}-${prog.id}`}
-                          variant="epg"
-                          radius="0px"
-                          onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
-                          class="flex min-w-[220px] flex-1 flex-col justify-between border-0 px-4 py-3.5 text-left"
-                        >
-                          <div>
-                            <div class="flex items-center justify-between gap-2 text-[12px] font-medium tabular-nums text-white/65">
-                              <span>
-                                {formatXmltvTime(prog.start_time)} — {formatXmltvTime(prog.stop_time)}
-                              </span>
-                              <Show when={idx() === 0}>
-                                <span class="inline-flex items-center gap-1.5 font-semibold text-white">
-                                  <span class="live-dot" />
-                                  Now
+                        <div class="flex min-w-[225px] flex-1">
+                          <HapticTile
+                            id={`epg-prog-${ch.id}-${prog.id}`}
+                            variant="epg"
+                            radius="10px"
+                            onSelect={() =>
+                              sendCommand({ type: "SelectChannel", channel_id: ch.id })
+                            }
+                            class="flex h-full w-full flex-col justify-between rounded-[10px] px-4 py-3 text-left"
+                          >
+                            <div>
+                              <div class="flex items-center justify-between gap-2 text-[12px] font-medium tabular-nums text-white/[0.62]">
+                                <span>
+                                  {formatXmltvTime(prog.start_time)} –{" "}
+                                  {formatXmltvTime(prog.stop_time)}
                                 </span>
+                                <Show when={idx() === 0}>
+                                  <span class="inline-flex items-center gap-1.5 font-semibold text-white">
+                                    <span class="live-dot" />
+                                    Live
+                                  </span>
+                                </Show>
+                              </div>
+                              <div class="mt-1 truncate text-[14px] font-semibold text-white">
+                                {prog.title}
+                              </div>
+                              <Show when={prog.description}>
+                                <div class="mt-0.5 line-clamp-1 text-[12px] font-medium text-white/[0.62]">
+                                  {prog.description}
+                                </div>
                               </Show>
                             </div>
-                            <div class="mt-1 truncate text-[13.5px] font-semibold text-white">
-                              {prog.title}
-                            </div>
-                            <Show when={prog.description}>
-                              <div class="mt-0.5 line-clamp-1 text-[12px] font-medium text-white/60">
-                                {prog.description}
+
+                            <Show when={idx() === 0}>
+                              <div class="mt-2.5 h-[3px] w-full overflow-hidden rounded-full bg-white/20">
+                                <div
+                                  class="h-full rounded-full bg-white"
+                                  style={{
+                                    width: `${computeEpgProgress(prog.start_time, prog.stop_time)}%`
+                                  }}
+                                />
                               </div>
                             </Show>
-                          </div>
-
-                          <Show when={idx() === 0}>
-                            <div class="mt-2.5 h-[2px] w-full overflow-hidden rounded-full bg-white/[0.14]">
-                              <div
-                                class="h-full rounded-full bg-[#E13A26]"
-                                style={{
-                                  width: `${computeEpgProgress(prog.start_time, prog.stop_time)}%`
-                                }}
-                              />
-                            </div>
-                          </Show>
-                        </HapticTile>
+                          </HapticTile>
+                        </div>
                       )}
                     </For>
 
                     <Show when={programs().length === 0}>
-                      <div class="flex flex-1 items-center bg-white/[0.03] px-5 text-[13px] font-medium text-white/55">
+                      <div class="flex flex-1 items-center px-5 text-[13px] font-medium text-white/[0.52]">
                         No schedule entries available
                       </div>
                     </Show>
@@ -226,7 +243,7 @@ export const FullEpg = () => {
             }}
           </For>
         </div>
-      </GlassPanel>
+      </div>
     </GlassPanel>
   );
 };

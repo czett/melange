@@ -7,7 +7,6 @@ import {
   onNavEvent,
   sendCommand
 } from "./bridge/ws";
-import { FlutedBackdrop } from "./components/FlutedBackdrop";
 import { FocusRing } from "./components/FocusRing";
 import { FullEpg } from "./components/FullEpg";
 import { HomeView } from "./components/HomeView";
@@ -15,6 +14,7 @@ import { LeaveMenu } from "./components/LeaveMenu";
 import { OnDemandView } from "./components/OnDemandView";
 import { PlayerOsd } from "./components/PlayerOsd";
 import { ProfileSwitcher } from "./components/ProfileSwitcher";
+import { ScenicBackdrop } from "./components/ScenicBackdrop";
 import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
 import { handleSpatialNav, measureFocused } from "./spatial/nav";
@@ -125,9 +125,9 @@ export const App = () => {
     return s === "Playing" || s === "Buffering";
   };
 
-  // Every mode except LiveTv sits 100% opaquely on the luminous crimson fluted-glass
-  // backdrop (plus ProfileSwitcher if opened over LiveTv), so background TV credits
-  // never bleed through behind hero headlines. Only LiveTv reveals the raw libmpv feed.
+  // Every mode except LiveTv sits opaquely on the nocturnal alpine twilight horizon
+  // (plus ProfileSwitcher / LeaveMenu if opened over LiveTv). LiveTv stays 100% transparent
+  // so raw libmpv video renders cleanly underneath.
   const showBackdrop = () =>
     melangeState().mode !== "LiveTv" ||
     melangeState().overlay === "ProfileSwitcher" ||
@@ -137,14 +137,6 @@ export const App = () => {
 
   const showLiveTvScrim = () =>
     melangeState().mode === "LiveTv" && isVideoActive();
-
-  const showFocusRing = () =>
-    melangeState().mode !== "LiveTv" ||
-    melangeState().overlay === "FullEpg" ||
-    melangeState().overlay === "ProfileSwitcher" ||
-    melangeState().overlay === "PlayerOsd" ||
-    melangeState().overlay === "SearchKeyboard" ||
-    melangeState().overlay === "LeaveMenu";
 
   const goHome = () => sendCommand({ type: "SetMode", mode: "Home" });
 
@@ -160,34 +152,15 @@ export const App = () => {
       class="relative h-screen w-screen overflow-hidden bg-transparent text-white"
       onClick={handleStageClick}
     >
-      {/* Optical irregular fluted-glass light field (100% opaque outside LiveTv) */}
-      <FlutedBackdrop
+      {/* Atmospheric alpine twilight horizon (or full-bleed custom profile wallpaper) */}
+      <ScenicBackdrop
         active={showBackdrop()}
+        wallpaperUrl={melangeState().active_profile?.wallpaper_path}
         class="-z-30 transition-opacity duration-500 ease-out"
         style={{ opacity: backdropOpacity() }}
       />
 
-      {/* Optional profile wallpaper, smoked into the neutral obsidian backdrop */}
-      <Show when={showBackdrop() && melangeState().active_profile?.wallpaper_path}>
-        {(wp) => (
-          <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden">
-            <img
-              src={wp()}
-              alt=""
-              class="h-full w-full scale-105 object-cover opacity-25 mix-blend-luminosity"
-            />
-            <div
-              class="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(160deg, rgba(14,14,18,0.56) 0%, rgba(16,16,20,0.42) 55%, rgba(10,10,14,0.68) 100%)"
-              }}
-            />
-          </div>
-        )}
-      </Show>
-
-      {/* LiveTv HUD over raw libmpv video: top/bottom vignette only */}
+      {/* LiveTv HUD over raw libmpv video: subtle top/bottom vignette only */}
       <div
         class="video-scrim pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500"
         style={{
@@ -249,9 +222,7 @@ export const App = () => {
         <LeaveMenu />
       </Show>
 
-      <Show when={showFocusRing()}>
-        <FocusRing />
-      </Show>
+      <FocusRing />
     </div>
   );
 };

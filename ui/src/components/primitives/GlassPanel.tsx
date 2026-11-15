@@ -7,12 +7,20 @@ export interface GlassPanelProps {
   variant?: GlassPanelVariant;
   as?: "div" | "section" | "nav" | "header";
   class?: string;
+  style?: JSX.CSSProperties;
   onClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>;
   children: JSX.Element;
 }
 
 export function GlassPanel(props: GlassPanelProps) {
-  const [local, rest] = splitProps(props, ["variant", "as", "class", "children", "onClick"]);
+  const [local, rest] = splitProps(props, [
+    "variant",
+    "as",
+    "class",
+    "style",
+    "children",
+    "onClick"
+  ]);
   const tag = () => local.as ?? "div";
   const variantClass = () => `glass-panel glass-panel--${local.variant ?? "surface"}`;
 
@@ -20,6 +28,7 @@ export function GlassPanel(props: GlassPanelProps) {
     <Dynamic
       component={tag()}
       class={`${variantClass()} ${local.class ?? ""}`}
+      style={local.style}
       onClick={local.onClick}
       {...rest}
     >

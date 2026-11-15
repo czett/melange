@@ -5,38 +5,36 @@ export default {
     extend: {
       colors: {
         melange: {
-          crimson: '#E13A26',
-          hot: '#FF5A42',
-          deep: '#831613',
-          ink: '#111113',
+          live: '#EF4444',
+          ink: '#111318',
+          sky: '#0B0E14',
         },
-        obsidian: {
-          glass: 'rgba(255, 255, 255, 0.10)',
-          heavy: 'rgba(20, 20, 24, 0.62)',
-          inner: 'rgba(255, 255, 255, 0.08)',
+        smoke: {
+          surface: 'rgba(18, 20, 26, 0.66)',
+          heavy: 'rgba(15, 17, 22, 0.82)',
+          focus: 'rgba(28, 31, 40, 0.84)',
         },
       },
       fontFamily: {
         sans: [
-          'Plus Jakarta Sans',
+          'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
           'SF Pro Display',
           'SF Pro Text',
-          'Inter',
           'system-ui',
           'sans-serif',
         ],
       },
       letterSpacing: {
-        display: '-0.035em',
+        display: '-0.045em',
         editorial: '-0.02em',
       },
       boxShadow: {
-        ambient: '0 16px 40px rgba(0, 0, 0, 0.35)',
+        ambient: '0 12px 32px rgba(0, 0, 0, 0.36)',
       },
       transitionTimingFunction: {
-        spring: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        spring: 'cubic-bezier(0.2, 0.9, 0.3, 1)',
       },
     },
   },

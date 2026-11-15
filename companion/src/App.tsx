@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { FlutedBackdrop } from './components/FlutedBackdrop';
+import { ScenicBackdrop } from './components/ScenicBackdrop';
 
 interface Channel {
   id: number;
@@ -167,23 +167,12 @@ export default function App() {
 
   return (
     <div class="relative mx-auto flex min-h-screen max-w-md flex-col overflow-x-hidden">
-      <FlutedBackdrop class="-z-10" />
+      <ScenicBackdrop class="-z-10" />
 
       <header class="sticky top-0 z-20 px-4 pt-3.5">
-        <div class="glass-card flex h-11 items-center justify-between rounded-full px-4">
+        <div class="flex h-11 items-center justify-between rounded-full border border-white/[0.11] bg-black/45 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-2xl">
           <div class="flex items-center gap-2">
-            <svg
-              class="h-4 w-4 text-white"
-              viewBox="0 0 28 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.1"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M8.5 15.5c-3 0-5.5-2.4-5.5-5.5S5.5 4.5 8.5 4.5c4.2 0 6.8 11 11 11 3 0 5.5-2.4 5.5-5.5s-2.5-5.5-5.5-5.5c-4.2 0-6.8 11-11 11z" />
-            </svg>
-            <span class="text-sm font-semibold tracking-[-0.02em] text-white">melange</span>
+            <span class="text-[14px] font-semibold tracking-[-0.02em] text-white">melange</span>
             <span
               class={connected() ? 'live-dot ml-0.5' : 'ml-0.5 h-1.5 w-1.5 rounded-full bg-white/30'}
               title={connected() ? 'Connected' : 'Reconnecting'}
@@ -194,7 +183,7 @@ export default function App() {
             when={statusMsg()}
             fallback={<span class="eyebrow">Companion</span>}
           >
-            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold tracking-[-0.01em] text-[#111113]">
+            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold tracking-[-0.01em] text-[#111318]">
               {statusMsg()}
             </span>
           </Show>
@@ -204,7 +193,7 @@ export default function App() {
       <main class="flex-1 overflow-y-auto px-4 pb-24 pt-5">
         <div class="mb-5 px-1">
           <div class="eyebrow">{pageHeading().eyebrow}</div>
-          <h1 class="mt-1 text-[28px] font-semibold leading-[1.08] tracking-[-0.03em] text-white">
+          <h1 class="mt-0.5 text-[26px] font-semibold leading-[1.1] tracking-[-0.03em] text-white">
             {pageHeading().title}
           </h1>
         </div>
@@ -212,16 +201,16 @@ export default function App() {
         <Show when={tab() === 'remote'}>
           <div class="space-y-4">
             {/* Spatial D-Pad */}
-            <div class="glass-card mx-auto max-w-[264px] rounded-[22px] p-4">
+            <div class="glass-card mx-auto max-w-[268px] rounded-[22px] p-4">
               <div class="grid grid-cols-3 gap-2.5">
                 <div />
                 <button
                   type="button"
                   onClick={() => void sendNav('Up')}
-                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
+                  class="key flex h-12 items-center justify-center rounded-[14px] text-sm"
                   aria-label="Up"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 15l-6-6-6 6" />
                   </svg>
                 </button>
@@ -229,27 +218,27 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Left')}
-                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
+                  class="key flex h-12 items-center justify-center rounded-[14px] text-sm"
                   aria-label="Left"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M15 18l-6-6 6-6" />
                   </svg>
                 </button>
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-bold tracking-[-0.01em] text-[#111113] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#141418]/60 active:scale-95"
+                  class="flex h-12 items-center justify-center rounded-[14px] bg-white text-[13px] font-semibold tracking-[-0.01em] text-[#111318] shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition-transform duration-150 focus-visible:outline-none active:scale-95"
                 >
                   OK
                 </button>
                 <button
                   type="button"
                   onClick={() => void sendNav('Right')}
-                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
+                  class="key flex h-12 items-center justify-center rounded-[14px] text-sm"
                   aria-label="Right"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 18l6-6-6-6" />
                   </svg>
                 </button>
@@ -257,10 +246,10 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Down')}
-                  class="key flex h-12 items-center justify-center rounded-2xl text-sm"
+                  class="key flex h-12 items-center justify-center rounded-[14px] text-sm"
                   aria-label="Down"
                 >
-                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M6 9l6 6 6-6" />
                   </svg>
                 </button>
@@ -315,14 +304,14 @@ export default function App() {
             </div>
 
             {/* Numeric Keypad */}
-            <div class="glass-card mx-auto max-w-[264px] rounded-[22px] p-4">
+            <div class="glass-card mx-auto max-w-[268px] rounded-[22px] p-4">
               <div class="grid grid-cols-3 gap-2">
                 <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9]}>
                   {(d) => (
                     <button
                       type="button"
                       onClick={() => void sendNav({ Digit: d })}
-                      class="key h-11 rounded-xl text-[13px] font-medium tabular-nums"
+                      class="key h-11 rounded-[12px] text-[14px] font-semibold tabular-nums"
                     >
                       {d}
                     </button>
@@ -332,7 +321,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav({ Digit: 0 })}
-                  class="key h-11 rounded-xl text-[13px] font-medium tabular-nums"
+                  class="key h-11 rounded-[12px] text-[14px] font-semibold tabular-nums"
                 >
                   0
                 </button>
@@ -347,20 +336,22 @@ export default function App() {
             <For
               each={channels()}
               fallback={
-                <div class="glass-card rounded-[20px] p-6 text-center text-[13px] font-medium text-white/[0.74]">
+                <div class="glass-card rounded-[18px] p-6 text-center text-[13px] font-medium text-white/[0.62]">
                   No channels synced yet.
                 </div>
               }
             >
               {(ch, idx) => (
-                <div class="glass-card flex items-center justify-between rounded-[20px] px-3.5 py-3">
+                <div class="glass-card flex items-center justify-between rounded-[18px] px-3.5 py-3">
                   <div class="flex min-w-0 items-center gap-3 pr-2">
-                    <span class="glass-inner flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold tabular-nums text-white">
+                    <span class="glass-inner flex h-8 min-w-[2rem] shrink-0 items-center justify-center rounded-[9px] px-2 text-[12px] font-semibold tabular-nums text-white">
                       {ch.number}
                     </span>
                     <div class="min-w-0">
                       <div class="truncate text-[14px] font-semibold text-white">{ch.name}</div>
-                      <div class="truncate text-[12px] font-medium text-white/[0.74]">{ch.group_title}</div>
+                      <div class="truncate text-[12px] font-medium text-white/[0.62]">
+                        {ch.group_title || 'Live TV'}
+                      </div>
                     </div>
                   </div>
                   <div class="flex shrink-0 items-center gap-1.5">
@@ -407,7 +398,7 @@ export default function App() {
                 value={newProfileName()}
                 onInput={(e) => setNewProfileName(e.currentTarget.value)}
                 placeholder="New profile name..."
-                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] font-medium text-white placeholder:text-white/50"
+                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] font-medium text-white placeholder:text-white/45"
               />
               <button type="submit" class="pill pill-primary">
                 Add
@@ -417,18 +408,20 @@ export default function App() {
             <div class="space-y-2.5">
               <For each={profiles()}>
                 {(p) => (
-                  <div class="glass-card space-y-3 rounded-[22px] p-4">
+                  <div class="glass-card space-y-3 rounded-[20px] p-4">
                     <Show
                       when={editingProfileId() === p.id}
                       fallback={
                         <div class="flex items-center justify-between gap-3">
                           <div class="flex items-center gap-3">
-                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-[#111113]">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[13px] font-bold text-[#111318]">
                               {p.name.slice(0, 1).toUpperCase()}
                             </span>
                             <div>
                               <div class="text-[14px] font-semibold text-white">{p.name}</div>
-                              <div class="text-[12px] font-medium text-white/[0.74]">Local profile</div>
+                              <div class="text-[12px] font-medium text-white/[0.62]">
+                                Local profile
+                              </div>
                             </div>
                           </div>
                           <button
@@ -469,7 +462,7 @@ export default function App() {
                       <img
                         src={p.wallpaper_path!}
                         alt="Wallpaper"
-                        class="h-28 w-full rounded-2xl border border-white/10 object-cover"
+                        class="h-28 w-full rounded-[14px] border border-white/10 object-cover"
                       />
                     </Show>
 

@@ -49,7 +49,7 @@ function SegmentButton(props: { item: SegmentedItem }) {
     if (pressTimer !== undefined) window.clearTimeout(pressTimer);
     pressTimer = window.setTimeout(() => {
       btnRef?.removeAttribute("data-pressed");
-    }, 140);
+    }, 130);
     setFocus(props.item.focusId, false);
     props.item.onSelect();
   };
@@ -71,8 +71,8 @@ function SegmentButton(props: { item: SegmentedItem }) {
           <span
             class={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
               props.item.active
-                ? "bg-[#111113]/12 text-[#111113]"
-                : "bg-white/10 text-white/80"
+                ? "bg-[#111318]/12 text-[#111318]"
+                : "bg-white/10 text-white/75"
             }`}
           >
             {badge()}
@@ -91,12 +91,16 @@ export function SegmentedPill(props: SegmentedPillProps) {
       <Show when={props.trailingAction}>
         {(action) => {
           let actionRef!: HTMLButtonElement;
+          let pressTimer: number | undefined;
 
           onMount(() => {
             const cleanup = registerFocusable(action().focusId, actionRef, () =>
               action().onSelect()
             );
-            onCleanup(cleanup);
+            onCleanup(() => {
+              cleanup();
+              if (pressTimer !== undefined) window.clearTimeout(pressTimer);
+            });
           });
 
           return (
@@ -110,10 +114,15 @@ export function SegmentedPill(props: SegmentedPillProps) {
               title={action().title ?? action().label}
               onClick={(e) => {
                 e.stopPropagation();
+                actionRef.setAttribute("data-pressed", "true");
+                if (pressTimer !== undefined) window.clearTimeout(pressTimer);
+                pressTimer = window.setTimeout(() => {
+                  actionRef?.removeAttribute("data-pressed");
+                }, 130);
                 setFocus(action().focusId, false);
                 action().onSelect();
               }}
-              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[14px] font-semibold"
+              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[15px] font-semibold text-white/80"
             >
               {action().label}
             </button>

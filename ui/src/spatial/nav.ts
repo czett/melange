@@ -160,7 +160,7 @@ export function handleSpatialNav(ev: NavEvent): boolean {
         target.el.setAttribute("data-pressed", "true");
         window.setTimeout(() => {
           target.el.removeAttribute("data-pressed");
-        }, 140);
+        }, 130);
         target.onSelect();
         requestAnimationFrame(measureFocused);
         return true;

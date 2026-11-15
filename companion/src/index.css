@@ -3,42 +3,47 @@
 @tailwind utilities;
 
 :root {
-  --melange-crimson: #e13a26;
-  --melange-crimson-hot: #ff5a42;
-  --melange-ink: #111113;
+  --live-red: #ef4444;
+  --melange-ink: #111318;
 
-  --glass-surface: rgba(255, 255, 255, 0.10);
-  --glass-heavy: rgba(20, 20, 24, 0.65);
-  --glass-inner: rgba(255, 255, 255, 0.08);
-  --glass-blur: blur(44px) saturate(185%);
-  --hairline: rgba(255, 255, 255, 0.16);
-  --hairline-focus: rgba(255, 255, 255, 0.92);
-  --shadow-ambient:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 16px 40px rgba(0, 0, 0, 0.35);
+  --glass-surface: rgba(18, 20, 26, 0.68);
+  --glass-heavy: rgba(15, 17, 22, 0.82);
+  --glass-focus: rgba(28, 31, 40, 0.86);
+  --glass-blur: blur(36px) saturate(165%);
+  --glass-blur-heavy: blur(48px) saturate(175%);
+  --hairline: rgba(255, 255, 255, 0.11);
+  --shadow-ambient: 0 12px 32px rgba(0, 0, 0, 0.36);
   --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
-  --dur-geometry: 140ms;
+  --dur-geometry: 130ms;
 }
 
 body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background-color: #0b0b0e;
+  background-color: #0b0e14;
   color: #ffffff;
   font-family:
-    'Plus Jakarta Sans',
+    'Inter',
     -apple-system,
     BlinkMacSystemFont,
     'SF Pro Display',
     'SF Pro Text',
-    'Inter',
     system-ui,
     sans-serif;
   font-weight: 500;
-  font-feature-settings: 'ss01', 'cv11';
-  letter-spacing: -0.005em;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+  letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -49,19 +54,19 @@ body {
   scrollbar-width: none;
 }
 
-/* ───────────────────────── Ambient backdrop ───────────────────────── */
+/* ───────────────────────── Atmospheric Scenic Backdrop ───────────────────────── */
 
-.fluted-backdrop {
+.scenic-backdrop {
   position: fixed;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #0b0b0e;
+  background: #0b0e14;
   contain: strict;
   isolation: isolate;
 }
 
-/* ───────────────────────── Neutral Apple translucent frosted cards ───────────────────────── */
+/* ───────────────────────── Dark Smoke-Glass Cards ───────────────────────── */
 
 .glass-card {
   position: relative;
@@ -74,20 +79,20 @@ body {
 
 .glass-inner {
   position: relative;
-  background: var(--glass-inner);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.11);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
-    border-color 140ms ease,
-    background-color 140ms ease;
+    border-color 100ms ease,
+    background-color 100ms ease;
 }
 
 .glass-inner:focus-visible {
   outline: none;
-  border-color: var(--hairline-focus);
+  border-color: #ffffff;
 }
 
-/* ───────────────────────── Pills & keys (single-layer focus) ───────────────────────── */
+/* ───────────────────────── Pills & Keys ───────────────────────── */
 
 .pill {
   display: inline-flex;
@@ -96,15 +101,15 @@ body {
   gap: 0.45rem;
   height: 2.25rem;
   border-radius: 9999px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   transition:
     transform var(--dur-geometry) var(--ease-spring),
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease,
+    background-color 100ms ease,
+    border-color 100ms ease,
+    color 100ms ease,
     box-shadow 120ms ease;
 }
 
@@ -118,88 +123,91 @@ body {
   padding: 0 1rem;
   background: #ffffff;
   color: var(--melange-ink);
-  border: none;
+  border: 1px solid #ffffff;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .pill-primary:focus-visible {
-  box-shadow:
-    0 0 0 2px rgba(20, 20, 24, 0.72),
-    0 0 0 3.5px rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
 }
 
 .pill-secondary {
   padding: 0 1rem;
-  background: rgba(255, 255, 255, 0.10);
-  color: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-weight: 500;
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  background: var(--glass-surface);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .pill-secondary:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(26, 29, 38, 0.78);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
-.pill-secondary:active,
-.pill-secondary[data-active='true'],
-.pill-secondary:focus-visible {
+.pill-secondary[data-active='true'] {
   background: #ffffff;
   color: var(--melange-ink);
   border-color: #ffffff;
 }
 
+.pill-secondary:focus-visible {
+  background: var(--glass-focus);
+  border: 2px solid #ffffff;
+  color: #ffffff;
+}
+
 .pill:active {
-  transform: scale(0.97);
+  transform: scale(0.965);
 }
 
 .key {
   position: relative;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid var(--hairline);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.94);
+  background: rgba(22, 25, 33, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  color: #ffffff;
   font-weight: 600;
   transition:
     transform var(--dur-geometry) var(--ease-spring),
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+    background-color 100ms ease,
+    border-color 100ms ease,
+    color 100ms ease;
 }
 
 .key:hover {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(30, 34, 44, 0.86);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .key:active,
 .key:focus-visible {
-  background: #ffffff;
-  border-color: #ffffff;
-  color: var(--melange-ink);
+  background: var(--glass-focus);
+  border: 2px solid #ffffff;
+  color: #ffffff;
 }
 
 .key:active {
-  transform: scale(0.97);
+  transform: scale(0.965);
 }
 
-/* ───────────────────────── Navigation & typography helpers ───────────────────────── */
+/* ───────────────────────── couch-tv Segmented Navigation Pill ───────────────────────── */
 
 .nav-bar {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: 0.25rem;
-  height: 3rem;
+  height: 2.875rem;
   padding: 0.25rem;
   border-radius: 9999px;
-  background: var(--glass-heavy);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(48px) saturate(185%);
-  -webkit-backdrop-filter: blur(48px) saturate(185%);
-  box-shadow: var(--shadow-ambient);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.48);
 }
 
 .nav-link {
@@ -208,17 +216,18 @@ body {
   justify-content: center;
   gap: 0.4rem;
   height: 2.25rem;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-radius: 9999px;
   background: transparent;
-  font-size: 0.8rem;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.75);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
-    color 120ms ease,
-    background-color 120ms ease;
+    color 100ms ease,
+    border-color 100ms ease,
+    background-color 100ms ease;
 }
 
 .nav-link[data-active='true'] {
@@ -228,18 +237,11 @@ body {
 }
 
 .nav-link:active {
-  transform: scale(0.97);
+  transform: scale(0.965);
 }
 
 .nav-link:focus-visible {
-  border-color: var(--hairline-focus);
-}
-
-.nav-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 9999px;
-  background: #ffffff;
+  border-color: #ffffff;
 }
 
 .live-dot {
@@ -248,7 +250,7 @@ body {
   height: 6px;
   flex-shrink: 0;
   border-radius: 9999px;
-  background: var(--melange-crimson);
+  background: var(--live-red);
   animation: liveDot 2.4s ease-in-out infinite;
 }
 
@@ -263,10 +265,10 @@ body {
 }
 
 .eyebrow {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 @media (prefers-reduced-motion: reduce) {

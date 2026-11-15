@@ -63,18 +63,15 @@ export const ZapBanner = () => {
         transform: isVisible() ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)"
       }}
     >
-      <GlassPanel
-        variant="heavy"
-        class="w-full max-w-4xl rounded-[24px] bg-[#141418]/[0.65] px-7 py-5"
-      >
+      <GlassPanel variant="heavy" class="w-full max-w-4xl rounded-[24px] px-7 py-5">
         <div class="flex items-center justify-between gap-6">
-          <div class="flex items-center gap-5">
-            <div class="flex h-12 min-w-[3.25rem] items-center justify-center rounded-2xl border border-white/[0.16] bg-white/[0.10] px-3 text-2xl font-bold tracking-[-0.035em] tabular-nums text-white">
+          <div class="flex items-center gap-4">
+            <div class="flex h-12 min-w-[3.25rem] items-center justify-center rounded-[14px] border border-white/[0.12] bg-white/[0.07] px-3 text-[22px] font-semibold tracking-[-0.03em] tabular-nums text-white">
               {melangeState().digit_buffer || melangeState().playback.channel_number || "—"}
             </div>
             <div>
               <div class="flex items-center gap-3">
-                <h2 class="text-[22px] font-semibold leading-tight tracking-[-0.03em] text-white">
+                <h2 class="text-[20px] font-semibold leading-tight tracking-[-0.025em] text-white">
                   {activeChannel()?.name ?? melangeState().playback.title ?? "Live TV"}
                 </h2>
                 <Show when={melangeState().playback.is_zapping}>
@@ -95,7 +92,7 @@ export const ZapBanner = () => {
                   </span>
                 </Show>
               </div>
-              <p class="mt-0.5 text-[13px] font-medium text-white/65">
+              <p class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
@@ -105,7 +102,7 @@ export const ZapBanner = () => {
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
-                  {formatXmltvTime(now().start_time)} — {formatXmltvTime(now().stop_time)}
+                  {formatXmltvTime(now().start_time)} – {formatXmltvTime(now().stop_time)}
                 </span>
               )}
             </Show>
@@ -119,11 +116,9 @@ export const ZapBanner = () => {
             </p>
             <Show when={nowNext()?.next}>
               {(next) => (
-                <p class="shrink-0 text-[12px] font-medium text-white/70">
+                <p class="shrink-0 text-[12px] font-medium text-white/[0.62]">
                   Next: <span class="font-semibold text-white">{next().title}</span>{" "}
-                  <span class="tabular-nums text-white/60">
-                    ({formatXmltvTime(next().start_time)})
-                  </span>
+                  <span class="tabular-nums">({formatXmltvTime(next().start_time)})</span>
                 </p>
               )}
             </Show>

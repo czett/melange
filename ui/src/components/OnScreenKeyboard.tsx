@@ -58,20 +58,20 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
     >
       <GlassPanel
         variant="heavy"
-        class="flex w-full max-w-3xl flex-col gap-5 rounded-[24px] bg-[#141418]/[0.65] p-7"
+        class="flex w-full max-w-3xl flex-col gap-5 rounded-[24px] p-7"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <div class="flex items-center justify-between gap-4">
-          <div class="text-[14px] font-medium text-white/85">Search</div>
+          <div class="text-[15px] font-semibold tracking-[-0.015em] text-white/95">Search</div>
           <div class="chip font-medium">Type or D-pad + OK</div>
         </div>
 
-        <div class="flex min-h-[3.25rem] items-center justify-between rounded-2xl border border-white/[0.16] bg-white/[0.08] px-5 py-3 text-lg font-semibold tracking-[-0.02em] text-white">
+        <div class="flex min-h-[3.25rem] items-center justify-between rounded-[16px] border border-white/[0.12] bg-black/35 px-5 py-3 text-[17px] font-semibold tracking-[-0.02em] text-white">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>
             ) : (
-              <span class="font-medium text-white/50">Type to search...</span>
+              <span class="font-medium text-white/45">Type to search...</span>
             )}
             <span class="inline-block h-5 w-0.5 animate-pulse bg-white/85" />
           </div>
@@ -88,7 +88,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
                       variant="key"
                       radius="12px"
                       onSelect={() => appendChar(key)}
-                      class="flex h-11 w-11 items-center justify-center rounded-xl text-[14px] font-semibold"
+                      class="flex h-11 w-11 items-center justify-center rounded-[12px] text-[14px] font-semibold tabular-nums"
                     >
                       {key}
                     </HapticTile>
@@ -98,13 +98,12 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
             )}
           </For>
 
-          <div class="flex justify-center gap-2.5 pt-3">
+          <div class="flex flex-wrap justify-center gap-2.5 pt-3">
             <HapticTile
               id="osk-space"
               variant="pill"
               radius="9999px"
               onSelect={() => props.onChange(props.value + " ")}
-              class="bg-white/[0.10] text-white"
             >
               Space
             </HapticTile>
@@ -113,7 +112,6 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={backspace}
-              class="bg-white/[0.10] text-white"
             >
               Backspace
             </HapticTile>
@@ -122,7 +120,6 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={clear}
-              class="bg-white/[0.10] text-white"
             >
               Clear
             </HapticTile>
@@ -140,7 +137,6 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={props.onClose}
-              class="bg-white/[0.10] text-white"
             >
               Cancel
             </HapticTile>

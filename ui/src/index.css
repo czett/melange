@@ -15,20 +15,28 @@ body,
   background: transparent !important;
   color: var(--text-primary);
   font-family:
-    "Plus Jakarta Sans",
+    "Inter",
     -apple-system,
     BlinkMacSystemFont,
     "SF Pro Display",
     "SF Pro Text",
-    "Inter",
     system-ui,
     sans-serif;
   font-weight: 500;
-  font-feature-settings: "ss01", "cv11";
-  letter-spacing: -0.005em;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   user-select: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
 }
 
 ::selection {
