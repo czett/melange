@@ -7,7 +7,7 @@
   font-style: italic;
   font-weight: 100;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYULTRALIGHTITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYULTRALIGHTITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -15,7 +15,7 @@
   font-style: italic;
   font-weight: 200;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYTHINITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYTHINITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -23,7 +23,7 @@
   font-style: italic;
   font-weight: 300;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYLIGHTITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYLIGHTITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -31,7 +31,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
 }
 
 @font-face {
@@ -39,7 +39,15 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -47,7 +55,7 @@
   font-style: italic;
   font-weight: 600;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -55,7 +63,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -63,7 +71,7 @@
   font-style: italic;
   font-weight: 800;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYHEAVYITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYHEAVYITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -71,7 +79,7 @@
   font-style: italic;
   font-weight: 900;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYBLACKITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYBLACKITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -79,7 +87,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
 }
 
 @font-face {
@@ -87,7 +95,15 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -95,7 +111,7 @@
   font-style: italic;
   font-weight: 600;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -103,7 +119,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -111,7 +127,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
 }
 
 @font-face {
@@ -119,7 +135,15 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -127,7 +151,7 @@
   font-style: italic;
   font-weight: 600;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
 }
 
 @font-face {
@@ -135,7 +159,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+  src: url('../public/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
 }
 
 @font-face {
@@ -143,7 +167,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/companion/fonts/Inter-Regular.woff2') format('woff2');
+  src: url('../public/fonts/Inter-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -151,7 +175,7 @@
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url('/companion/fonts/Inter-Medium.woff2') format('woff2');
+  src: url('../public/fonts/Inter-Medium.woff2') format('woff2');
 }
 
 @font-face {
@@ -159,7 +183,7 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url('/companion/fonts/Inter-SemiBold.woff2') format('woff2');
+  src: url('../public/fonts/Inter-SemiBold.woff2') format('woff2');
 }
 
 @font-face {
@@ -167,7 +191,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('/companion/fonts/Inter-Bold.woff2') format('woff2');
+  src: url('../public/fonts/Inter-Bold.woff2') format('woff2');
 }
 
 :root {
@@ -194,13 +218,10 @@ body {
   background-color: #0b0e14;
   color: #ffffff;
   font-family:
-    'SF Pro Text',
-    'SF Pro',
     'SF Pro Display',
+    'SF Pro Text',
     -apple-system,
     BlinkMacSystemFont,
-    'Inter',
-    system-ui,
     sans-serif;
   font-weight: 500;
   font-feature-settings: 'kern' 1, 'liga' 1;

@@ -47,7 +47,7 @@ export const LeaveMenu = () => {
           </p>
         </div>
 
-        <div class="mt-6 grid grid-cols-1 gap-2.5">
+        <div class="-mx-2 mt-6 grid grid-cols-1 gap-2.5 px-2 py-1">
           <HapticTile
             id="leave-stay"
             variant="row"
@@ -56,10 +56,10 @@ export const LeaveMenu = () => {
             class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
-              <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
+              <div class="text-[14px] font-semibold tracking-[-0.01em]">
                 Stay in Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/80">
+              <div class="row-muted mt-0.5 text-[12px] font-medium">
                 Return to the home screen
               </div>
             </div>
@@ -74,10 +74,10 @@ export const LeaveMenu = () => {
             class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
-              <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
+              <div class="text-[14px] font-semibold tracking-[-0.01em]">
                 Toggle Fullscreen
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/80">
+              <div class="row-muted mt-0.5 text-[12px] font-medium">
                 {melangeState().is_fullscreen ? "Exit fullscreen window" : "Expand to fullscreen"}
               </div>
             </div>
@@ -92,10 +92,10 @@ export const LeaveMenu = () => {
             class="flex items-center justify-between rounded-[16px] px-4 py-3.5 text-left"
           >
             <div>
-              <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
+              <div class="text-[14px] font-semibold tracking-[-0.01em]">
                 Quit Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/80">
+              <div class="row-muted mt-0.5 text-[12px] font-medium">
                 Close the player and exit
               </div>
             </div>

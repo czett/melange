@@ -17,12 +17,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          'Inter',
-          '-apple-system',
-          'BlinkMacSystemFont',
           'SF Pro Display',
           'SF Pro Text',
-          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
           'sans-serif',
         ],
       },

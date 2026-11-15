@@ -49,7 +49,7 @@ export const ProfileSwitcher = () => {
           </HapticTile>
         </div>
 
-        <div class="mt-6 grid grid-cols-1 gap-2.5">
+        <div class="-mx-2 mt-6 grid grid-cols-1 gap-2.5 px-2 py-1">
           <For each={melangeState().profiles}>
             {(profile) => {
               const isActive = () => melangeState().active_profile?.id === profile.id;
@@ -65,23 +65,20 @@ export const ProfileSwitcher = () => {
                 >
                   <div class="flex items-center gap-3.5">
                     <div
-                      class={`flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold ${
-                        isActive()
-                          ? "bg-white text-[#111318]"
-                          : "border border-white/[0.14] bg-white/[0.08] text-white"
-                      }`}
+                      data-active={isActive() ? "true" : undefined}
+                      class="row-avatar flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold"
                     >
                       {profile.name.slice(0, 1).toUpperCase()}
                     </div>
                     <div>
-                      <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
+                      <div class="text-[14px] font-semibold tracking-[-0.01em]">
                         {profile.name}
                       </div>
-                      <div class="text-[12px] font-medium text-white/80">Local profile</div>
+                      <div class="row-muted text-[12px] font-medium">Local profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>
-                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold leading-none text-[#111318]">
+                    <span class="row-pill-active rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none">
                       Active
                     </span>
                   </Show>

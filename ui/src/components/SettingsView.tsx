@@ -47,6 +47,42 @@ function ActiveCheckmark() {
   );
 }
 
+function CategoryIcon(props: { id: SettingsCategory }) {
+  switch (props.id) {
+    case "look":
+      return (
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="3" />
+          <circle cx="8.5" cy="9.5" r="1.5" />
+          <path d="m21 15-4.5-4.5L8 19" />
+        </svg>
+      );
+    case "companion":
+      return (
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </svg>
+      );
+    case "providers":
+      return (
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="14" rx="2.5" />
+          <path d="M8 20h8" />
+          <path d="M12 18v2" />
+        </svg>
+      );
+    case "about":
+      return (
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 16v-4" />
+          <path d="M12 8h.01" />
+        </svg>
+      );
+  }
+}
+
 export function SettingsView(props: SettingsViewProps) {
   const [category, setCategory] = createSignal<SettingsCategory>("look");
   const [info, setInfo] = createSignal<CompanionInfo | null>(null);
@@ -133,7 +169,7 @@ export function SettingsView(props: SettingsViewProps) {
               </HapticTile>
             </div>
 
-            <nav class="flex flex-col gap-1.5" aria-label="Settings categories">
+            <nav class="flex flex-col gap-1.5 px-2 py-1" aria-label="Settings categories">
               <For each={categories}>
                 {(cat) => {
                   const isActive = () => category() === cat.id;
@@ -141,17 +177,13 @@ export function SettingsView(props: SettingsViewProps) {
                     <HapticTile
                       id={`settings-cat-${cat.id}`}
                       variant="sidebar"
-                      radius="14px"
+                      radius="12px"
                       active={isActive()}
                       onSelect={() => setCategory(cat.id)}
-                      class={`flex h-12 w-full items-center justify-between rounded-[14px] px-4 text-left text-[15px] font-medium ${
-                        isActive() ? "bg-white/[0.12] text-white" : "text-white/70"
-                      }`}
+                      class="flex h-11 w-full items-center gap-3 rounded-xl px-4 text-left text-[15px] font-medium"
                     >
-                      <span>{cat.label}</span>
-                      <Show when={isActive()}>
-                        <span class="h-1.5 w-1.5 rounded-full bg-white" />
-                      </Show>
+                      <CategoryIcon id={cat.id} />
+                      <span class="truncate">{cat.label}</span>
                     </HapticTile>
                   );
                 }}
@@ -159,7 +191,7 @@ export function SettingsView(props: SettingsViewProps) {
             </nav>
           </div>
 
-          <div class="pt-6">
+          <div class="px-2 pt-6 pb-1">
             <HapticTile
               id="settings-profile-footer"
               variant="grouped"
@@ -168,7 +200,7 @@ export function SettingsView(props: SettingsViewProps) {
               class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
             >
               <div class="flex min-w-0 items-center gap-3">
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[12px] font-bold text-[#111318]">
+                <span class="row-avatar-solid flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold">
                   {(props.activeProfile?.name ?? "D").slice(0, 1).toUpperCase()}
                 </span>
                 <div class="min-w-0">
@@ -184,7 +216,7 @@ export function SettingsView(props: SettingsViewProps) {
         </aside>
 
         {/* Right Content Pane */}
-        <main class="no-scrollbar min-w-0 flex-1 overflow-y-auto py-1 pr-2">
+        <main class="no-scrollbar min-w-0 flex-1 overflow-y-auto px-2 py-1">
           <div class="mb-6 flex items-center justify-between">
             <div>
               <div class="text-[12px] font-medium uppercase tracking-wider text-white/50">

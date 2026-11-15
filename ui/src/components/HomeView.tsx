@@ -211,7 +211,7 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Center Stage: Date + Tall Slender Fading Couch TV Lockscreen Clock */}
+      {/* Center Stage: Date + Crisp High-Legibility Couch TV Lockscreen Clock */}
       <section
         class={`my-auto flex flex-col items-center justify-center py-3 text-center transition-opacity duration-150 ${
           melangeState().overlay !== "None" ? "pointer-events-none opacity-0" : "opacity-100"
@@ -220,7 +220,7 @@ export const HomeView = () => {
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-3 select-none text-[168px] font-normal leading-[0.88] tracking-[-0.04em] tabular-nums xl:text-[188px]">
+        <div class="lockscreen-clock mt-3 select-none text-[152px] font-medium leading-[0.94] tracking-[-0.04em] tabular-nums">
           {formattedTime()}
         </div>
       </section>
@@ -232,7 +232,7 @@ export const HomeView = () => {
             <div class="mb-1.5 px-1 text-[15px] font-semibold tracking-[-0.015em] text-white/95">
               Keep watching
             </div>
-            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-2">
+            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-1">
               <For each={keepWatchingItems()}>
                 {(cw) => {
                   const pct = () =>
@@ -268,11 +268,11 @@ export const HomeView = () => {
                       onSelect={resumeItem}
                       class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
-                      <div class="relative h-[58px] w-[92px] shrink-0 overflow-hidden rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/[0.08]">
+                      <div class="row-media-box relative h-[58px] w-[92px] shrink-0 overflow-hidden rounded-[10px] ring-1 ring-inset ring-white/[0.08]">
                         <Show
                           when={cw.thumbnail_url}
                           fallback={
-                            <div class="flex h-full w-full items-center justify-center bg-white/[0.05] text-white/75">
+                            <div class="flex h-full w-full items-center justify-center">
                               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="8,6 18,12 8,18" />
                               </svg>
@@ -292,21 +292,21 @@ export const HomeView = () => {
 
                       <div class="flex h-[58px] min-w-0 flex-1 flex-col justify-between py-[2px]">
                         <div class="min-w-0">
-                          <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em] text-white">
+                          <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em]">
                             {cw.title}
                           </div>
-                          <div class="mt-1 flex items-center gap-1.5 min-w-0">
-                            <span class="shrink-0 rounded-[5px] bg-white/[0.10] px-1.5 py-[1px] text-[10.5px] font-semibold leading-tight text-white/85">
+                          <div class="mt-1 flex min-w-0 items-center gap-1.5">
+                            <span class="row-badge shrink-0 rounded-[5px] px-1.5 py-[1px] text-[10.5px] font-semibold leading-tight">
                               {providerLabel(cw.provider)}
                             </span>
-                            <span class="truncate text-[12px] font-medium leading-[1.2] text-white/80">
+                            <span class="row-muted truncate text-[12px] font-medium leading-[1.2]">
                               {formatRemaining(cw.position_sec, cw.duration_sec)}
                             </span>
                           </div>
                         </div>
-                        <div class="h-[3px] w-full overflow-hidden rounded-full bg-white/20">
+                        <div class="row-progress-track h-[3px] w-full overflow-hidden rounded-full">
                           <div
-                            class="h-full rounded-full bg-white"
+                            class="row-progress-fill h-full rounded-full"
                             style={{ width: `${pct()}%` }}
                           />
                         </div>
@@ -341,7 +341,7 @@ export const HomeView = () => {
               </GlassPanel>
             }
           >
-            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-2">
+            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-1">
               <For each={liveChannels()}>
                 {(ch) => {
                   const nn = () => melangeState().epg_now_next[ch.tvg_id];
@@ -370,23 +370,21 @@ export const HomeView = () => {
                       class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
                       <div
-                        class={`relative flex h-[58px] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] ring-1 ring-inset ${
-                          isActive()
-                            ? "bg-white/[0.12] ring-white/25"
-                            : "bg-white/[0.07] ring-white/[0.08]"
+                        class={`row-media-box relative flex h-[58px] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] ring-1 ring-inset ${
+                          isActive() ? "ring-white/25" : "ring-white/[0.08]"
                         }`}
                       >
                         <Show
                           when={ch.logo_url}
                           fallback={
-                            <span class="text-[18px] font-semibold tracking-[-0.02em] tabular-nums text-white">
+                            <span class="text-[18px] font-semibold tracking-[-0.02em] tabular-nums">
                               {ch.number}
                             </span>
                           }
                         >
                           {(logo) => (
                             <>
-                              <span class="absolute left-2 top-1.5 text-[10px] font-semibold leading-none tabular-nums text-white/80">
+                              <span class="absolute left-2 top-1.5 text-[10px] font-semibold leading-none tabular-nums opacity-80">
                                 {ch.number}
                               </span>
                               <img
@@ -407,17 +405,17 @@ export const HomeView = () => {
 
                       <div class="flex h-[58px] min-w-0 flex-1 flex-col justify-between py-[2px]">
                         <div class="min-w-0">
-                          <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em] text-white">
+                          <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em]">
                             {ch.name}
                           </div>
-                          <div class="mt-1 truncate text-[12px] font-medium leading-[1.2] text-white/80">
+                          <div class="row-muted mt-1 truncate text-[12px] font-medium leading-[1.2]">
                             {subtitle()}
                           </div>
                         </div>
 
-                        <div class="h-[3px] w-full overflow-hidden rounded-full bg-white/20">
+                        <div class="row-progress-track h-[3px] w-full overflow-hidden rounded-full">
                           <div
-                            class="h-full rounded-full bg-white"
+                            class="row-progress-fill h-full rounded-full"
                             style={{ width: `${nowProg() ? progressPct() : isActive() ? 100 : 0}%` }}
                           />
                         </div>
