@@ -274,6 +274,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
                     toggle_window_fullscreen(&window_keys, &state_keys);
                     return glib::Propagation::Stop;
                 }
+                KeyAction::OpenSettings
+                | KeyAction::OpenHome
+                | KeyAction::OpenLiveTv
+                | KeyAction::OpenMediathek
+                | KeyAction::OpenYouTube
+                | KeyAction::OpenSearch => {
+                    state_keys.handle_key_action(action);
+                    return glib::Propagation::Stop;
+                }
                 other => {
                     router_keys.dispatch(action_to_nav_event(other));
                     return glib::Propagation::Stop;
@@ -623,7 +632,13 @@ fn action_to_nav_event(action: KeyAction) -> NavEvent {
         KeyAction::ToggleMute => NavEvent::ToggleMute,
         KeyAction::ChannelUp => NavEvent::ChannelUp,
         KeyAction::ChannelDown => NavEvent::ChannelDown,
-        KeyAction::ToggleFullscreen => NavEvent::Select,
+        KeyAction::OpenHome => NavEvent::Home,
+        KeyAction::ToggleFullscreen
+        | KeyAction::OpenSettings
+        | KeyAction::OpenLiveTv
+        | KeyAction::OpenMediathek
+        | KeyAction::OpenYouTube
+        | KeyAction::OpenSearch => NavEvent::Select,
     }
 }
 
@@ -641,7 +656,6 @@ fn map_gtk_key_for_search(key: Key) -> Option<NavEvent> {
 
 fn map_gtk_fallback_key(key: Key) -> Option<NavEvent> {
     match key {
-        Key::h | Key::H => Some(NavEvent::Home),
         Key::_0 | Key::KP_0 => Some(NavEvent::Digit(0)),
         Key::_1 | Key::KP_1 => Some(NavEvent::Digit(1)),
         Key::_2 | Key::KP_2 => Some(NavEvent::Digit(2)),

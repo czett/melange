@@ -127,7 +127,13 @@ export type KeyAction =
   | "ToggleMute"
   | "ToggleFullscreen"
   | "ChannelUp"
-  | "ChannelDown";
+  | "ChannelDown"
+  | "OpenSettings"
+  | "OpenHome"
+  | "OpenLiveTv"
+  | "OpenMediathek"
+  | "OpenYouTube"
+  | "OpenSearch";
 
 export interface KeymapConfig {
   up: string[];
@@ -142,6 +148,12 @@ export interface KeymapConfig {
   toggle_fullscreen: string[];
   channel_up: string[];
   channel_down: string[];
+  open_settings: string[];
+  open_home: string[];
+  open_live_tv: string[];
+  open_mediathek: string[];
+  open_youtube: string[];
+  open_search: string[];
   wasd_navigation: boolean;
 }
 

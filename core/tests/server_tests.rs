@@ -493,3 +493,49 @@ async fn wallpapers_natural_sort_and_keymap_persistence_work() {
     assert_eq!(reloaded_state.keymap().toggle_epg, vec!["g".to_string()]);
     assert!(reloaded_state.keymap().wasd_navigation);
 }
+
+#[test]
+fn key_action_view_and_search_shortcuts_work() {
+    use melange_core::{Channel, KeyAction, OverlayKind};
+
+    let ch = Channel {
+        id: 7,
+        number: 1,
+        tvg_id: "arte.de".to_string(),
+        name: "ARTE HD".to_string(),
+        group_title: "Culture".to_string(),
+        logo_url: String::new(),
+        stream_url: "http://example.com/arte.m3u8".to_string(),
+        is_favorite: false,
+        sort_order: 1,
+    };
+    let state = StateManager::new(vec![], vec![ch], vec![], Arc::new(AudioEngine::noop()));
+
+    state.handle_key_action(KeyAction::OpenSettings);
+    assert_eq!(state.snapshot().mode, AppMode::Settings);
+
+    state.handle_key_action(KeyAction::OpenHome);
+    assert_eq!(state.snapshot().mode, AppMode::Home);
+
+    // Search only opens in Mediathek or YouTube
+    state.handle_key_action(KeyAction::OpenSearch);
+    assert_eq!(state.snapshot().overlay, OverlayKind::None);
+
+    state.handle_key_action(KeyAction::OpenMediathek);
+    assert_eq!(state.snapshot().mode, AppMode::Mediathek);
+
+    state.handle_key_action(KeyAction::OpenSearch);
+    assert_eq!(state.snapshot().overlay, OverlayKind::SearchKeyboard);
+
+    state.handle_key_action(KeyAction::OpenYouTube);
+    assert_eq!(state.snapshot().mode, AppMode::YouTube);
+    assert_eq!(state.snapshot().overlay, OverlayKind::None);
+
+    state.handle_key_action(KeyAction::OpenSearch);
+    assert_eq!(state.snapshot().overlay, OverlayKind::SearchKeyboard);
+
+    state.handle_key_action(KeyAction::OpenLiveTv);
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::LiveTv);
+    assert_eq!(snap.playback.channel_id, Some(7));
+}

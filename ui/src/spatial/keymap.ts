@@ -18,6 +18,12 @@ export const DEFAULT_KEYMAP: KeymapConfig = {
   toggle_fullscreen: ["F11", "f"],
   channel_up: ["PageUp"],
   channel_down: ["PageDown"],
+  open_settings: [",", "s"],
+  open_home: ["h"],
+  open_live_tv: ["t"],
+  open_mediathek: ["d"],
+  open_youtube: ["y"],
+  open_search: ["/"],
   wasd_navigation: false
 };
 
@@ -78,6 +84,42 @@ export const KEYMAP_FIELDS: {
     action: "ChannelDown",
     label: "Channel Down",
     description: "Tune to the previous TV channel"
+  },
+  {
+    key: "open_settings",
+    action: "OpenSettings",
+    label: "Open Settings",
+    description: "Jump directly to the Settings screen"
+  },
+  {
+    key: "open_home",
+    action: "OpenHome",
+    label: "Go Home",
+    description: "Return directly to the Home screen"
+  },
+  {
+    key: "open_live_tv",
+    action: "OpenLiveTv",
+    label: "Open Live TV",
+    description: "Tune the active or first Live TV channel"
+  },
+  {
+    key: "open_mediathek",
+    action: "OpenMediathek",
+    label: "Open Mediathek",
+    description: "Browse ARD / ZDF Mediathek"
+  },
+  {
+    key: "open_youtube",
+    action: "OpenYouTube",
+    label: "Open YouTube",
+    description: "Browse YouTube On Demand"
+  },
+  {
+    key: "open_search",
+    action: "OpenSearch",
+    label: "Open Search",
+    description: "Open search keyboard in Mediathek or YouTube"
   }
 ];
 
@@ -124,6 +166,20 @@ export function normalizeKeyName(raw: string): string {
     case "Tab":
     case "ISO_Left_Tab":
       return "Tab";
+    case "plus":
+    case "KP_Add":
+      return "+";
+    case "minus":
+    case "KP_Subtract":
+      return "-";
+    case "period":
+    case "KP_Decimal":
+      return ".";
+    case "comma":
+      return ",";
+    case "slash":
+    case "KP_Divide":
+      return "/";
     default:
       break;
   }
@@ -170,6 +226,12 @@ export function normalizeKeymap(raw: Partial<KeymapConfig> | null | undefined): 
     toggle_fullscreen: normalizeList(raw?.toggle_fullscreen, DEFAULT_KEYMAP.toggle_fullscreen),
     channel_up: normalizeList(raw?.channel_up, DEFAULT_KEYMAP.channel_up),
     channel_down: normalizeList(raw?.channel_down, DEFAULT_KEYMAP.channel_down),
+    open_settings: normalizeList(raw?.open_settings, DEFAULT_KEYMAP.open_settings),
+    open_home: normalizeList(raw?.open_home, DEFAULT_KEYMAP.open_home),
+    open_live_tv: normalizeList(raw?.open_live_tv, DEFAULT_KEYMAP.open_live_tv),
+    open_mediathek: normalizeList(raw?.open_mediathek, DEFAULT_KEYMAP.open_mediathek),
+    open_youtube: normalizeList(raw?.open_youtube, DEFAULT_KEYMAP.open_youtube),
+    open_search: normalizeList(raw?.open_search, DEFAULT_KEYMAP.open_search),
     wasd_navigation: Boolean(raw?.wasd_navigation)
   };
 }
@@ -251,6 +313,17 @@ export function resolveBrowserKeyAction(rawKey: string): KeyAction | null {
   if (!canon) return null;
   const cfg = keymap();
   for (const field of KEYMAP_FIELDS) {
+    if (
+      cfg.wasd_navigation &&
+      ((field.action === "OpenSettings" &&
+        canon === "s" &&
+        JSON.stringify(cfg.open_settings) === JSON.stringify(DEFAULT_KEYMAP.open_settings)) ||
+        (field.action === "OpenMediathek" &&
+          canon === "d" &&
+          JSON.stringify(cfg.open_mediathek) === JSON.stringify(DEFAULT_KEYMAP.open_mediathek)))
+    ) {
+      continue;
+    }
     if (cfg[field.key].some((k) => normalizeKeyName(k) === canon)) {
       return field.action;
     }

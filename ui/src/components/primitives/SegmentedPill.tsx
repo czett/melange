@@ -1,5 +1,5 @@
 import { For, Show, onCleanup, onMount } from "solid-js";
-import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
+import { registerFocusable, setFocus, setInputModality, type NavNeighbors } from "../../spatial/nav";
 
 export interface SegmentedItem {
   id: string;
@@ -8,6 +8,7 @@ export interface SegmentedItem {
   active: boolean;
   onSelect: () => void;
   badge?: string;
+  neighbors?: NavNeighbors;
 }
 
 export interface SegmentedPillProps {
@@ -18,6 +19,7 @@ export interface SegmentedPillProps {
     ariaLabel?: string;
     title?: string;
     onSelect: () => void;
+    neighbors?: NavNeighbors;
   };
   class?: string;
 }
@@ -46,7 +48,12 @@ function SegmentButton(props: { item: SegmentedItem }) {
   const press = createPressHelper();
 
   onMount(() => {
-    const cleanup = registerFocusable(props.item.focusId, btnRef, () => props.item.onSelect());
+    const cleanup = registerFocusable(
+      props.item.focusId,
+      btnRef,
+      () => props.item.onSelect(),
+      () => props.item.neighbors
+    );
     onCleanup(() => {
       cleanup();
       press.clear();
@@ -95,8 +102,11 @@ export function SegmentedPill(props: SegmentedPillProps) {
           const press = createPressHelper();
 
           onMount(() => {
-            const cleanup = registerFocusable(action().focusId, actionRef, () =>
-              action().onSelect()
+            const cleanup = registerFocusable(
+              action().focusId,
+              actionRef,
+              () => action().onSelect(),
+              () => action().neighbors
             );
             onCleanup(() => {
               cleanup();

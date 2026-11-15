@@ -192,6 +192,24 @@ export function SettingsView(props: SettingsViewProps) {
     }
   });
 
+  const firstContentFocusId = createMemo(() => {
+    switch (category()) {
+      case "look":
+        return "settings-look-profile";
+      case "controls":
+        return "settings-keymap-wasd";
+      case "companion":
+        return "settings-companion-url";
+      case "providers":
+        return "settings-prov-livetv";
+      case "about":
+        return "settings-about-app";
+    }
+  });
+
+  const activeSidebarId = () => `settings-cat-${category()}`;
+  const rightRowNeighbors = () => ({ left: activeSidebarId(), right: "none" });
+
   onMount(async () => {
     requestAnimationFrame(() => {
       setFocus("settings-cat-look", false);
@@ -265,6 +283,12 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-back"
                 variant="pill"
                 radius="9999px"
+                neighbors={{
+                  up: "none",
+                  down: "settings-cat-look",
+                  left: "none",
+                  right: firstContentFocusId()
+                }}
                 onSelect={goBack}
                 class="h-8 px-3.5 text-[12px]"
               >
@@ -274,7 +298,7 @@ export function SettingsView(props: SettingsViewProps) {
 
             <nav class="flex flex-col gap-1.5 px-3 py-2" aria-label="Settings categories">
               <For each={categories}>
-                {(cat) => {
+                {(cat, i) => {
                   const isActive = () => category() === cat.id;
                   return (
                     <HapticTile
@@ -282,6 +306,15 @@ export function SettingsView(props: SettingsViewProps) {
                       variant="sidebar"
                       radius="12px"
                       active={isActive()}
+                      neighbors={{
+                        up: i() === 0 ? "settings-back" : `settings-cat-${categories[i() - 1].id}`,
+                        down:
+                          i() === categories.length - 1
+                            ? "settings-profile-footer"
+                            : `settings-cat-${categories[i() + 1].id}`,
+                        left: "none",
+                        right: firstContentFocusId()
+                      }}
                       onSelect={() => selectCategory(cat.id)}
                       class="flex h-11 w-full items-center gap-3 rounded-xl px-4 text-left text-[15px] font-medium"
                     >
@@ -299,6 +332,12 @@ export function SettingsView(props: SettingsViewProps) {
               id="settings-profile-footer"
               variant="grouped"
               radius="16px"
+              neighbors={{
+                up: "settings-cat-about",
+                down: "none",
+                left: "none",
+                right: firstContentFocusId()
+              }}
               onSelect={() => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })}
               class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
             >
@@ -340,6 +379,7 @@ export function SettingsView(props: SettingsViewProps) {
                   id="settings-look-profile"
                   variant="grouped"
                   radius="16px"
+                  neighbors={rightRowNeighbors()}
                   onSelect={() => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })}
                   class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
                 >
@@ -367,6 +407,7 @@ export function SettingsView(props: SettingsViewProps) {
                           variant="grouped"
                           radius="16px"
                           active={isActive()}
+                          neighbors={rightRowNeighbors()}
                           ariaLabel={`Select wallpaper ${presetLabel(file)}`}
                           onSelect={() => selectPreset(file)}
                           class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
@@ -412,6 +453,7 @@ export function SettingsView(props: SettingsViewProps) {
                   variant="grouped"
                   radius="16px"
                   active={keymap().wasd_navigation}
+                  neighbors={rightRowNeighbors()}
                   onSelect={() => {
                     const current = keymap();
                     void saveKeymap({
@@ -458,6 +500,7 @@ export function SettingsView(props: SettingsViewProps) {
                           variant="grouped"
                           radius="16px"
                           active={isCapturing()}
+                          neighbors={rightRowNeighbors()}
                           ariaLabel={`Rebind ${field.label}`}
                           onSelect={() => toggleCapture(field.key)}
                           class="flex h-14 w-full items-center justify-between gap-4 rounded-[16px] px-4 text-left"
@@ -499,6 +542,7 @@ export function SettingsView(props: SettingsViewProps) {
                   id="settings-keymap-reset"
                   variant="grouped"
                   radius="16px"
+                  neighbors={rightRowNeighbors()}
                   onSelect={() => {
                     stopCapture();
                     void resetKeymap();
@@ -552,6 +596,7 @@ export function SettingsView(props: SettingsViewProps) {
                   id="settings-companion-url"
                   variant="grouped"
                   radius="16px"
+                  neighbors={rightRowNeighbors()}
                   onSelect={() => setCategory("companion")}
                   class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
                 >
@@ -564,6 +609,7 @@ export function SettingsView(props: SettingsViewProps) {
                   id="settings-companion-status"
                   variant="grouped"
                   radius="16px"
+                  neighbors={rightRowNeighbors()}
                   onSelect={() => setCategory("companion")}
                   class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
                 >
@@ -586,6 +632,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-prov-livetv"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -605,6 +652,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-prov-mediathek"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "SetMode", mode: "Mediathek" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -622,6 +670,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-prov-youtube"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "SetMode", mode: "YouTube" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -639,6 +688,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-prov-local"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "SetMode", mode: "Media" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -663,6 +713,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-about-app"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => setCategory("about")}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -674,6 +725,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-about-video"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "ToggleFullscreen" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -690,6 +742,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-about-input"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => setCategory("companion")}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >
@@ -706,6 +759,7 @@ export function SettingsView(props: SettingsViewProps) {
                 id="settings-about-leave"
                 variant="grouped"
                 radius="16px"
+                neighbors={rightRowNeighbors()}
                 onSelect={() => sendCommand({ type: "SetOverlay", overlay: "LeaveMenu" })}
                 class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
               >

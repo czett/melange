@@ -67,6 +67,37 @@ export const HomeView = () => {
     );
   });
 
+  const keepWatchingItems = createMemo(() => melangeState().continue_watching.slice(0, 6));
+  const liveChannels = createMemo(() => melangeState().channels.slice(0, 12));
+
+  const firstProfileFocusId = () =>
+    melangeState().profiles.length > 0
+      ? `home-profile-${melangeState().profiles[0].id}`
+      : "home-profile-default";
+
+  const lastProfileFocusId = () => {
+    const profiles = melangeState().profiles;
+    return profiles.length > 0
+      ? `home-profile-${profiles[profiles.length - 1].id}`
+      : "home-profile-default";
+  };
+
+  const topBarDownId = () => {
+    const cw = keepWatchingItems();
+    if (cw.length > 0) return `home-cw-${cw[0].item_id}`;
+    const ch = liveChannels();
+    if (ch.length > 0) return `home-ch-${ch[0].id}`;
+    return "dock-livetv";
+  };
+
+  const dockUpId = () => {
+    const ch = liveChannels();
+    if (ch.length > 0) return `home-ch-${ch[0].id}`;
+    const cw = keepWatchingItems();
+    if (cw.length > 0) return `home-cw-${cw[0].item_id}`;
+    return firstProfileFocusId();
+  };
+
   const profileItems = createMemo<SegmentedItem[]>(() => {
     const profiles = melangeState().profiles;
     const activeId = melangeState().active_profile?.id;
@@ -77,15 +108,30 @@ export const HomeView = () => {
           focusId: "home-profile-default",
           label: melangeState().active_profile?.name ?? "Default",
           active: true,
+          neighbors: {
+            up: "none",
+            down: topBarDownId(),
+            left: "none",
+            right: "home-profile-manage"
+          },
           onSelect: () => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
         }
       ];
     }
-    return profiles.map((p) => ({
+    return profiles.map((p, idx) => ({
       id: String(p.id),
       focusId: `home-profile-${p.id}`,
       label: p.name,
       active: p.id === activeId,
+      neighbors: {
+        up: "none",
+        down: topBarDownId(),
+        left: idx === 0 ? "none" : `home-profile-${profiles[idx - 1].id}`,
+        right:
+          idx === profiles.length - 1
+            ? "home-profile-manage"
+            : `home-profile-${profiles[idx + 1].id}`
+      },
       onSelect: () => sendCommand({ type: "SelectProfile", profile_id: p.id })
     }));
   });
@@ -99,9 +145,6 @@ export const HomeView = () => {
     }
   };
 
-  const keepWatchingItems = createMemo(() => melangeState().continue_watching.slice(0, 6));
-  const liveChannels = createMemo(() => melangeState().channels.slice(0, 12));
-
   return (
     <div class="relative flex h-full w-full flex-col justify-between overflow-hidden px-10 py-6 xl:px-14 xl:py-8">
       {/* Top Bar: Left profile pill · Right utility circles */}
@@ -113,6 +156,12 @@ export const HomeView = () => {
             label: "+",
             ariaLabel: "Manage profiles",
             title: "Switch or manage profiles",
+            neighbors: {
+              up: "none",
+              down: topBarDownId(),
+              left: lastProfileFocusId(),
+              right: "home-fullscreen"
+            },
             onSelect: () => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
           }}
         />
@@ -122,6 +171,12 @@ export const HomeView = () => {
             id="home-fullscreen"
             variant="icon"
             radius="9999px"
+            neighbors={{
+              up: "none",
+              down: topBarDownId(),
+              left: "home-profile-manage",
+              right: "home-settings"
+            }}
             ariaLabel={melangeState().is_fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             title={melangeState().is_fullscreen ? "Exit Fullscreen (F11)" : "Fullscreen (F11)"}
             onSelect={() => sendCommand({ type: "ToggleFullscreen" })}
@@ -167,6 +222,12 @@ export const HomeView = () => {
             id="home-settings"
             variant="icon"
             radius="9999px"
+            neighbors={{
+              up: "none",
+              down: topBarDownId(),
+              left: "home-fullscreen",
+              right: "home-leave"
+            }}
             ariaLabel="Settings"
             title="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
@@ -190,6 +251,12 @@ export const HomeView = () => {
             id="home-leave"
             variant="icon"
             radius="9999px"
+            neighbors={{
+              up: "none",
+              down: topBarDownId(),
+              left: "home-settings",
+              right: "none"
+            }}
             ariaLabel="Leave Menu"
             title="Leave Melange (Esc)"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "LeaveMenu" })}
@@ -234,7 +301,7 @@ export const HomeView = () => {
             </div>
             <div class="no-scrollbar -mx-3 flex gap-3.5 overflow-x-auto px-3 py-2">
               <For each={keepWatchingItems()}>
-                {(cw) => {
+                {(cw, i) => {
                   const pct = () =>
                     cw.duration_sec > 0
                       ? Math.round(
@@ -265,6 +332,21 @@ export const HomeView = () => {
                       id={`home-cw-${cw.item_id}`}
                       variant="card"
                       radius="16px"
+                      neighbors={{
+                        left:
+                          i() === 0
+                            ? "none"
+                            : `home-cw-${keepWatchingItems()[i() - 1].item_id}`,
+                        right:
+                          i() === keepWatchingItems().length - 1
+                            ? "none"
+                            : `home-cw-${keepWatchingItems()[i() + 1].item_id}`,
+                        up: firstProfileFocusId(),
+                        down:
+                          liveChannels().length > 0
+                            ? `home-ch-${liveChannels()[0].id}`
+                            : "dock-livetv"
+                      }}
                       onSelect={resumeItem}
                       class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
@@ -343,7 +425,7 @@ export const HomeView = () => {
           >
             <div class="no-scrollbar -mx-3 flex gap-3.5 overflow-x-auto px-3 py-2">
               <For each={liveChannels()}>
-                {(ch) => {
+                {(ch, i) => {
                   const nn = () => melangeState().epg_now_next[ch.tvg_id];
                   const isActive = () => melangeState().playback.channel_id === ch.id;
                   const nowProg = () => nn()?.now;
@@ -366,6 +448,18 @@ export const HomeView = () => {
                       variant="card"
                       radius="16px"
                       active={isActive()}
+                      neighbors={{
+                        left: i() === 0 ? "none" : `home-ch-${liveChannels()[i() - 1].id}`,
+                        right:
+                          i() === liveChannels().length - 1
+                            ? "none"
+                            : `home-ch-${liveChannels()[i() + 1].id}`,
+                        up:
+                          keepWatchingItems().length > 0
+                            ? `home-cw-${keepWatchingItems()[0].item_id}`
+                            : firstProfileFocusId(),
+                        down: "dock-livetv"
+                      }}
                       onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
                       class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
@@ -436,6 +530,7 @@ export const HomeView = () => {
             id="dock-livetv"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "none", right: "dock-epg" }}
             ariaLabel="Live TV"
             onSelect={handleWatchLive}
             class="relative"
@@ -452,6 +547,7 @@ export const HomeView = () => {
             id="dock-epg"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "dock-livetv", right: "dock-mediathek" }}
             ariaLabel="Guide"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
             class="relative"
@@ -468,6 +564,7 @@ export const HomeView = () => {
             id="dock-mediathek"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "dock-epg", right: "dock-youtube" }}
             ariaLabel="Mediathek"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Mediathek" })}
             class="relative"
@@ -479,6 +576,7 @@ export const HomeView = () => {
             id="dock-youtube"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "dock-mediathek", right: "dock-media" }}
             ariaLabel="YouTube"
             onSelect={() => sendCommand({ type: "SetMode", mode: "YouTube" })}
             class="relative"
@@ -490,6 +588,7 @@ export const HomeView = () => {
             id="dock-media"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "dock-youtube", right: "dock-settings" }}
             ariaLabel="Media"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Media" })}
             class="relative"
@@ -501,6 +600,7 @@ export const HomeView = () => {
             id="dock-settings"
             variant="dock"
             radius="14px"
+            neighbors={{ up: dockUpId(), down: "none", left: "dock-media", right: "none" }}
             ariaLabel="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
             class="relative"

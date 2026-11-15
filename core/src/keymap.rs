@@ -14,6 +14,12 @@ pub enum KeyAction {
     ToggleFullscreen,
     ChannelUp,
     ChannelDown,
+    OpenSettings,
+    OpenHome,
+    OpenLiveTv,
+    OpenMediathek,
+    OpenYouTube,
+    OpenSearch,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +37,12 @@ pub struct KeymapConfig {
     pub toggle_fullscreen: Vec<String>,
     pub channel_up: Vec<String>,
     pub channel_down: Vec<String>,
+    pub open_settings: Vec<String>,
+    pub open_home: Vec<String>,
+    pub open_live_tv: Vec<String>,
+    pub open_mediathek: Vec<String>,
+    pub open_youtube: Vec<String>,
+    pub open_search: Vec<String>,
     pub wasd_navigation: bool,
 }
 
@@ -49,6 +61,12 @@ impl Default for KeymapConfig {
             toggle_fullscreen: vec!["F11".to_string(), "f".to_string()],
             channel_up: vec!["PageUp".to_string()],
             channel_down: vec!["PageDown".to_string()],
+            open_settings: vec![",".to_string(), "s".to_string()],
+            open_home: vec!["h".to_string()],
+            open_live_tv: vec!["t".to_string()],
+            open_mediathek: vec!["d".to_string()],
+            open_youtube: vec!["y".to_string()],
+            open_search: vec!["/".to_string()],
             wasd_navigation: false,
         }
     }
@@ -130,6 +148,12 @@ impl KeymapConfig {
         normalize_list(&mut self.toggle_fullscreen);
         normalize_list(&mut self.channel_up);
         normalize_list(&mut self.channel_down);
+        normalize_list(&mut self.open_settings);
+        normalize_list(&mut self.open_home);
+        normalize_list(&mut self.open_live_tv);
+        normalize_list(&mut self.open_mediathek);
+        normalize_list(&mut self.open_youtube);
+        normalize_list(&mut self.open_search);
     }
 
     pub fn normalized(mut self) -> Self {
@@ -143,7 +167,7 @@ impl KeymapConfig {
             return None;
         }
 
-        let groups: [(KeyAction, &[String]); 12] = [
+        let groups: [(KeyAction, &[String]); 18] = [
             (KeyAction::Up, &self.up),
             (KeyAction::Down, &self.down),
             (KeyAction::Left, &self.left),
@@ -156,9 +180,25 @@ impl KeymapConfig {
             (KeyAction::ToggleFullscreen, &self.toggle_fullscreen),
             (KeyAction::ChannelUp, &self.channel_up),
             (KeyAction::ChannelDown, &self.channel_down),
+            (KeyAction::OpenSettings, &self.open_settings),
+            (KeyAction::OpenHome, &self.open_home),
+            (KeyAction::OpenLiveTv, &self.open_live_tv),
+            (KeyAction::OpenMediathek, &self.open_mediathek),
+            (KeyAction::OpenYouTube, &self.open_youtube),
+            (KeyAction::OpenSearch, &self.open_search),
         ];
 
         for (action, list) in groups {
+            if self.wasd_navigation
+                && ((action == KeyAction::OpenSettings
+                    && key == "s"
+                    && self.open_settings == [",", "s"])
+                    || (action == KeyAction::OpenMediathek
+                        && key == "d"
+                        && self.open_mediathek == ["d"]))
+            {
+                continue;
+            }
             if list.iter().any(|bound| normalize_key_name(bound) == key) {
                 return Some(action);
             }
@@ -215,6 +255,16 @@ mod tests {
         assert_eq!(cfg.resolve_action("PageUp"), Some(KeyAction::ChannelUp));
         assert_eq!(cfg.resolve_action("Page_Down"), Some(KeyAction::ChannelDown));
         assert_eq!(cfg.resolve_action("PageDown"), Some(KeyAction::ChannelDown));
+
+        assert_eq!(cfg.resolve_action(","), Some(KeyAction::OpenSettings));
+        assert_eq!(cfg.resolve_action("comma"), Some(KeyAction::OpenSettings));
+        assert_eq!(cfg.resolve_action("s"), Some(KeyAction::OpenSettings));
+        assert_eq!(cfg.resolve_action("h"), Some(KeyAction::OpenHome));
+        assert_eq!(cfg.resolve_action("t"), Some(KeyAction::OpenLiveTv));
+        assert_eq!(cfg.resolve_action("d"), Some(KeyAction::OpenMediathek));
+        assert_eq!(cfg.resolve_action("y"), Some(KeyAction::OpenYouTube));
+        assert_eq!(cfg.resolve_action("/"), Some(KeyAction::OpenSearch));
+        assert_eq!(cfg.resolve_action("slash"), Some(KeyAction::OpenSearch));
     }
 
     #[test]

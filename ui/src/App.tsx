@@ -138,15 +138,29 @@ export const App = () => {
           }
         } else if (action === "ToggleMute") {
           sendCommand({ type: "PlaySound", sound: "select" });
+        } else if (action === "OpenSettings") {
+          sendCommand({ type: "SetMode", mode: "Settings" });
+        } else if (action === "OpenHome") {
+          sendCommand({ type: "SetMode", mode: "Home" });
+        } else if (action === "OpenLiveTv") {
+          const chId = state.playback.channel_id ?? state.channels[0]?.id;
+          if (chId !== undefined) {
+            sendCommand({ type: "SelectChannel", channel_id: chId });
+          } else {
+            sendCommand({ type: "SetMode", mode: "LiveTv" });
+          }
+        } else if (action === "OpenMediathek") {
+          sendCommand({ type: "SetMode", mode: "Mediathek" });
+        } else if (action === "OpenYouTube") {
+          sendCommand({ type: "SetMode", mode: "YouTube" });
+        } else if (action === "OpenSearch") {
+          if (state.mode === "Mediathek" || state.mode === "YouTube") {
+            sendCommand({ type: "SetOverlay", overlay: "SearchKeyboard" });
+          }
         } else {
           emitLocalNavEvent(action);
         }
         return;
-      }
-
-      if (e.key === "h" || e.key === "H") {
-        e.preventDefault();
-        emitLocalNavEvent("Home");
       }
     };
     window.addEventListener("keydown", onKeyDown);

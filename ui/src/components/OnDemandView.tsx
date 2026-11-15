@@ -23,36 +23,90 @@ function formatDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function categoryBadge(
-  item: MediaItem,
-  provider: OnDemandViewProps["provider"],
-  fallback: string
+interface PosterTheme {
+  background: string;
+  glow: string;
+  wordmark: string;
+}
+
+function extractBroadcasterWordmark(
+  rawAuthor: string,
+  provider: OnDemandViewProps["provider"]
 ): string {
+  const trimmed = rawAuthor.trim();
+  if (!trimmed) {
+    switch (provider) {
+      case "mediathek":
+        return "ARD";
+      case "youtube":
+        return "YouTube";
+      case "local":
+        return "Local Media";
+    }
+  }
+  const upper = trimmed.toUpperCase();
+  const known = ["ARTE", "3SAT", "ZDF", "ARD", "WDR", "NDR", "SWR", "RBB", "MDR", "BR", "HR", "SR", "KIKA", "PHOENIX"];
+  for (const tag of known) {
+    if (upper.includes(tag)) {
+      return tag === "3SAT" ? "3sat" : tag;
+    }
+  }
+  return trimmed;
+}
+
+function editorialPosterTheme(
+  item: MediaItem,
+  provider: OnDemandViewProps["provider"]
+): PosterTheme {
   const raw = (item.channel_or_author || "").trim();
-  if (raw.length > 0) return raw;
-  return provider === "local" ? "Local Media" : fallback;
-}
+  const upper = raw.toUpperCase();
+  const wordmark = extractBroadcasterWordmark(raw, provider);
 
-function fallbackCoverBackground(provider: OnDemandViewProps["provider"]): string {
-  switch (provider) {
-    case "mediathek":
-      return "radial-gradient(90% 95% at 18% 12%, rgba(56, 189, 248, 0.44) 0%, rgba(10, 132, 255, 0.24) 48%, rgba(12, 22, 46, 0.62) 100%), linear-gradient(155deg, rgba(18, 48, 96, 0.72) 0%, rgba(12, 18, 34, 0.82) 100%)";
-    case "youtube":
-      return "radial-gradient(90% 95% at 18% 12%, rgba(255, 69, 58, 0.42) 0%, rgba(255, 0, 51, 0.24) 48%, rgba(38, 12, 22, 0.64) 100%), linear-gradient(155deg, rgba(72, 16, 28, 0.72) 0%, rgba(16, 12, 18, 0.82) 100%)";
-    case "local":
-      return "radial-gradient(90% 95% at 18% 12%, rgba(255, 159, 10, 0.44) 0%, rgba(255, 55, 95, 0.26) 48%, rgba(28, 16, 40, 0.64) 100%), linear-gradient(155deg, rgba(76, 28, 52, 0.72) 0%, rgba(16, 14, 28, 0.82) 100%)";
+  if (provider === "local") {
+    return {
+      background: "linear-gradient(155deg, #3730A3 0%, #11131A 100%)",
+      glow: "radial-gradient(85% 90% at 22% 15%, rgba(129, 140, 248, 0.28) 0%, rgba(55, 48, 163, 0.12) 50%, transparent 100%)",
+      wordmark
+    };
   }
-}
 
-function fallbackBadgeAccent(provider: OnDemandViewProps["provider"]): string {
-  switch (provider) {
-    case "mediathek":
-      return "linear-gradient(160deg, rgba(56, 189, 248, 0.36) 0%, rgba(10, 132, 255, 0.22) 100%)";
-    case "youtube":
-      return "linear-gradient(160deg, rgba(255, 69, 58, 0.38) 0%, rgba(255, 0, 51, 0.22) 100%)";
-    case "local":
-      return "linear-gradient(160deg, rgba(255, 159, 10, 0.38) 0%, rgba(255, 55, 95, 0.24) 100%)";
+  if (upper.includes("ARTE")) {
+    return {
+      background: "linear-gradient(155deg, #9A3412 0%, #18181B 100%)",
+      glow: "radial-gradient(85% 90% at 22% 15%, rgba(251, 146, 60, 0.28) 0%, rgba(154, 52, 18, 0.12) 50%, transparent 100%)",
+      wordmark
+    };
   }
+
+  if (upper.includes("ZDF") || upper.includes("3SAT")) {
+    return {
+      background: "linear-gradient(155deg, #B45309 0%, #14171F 100%)",
+      glow: "radial-gradient(85% 90% at 22% 15%, rgba(251, 191, 36, 0.26) 0%, rgba(180, 83, 9, 0.12) 50%, transparent 100%)",
+      wordmark
+    };
+  }
+
+  if (
+    provider === "mediathek" ||
+    upper.includes("ARD") ||
+    upper.includes("BR") ||
+    upper.includes("RBB") ||
+    upper.includes("WDR") ||
+    upper.includes("NDR") ||
+    upper.includes("SWR")
+  ) {
+    return {
+      background: "linear-gradient(155deg, #1E40AF 0%, #111520 100%)",
+      glow: "radial-gradient(85% 90% at 22% 15%, rgba(96, 165, 250, 0.28) 0%, rgba(30, 64, 175, 0.12) 50%, transparent 100%)",
+      wordmark
+    };
+  }
+
+  return {
+    background: "linear-gradient(155deg, #991B1B 0%, #141218 100%)",
+    glow: "radial-gradient(85% 90% at 22% 15%, rgba(248, 113, 113, 0.26) 0%, rgba(153, 27, 27, 0.12) 50%, transparent 100%)",
+    wordmark
+  };
 }
 
 export function OnDemandView(props: OnDemandViewProps) {
@@ -295,75 +349,55 @@ export function OnDemandView(props: OnDemandViewProps) {
                 >
                   <Show
                     when={item.thumbnail_url}
-                    fallback={
-                      <div class="flex h-full w-full flex-col justify-between overflow-hidden">
-                        <div
-                          class="relative flex aspect-video w-full flex-col justify-between overflow-hidden border-b border-white/[0.14] p-3.5"
-                          style={{ background: fallbackCoverBackground(props.provider) }}
-                        >
-                          {/* Subtle diagonal light reflection across glossy cover */}
+                    fallback={(() => {
+                      const theme = editorialPosterTheme(item, props.provider);
+                      return (
+                        <>
                           <div
-                            class="pointer-events-none absolute inset-0"
-                            style={{
-                              background:
-                                "linear-gradient(132deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.07) 34%, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0.05) 100%)"
-                            }}
-                          />
-                          {/* Crisp inner top rim highlight */}
-                          <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-px"
-                            style={{
-                              background:
-                                "linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.42), rgba(255,255,255,0.08))"
-                            }}
-                          />
+                            class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14]"
+                            style={{ background: theme.background }}
+                          >
+                            {/* Soft radial light glow */}
+                            <div
+                              class="pointer-events-none absolute inset-0"
+                              style={{ background: theme.glow }}
+                            />
+                            {/* Crisp inner top rim highlight */}
+                            <div
+                              class="pointer-events-none absolute inset-x-0 top-0 h-px"
+                              style={{
+                                background:
+                                  "linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.28), rgba(255,255,255,0.06))"
+                              }}
+                            />
 
-                          {/* Top metadata chips */}
-                          <div class="relative z-10 flex items-center justify-between gap-2">
-                            <span class="max-w-[70%] truncate rounded-full border border-white/[0.12] bg-white/[0.10] px-2.5 py-0.5 text-[10.5px] font-semibold text-white/95 backdrop-blur-md">
-                              {categoryBadge(item, props.provider, props.subtitle)}
-                            </span>
+                            {/* Compact duration pill in top-right */}
                             <Show when={item.duration_sec > 0}>
-                              <span class="rounded-full border border-white/20 bg-black/35 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/95 backdrop-blur-md">
+                              <span class="absolute right-2.5 top-2.5 z-10 rounded-full border border-white/20 bg-black/35 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/95 backdrop-blur-md">
                                 {formatDuration(item.duration_sec)}
                               </span>
                             </Show>
+
+                            {/* Centered broadcaster wordmark / monogram */}
+                            <span class="relative z-10 select-none px-4 text-center text-2xl font-bold tracking-tight text-white/90">
+                              {theme.wordmark}
+                            </span>
                           </div>
 
-                          {/* Clean matte center broadcast / media badge */}
-                          <div class="relative z-10 my-auto flex items-center justify-center">
-                            <div
-                              class="flex h-12 w-12 items-center justify-center rounded-[15px] border border-white/[0.14] shadow-md backdrop-blur-xl"
-                              style={{ background: fallbackBadgeAccent(props.provider) }}
-                            >
-                              <svg
-                                class="h-5 w-5 translate-x-[0.5px] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                              >
-                                <path d="M8.5 6.8C8.5 5.98 9.4 5.48 10.1 5.92L18.6 11.12C19.26 11.52 19.26 12.48 18.6 12.88L10.1 18.08C9.4 18.52 8.5 18.02 8.5 17.2V6.8Z" />
-                              </svg>
+                          <div class="flex flex-col gap-1 px-4 py-3.5">
+                            <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
+                              {item.title}
+                            </div>
+                            <div class="truncate text-[12px] font-medium text-white/80">
+                              {item.channel_or_author || props.title}
+                              <Show when={item.subtitle}>
+                                <span> · {item.subtitle}</span>
+                              </Show>
                             </div>
                           </div>
-
-                          <div class="relative z-10 flex items-center justify-between text-[11px] font-semibold tracking-[-0.01em] text-white/85">
-                            <span>{props.title}</span>
-                            <span class="text-white/80">Play</span>
-                          </div>
-                        </div>
-
-                        <div class="flex flex-1 flex-col justify-between gap-1 px-4 py-3.5">
-                          <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
-                            {item.title}
-                          </div>
-                          <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-1 text-[12px] font-medium text-white/80">
-                              {item.subtitle || item.description}
-                            </div>
-                          </Show>
-                        </div>
-                      </div>
-                    }
+                        </>
+                      );
+                    })()}
                   >
                     {(thumb) => (
                       <>

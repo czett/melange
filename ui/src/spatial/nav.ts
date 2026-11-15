@@ -2,11 +2,14 @@ import { createSignal } from "solid-js";
 import type { NavEvent } from "../bridge/types";
 
 export type InputModality = "pointer" | "spatial";
+export type NavDirection = "up" | "down" | "left" | "right";
+export type NavNeighbors = Partial<Record<NavDirection, string>>;
 
 export interface FocusTarget {
   id: string;
   el: HTMLElement;
   onSelect: () => void;
+  neighbors?: NavNeighbors | (() => NavNeighbors | undefined);
 }
 
 const targets = new Map<string, FocusTarget>();
@@ -57,9 +60,10 @@ export function isFocused(id: string): boolean {
 export function registerFocusable(
   id: string,
   el: HTMLElement,
-  onSelect: () => void
+  onSelect: () => void,
+  neighbors?: NavNeighbors | (() => NavNeighbors | undefined)
 ): () => void {
-  targets.set(id, { id, el, onSelect });
+  targets.set(id, { id, el, onSelect, neighbors });
   if (!focusedId()) {
     setFocus(id, false);
   } else if (focusedId() === id) {
@@ -226,6 +230,24 @@ export function handleSpatialNav(ev: NavEvent): boolean {
   if (!current) {
     ensureValidFocus();
     return true;
+  }
+
+  const dirKey = ev.toLowerCase() as NavDirection;
+  const resolvedNeighbors =
+    typeof current.neighbors === "function" ? current.neighbors() : current.neighbors;
+  const explicit = resolvedNeighbors?.[dirKey];
+  if (explicit !== undefined) {
+    if (explicit === "none") {
+      return true;
+    }
+    const explicitTarget = targets.get(explicit);
+    if (explicitTarget && explicitTarget.el.isConnected) {
+      const r = explicitTarget.el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        setFocus(explicit, true);
+        return true;
+      }
+    }
   }
 
   const curRect = current.el.getBoundingClientRect();

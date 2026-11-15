@@ -27,7 +27,7 @@ use crate::audio::{AudioEngine, SoundKind};
 use crate::db::{Channel, EpgEntry, Profile, WatchHistoryEntry};
 use crate::error::MelangeError;
 use crate::input::NavEvent;
-use crate::keymap::KeymapConfig;
+use crate::keymap::{KeyAction, KeymapConfig};
 use crate::player::PlaybackState;
 use crate::providers::{
     LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, YouTubeProvider,
@@ -557,6 +557,64 @@ impl StateManager {
         }
         if leave_res.stopped {
             self.send_shell_command(ShellCommand::StopPlayback);
+        }
+    }
+
+    pub fn handle_key_action(&self, action: KeyAction) {
+        match action {
+            KeyAction::OpenSettings => {
+                self.audio.play(SoundKind::Select);
+                self.apply_client_command(ClientCommand::SetMode {
+                    mode: AppMode::Settings,
+                });
+            }
+            KeyAction::OpenHome => {
+                self.audio.play(SoundKind::Select);
+                self.apply_client_command(ClientCommand::SetMode {
+                    mode: AppMode::Home,
+                });
+            }
+            KeyAction::OpenLiveTv => {
+                let channel_id = {
+                    let st = self.state.read().expect("state lock");
+                    st.playback
+                        .channel_id
+                        .or_else(|| st.channels.first().map(|c| c.id))
+                };
+                if let Some(channel_id) = channel_id {
+                    self.apply_client_command(ClientCommand::SelectChannel { channel_id });
+                } else {
+                    self.audio.play(SoundKind::Select);
+                    self.apply_client_command(ClientCommand::SetMode {
+                        mode: AppMode::LiveTv,
+                    });
+                }
+            }
+            KeyAction::OpenMediathek => {
+                self.audio.play(SoundKind::Select);
+                self.apply_client_command(ClientCommand::SetMode {
+                    mode: AppMode::Mediathek,
+                });
+            }
+            KeyAction::OpenYouTube => {
+                self.audio.play(SoundKind::Select);
+                self.apply_client_command(ClientCommand::SetMode {
+                    mode: AppMode::YouTube,
+                });
+            }
+            KeyAction::OpenSearch => {
+                let can_search = {
+                    let st = self.state.read().expect("state lock");
+                    matches!(st.mode, AppMode::Mediathek | AppMode::YouTube)
+                };
+                if can_search {
+                    self.audio.play(SoundKind::Select);
+                    self.apply_client_command(ClientCommand::SetOverlay {
+                        overlay: OverlayKind::SearchKeyboard,
+                    });
+                }
+            }
+            _ => {}
         }
     }
 

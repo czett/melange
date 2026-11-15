@@ -1,5 +1,5 @@
 import { onCleanup, onMount, type JSX } from "solid-js";
-import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
+import { registerFocusable, setFocus, setInputModality, type NavNeighbors } from "../../spatial/nav";
 
 export type HapticTileVariant =
   | "card"
@@ -20,6 +20,7 @@ export interface HapticTileProps {
   radius?: string;
   ariaLabel?: string;
   title?: string;
+  neighbors?: NavNeighbors;
   class?: string;
   children: JSX.Element;
 }
@@ -31,7 +32,12 @@ export function HapticTile(props: HapticTileProps) {
   const variant = () => props.variant ?? "card";
 
   onMount(() => {
-    const cleanup = registerFocusable(props.id, btnRef, () => props.onSelect());
+    const cleanup = registerFocusable(
+      props.id,
+      btnRef,
+      () => props.onSelect(),
+      () => props.neighbors
+    );
     onCleanup(() => {
       cleanup();
       if (pressTimer !== undefined) {
