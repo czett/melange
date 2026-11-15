@@ -21,7 +21,7 @@ pub use keymap::{KeyAction, KeymapConfig, normalize_key_name};
 pub use player::{PlaybackState, PlayerBackend, PlayerController};
 pub use providers::{
     LocalMediaProvider, M3uXmltvProvider, MediaItem, MediathekProvider, OnDemandProvider,
-    SyncReport, TvheadendProvider, YouTubeProvider,
+    SponsorSegment, SyncReport, TvheadendProvider, YouTubeProvider,
 };
 pub use server::{
     AppMode, ClientCommand, EpgNowNext, MelangeState, OverlayKind, PlaybackSnapshot,

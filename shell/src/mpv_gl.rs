@@ -224,6 +224,13 @@ impl MpvPlayer {
             .map_err(|e| MelangeError::Player(format!("seek failed: {e}")))
     }
 
+    pub fn seek_absolute(&mut self, pos_sec: f64) -> Result<(), MelangeError> {
+        let pos = format!("{:.2}", pos_sec.max(0.0));
+        self.mpv
+            .command("seek", &[pos.as_str(), "absolute"])
+            .map_err(|e| MelangeError::Player(format!("absolute seek failed: {e}")))
+    }
+
     pub fn playback_progress(&self) -> (f64, f64, bool) {
         let pos: f64 = self.mpv.get_property("time-pos").unwrap_or(0.0);
         let dur: f64 = self.mpv.get_property("duration").unwrap_or(0.0);

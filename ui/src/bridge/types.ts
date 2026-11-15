@@ -73,6 +73,13 @@ export interface WatchHistoryEntry {
   updated_at: string;
 }
 
+export interface SponsorSegment {
+  uuid: string;
+  category: string;
+  start_sec: number;
+  end_sec: number;
+}
+
 export interface PlaybackSnapshot {
   state: PlaybackState;
   title: string | null;
@@ -85,6 +92,8 @@ export interface PlaybackSnapshot {
   paused: boolean;
   muted?: boolean;
   is_zapping: boolean;
+  sponsor_segments?: SponsorSegment[];
+  osd_notice?: string | null;
 }
 
 export interface MelangeState {

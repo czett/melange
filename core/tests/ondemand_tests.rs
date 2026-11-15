@@ -376,6 +376,7 @@ async fn test_youtube_oauth_device_code_and_token_refresh() {
         innertube_base_url: format!("http://{addr}"),
         client_id: "test-client".to_string(),
         client_secret: "test-secret".to_string(),
+        ..Default::default()
     };
     let yt = YouTubeProvider::with_endpoints(endpoints, vec![], false);
 
@@ -766,6 +767,7 @@ async fn test_youtube_http_routes_auth_feeds_channel_and_logout() {
             innertube_base_url: format!("http://{mock_addr}"),
             client_id: "cid".to_string(),
             client_secret: "csec".to_string(),
+            ..Default::default()
         },
         vec![],
         false,
@@ -887,4 +889,116 @@ async fn test_youtube_http_routes_auth_feeds_channel_and_logout() {
         .await
         .unwrap();
     assert!(st_after["account"].is_null());
+}
+
+#[tokio::test]
+async fn test_sponsorblock_fetch_timeout_and_play_media_hook() {
+    use axum::{Router, extract::Query, http::StatusCode, routing::get};
+    use melange_core::{ClientCommand, ShellCommand};
+    use melange_core::providers::youtube::{
+        YouTubeEndpoints, human_sponsor_category, parse_sponsorblock_segments,
+    };
+
+    // Parser sanity & invalid segment filtering
+    let parsed = parse_sponsorblock_segments(
+        r#"[
+            {"UUID":"seg-b","category":"selfpromo","segment":[120.5,145.0]},
+            {"UUID":"seg-a","category":"sponsor","segment":[15.0,45.25]},
+            {"UUID":"seg-tiny","category":"intro","segment":[2.0,2.1]}
+        ]"#,
+    );
+    assert_eq!(parsed.len(), 2);
+    assert_eq!(parsed[0].uuid, "seg-a");
+    assert_eq!(parsed[1].uuid, "seg-b");
+    assert_eq!(human_sponsor_category("selfpromo"), "self-promo");
+
+    let mock_sb = Router::new().route(
+        "/api/skipSegments",
+        get(|Query(q): Query<std::collections::HashMap<String, String>>| async move {
+            match q.get("videoID").map(String::as_str) {
+                Some("sbVid1") => (
+                    StatusCode::OK,
+                    r#"[{"UUID":"u1","category":"sponsor","segment":[10.0,30.0]}]"#,
+                ),
+                Some("slowVid") => {
+                    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
+                    (StatusCode::OK, "[]")
+                }
+                _ => (StatusCode::NOT_FOUND, "Not Found"),
+            }
+        }),
+    );
+
+    let sb_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let sb_addr = sb_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(sb_listener, mock_sb).await;
+    });
+
+    let yt = Arc::new(YouTubeProvider::with_endpoints(
+        YouTubeEndpoints {
+            sponsorblock_base_url: format!("http://{sb_addr}"),
+            ..Default::default()
+        },
+        vec![],
+        false,
+    ));
+
+    // Normal fetch + 404 + timeout (<1.65s)
+    let segs = yt.fetch_sponsorblock_segments("sbVid1").await;
+    assert_eq!(segs.len(), 1);
+    assert_eq!(segs[0].start_sec, 10.0);
+    assert_eq!(segs[0].end_sec, 30.0);
+    assert!(yt.fetch_sponsorblock_segments("missingVid").await.is_empty());
+
+    let t0 = std::time::Instant::now();
+    let timed_out = yt.fetch_sponsorblock_segments("slowVid").await;
+    assert!(timed_out.is_empty());
+    assert!(t0.elapsed() < std::time::Duration::from_millis(1900));
+
+    // PlayMedia triggers async SponsorBlock fetch -> ShellCommand::SetSponsorSegments + snapshot
+    let state = StateManager::new(vec![], vec![], vec![], Arc::new(AudioEngine::noop()));
+    state.set_youtube_provider(yt);
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.attach_shell_sender(tx);
+
+    let item = MediaItem {
+        id: "yt:sbVid1".to_string(),
+        provider: "youtube".to_string(),
+        title: "Sponsored Video".to_string(),
+        subtitle: None,
+        description: None,
+        channel_or_author: "Creator".to_string(),
+        channel_id: None,
+        duration_sec: 300,
+        thumbnail_url: None,
+        stream_url: "https://www.youtube.com/watch?v=sbVid1".to_string(),
+        published_at: None,
+    };
+
+    state.apply_client_command(ClientCommand::PlayMedia {
+        item,
+        resume: false,
+    });
+
+    assert!(matches!(rx.try_recv(), Ok(ShellCommand::PlayMedia { .. })));
+
+    let mut received_segments = false;
+    for _ in 0..20 {
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        if let Ok(ShellCommand::SetSponsorSegments { item_id, segments }) = rx.try_recv() {
+            assert_eq!(item_id, "yt:sbVid1");
+            assert_eq!(segments.len(), 1);
+            received_segments = true;
+            break;
+        }
+    }
+    assert!(received_segments, "expected SetSponsorSegments shell command");
+    assert_eq!(state.snapshot().playback.sponsor_segments.len(), 1);
+
+    state.emit_osd_notice("Skipped sponsor segment");
+    assert_eq!(
+        state.snapshot().playback.osd_notice.as_deref(),
+        Some("Skipped sponsor segment")
+    );
 }

@@ -31,9 +31,10 @@ use crate::error::MelangeError;
 use crate::input::NavEvent;
 use crate::keymap::{KeyAction, KeymapConfig};
 use crate::player::PlaybackState;
-use crate::providers::youtube::{TokenPollOutcome, YouTubeFeedTab, now_unix_secs};
+use crate::providers::youtube::{TokenPollOutcome, YouTubeFeedTab, extract_video_id, now_unix_secs};
 use crate::providers::{
-    LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, YouTubeProvider,
+    LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, SponsorSegment,
+    YouTubeProvider,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +73,10 @@ pub struct PlaybackSnapshot {
     #[serde(default)]
     pub muted: bool,
     pub is_zapping: bool,
+    #[serde(default)]
+    pub sponsor_segments: Vec<SponsorSegment>,
+    #[serde(default)]
+    pub osd_notice: Option<String>,
 }
 
 impl Default for PlaybackSnapshot {
@@ -88,6 +93,8 @@ impl Default for PlaybackSnapshot {
             paused: false,
             muted: false,
             is_zapping: false,
+            sponsor_segments: Vec::new(),
+            osd_notice: None,
         }
     }
 }
@@ -169,6 +176,7 @@ pub enum ShellCommand {
     SetMode { mode: AppMode },
     SetOverlay { overlay: OverlayKind },
     PlayMedia { item: MediaItem, start_position_sec: f64 },
+    SetSponsorSegments { item_id: String, segments: Vec<SponsorSegment> },
     SeekRelative { offset_sec: f64 },
     TogglePause,
     StopPlayback,
@@ -190,6 +198,7 @@ pub struct YouTubeAuthSessionState {
 }
 
 pub struct StateManager {
+    self_weak: std::sync::Weak<StateManager>,
     state: RwLock<MelangeState>,
     epg_entries: RwLock<Vec<EpgEntry>>,
     keymap: RwLock<KeymapConfig>,
@@ -197,6 +206,7 @@ pub struct StateManager {
     ws_tx: broadcast::Sender<ServerMessage>,
     shell_cmd_tx: RwLock<Option<std::sync::mpsc::Sender<ShellCommand>>>,
     nav_tx: RwLock<Option<std::sync::mpsc::Sender<NavEvent>>>,
+    tokio_handle: RwLock<Option<tokio::runtime::Handle>>,
     db_path: RwLock<Option<PathBuf>>,
     wallpapers_dir: RwLock<PathBuf>,
     port: RwLock<u16>,
@@ -205,6 +215,7 @@ pub struct StateManager {
     youtube: RwLock<Arc<YouTubeProvider>>,
     youtube_auth: RwLock<Option<YouTubeAuthSessionState>>,
     youtube_auth_seq: AtomicU64,
+    osd_notice_seq: AtomicU64,
     local_media: RwLock<Arc<LocalMediaProvider>>,
 }
 
@@ -275,7 +286,8 @@ impl StateManager {
             youtube_account: None,
         };
 
-        Arc::new(Self {
+        Arc::new_cyclic(|self_weak| Self {
+            self_weak: self_weak.clone(),
             state: RwLock::new(initial),
             epg_entries: RwLock::new(epg_entries),
             keymap: RwLock::new(KeymapConfig::default()),
@@ -283,6 +295,7 @@ impl StateManager {
             ws_tx,
             shell_cmd_tx: RwLock::new(None),
             nav_tx: RwLock::new(None),
+            tokio_handle: RwLock::new(None),
             db_path: RwLock::new(None),
             wallpapers_dir: RwLock::new(crate::config::default_wallpapers_dir()),
             port: RwLock::new(9000),
@@ -291,6 +304,7 @@ impl StateManager {
             youtube: RwLock::new(Arc::new(YouTubeProvider::new("https://pipedapi.kavin.rocks"))),
             youtube_auth: RwLock::new(None),
             youtube_auth_seq: AtomicU64::new(1),
+            osd_notice_seq: AtomicU64::new(1),
             local_media: RwLock::new(Arc::new(LocalMediaProvider::new(Vec::new()))),
         })
     }
@@ -878,13 +892,51 @@ impl StateManager {
                     st.playback.duration_sec = item.duration_sec as f64;
                     st.playback.paused = false;
                     st.playback.is_zapping = false;
+                    st.playback.sponsor_segments.clear();
+                    st.playback.osd_notice = None;
                 }
                 self.audio.play(SoundKind::Select);
                 self.broadcast_state();
                 self.send_shell_command(ShellCommand::PlayMedia {
-                    item,
+                    item: item.clone(),
                     start_position_sec,
                 });
+
+                if item.provider == "youtube"
+                    && let Some(video_id) = extract_video_id(&item.stream_url)
+                    && let Some(rt) = self.tokio_runtime_handle()
+                    && let Some(state_arc) = self.self_weak.upgrade()
+                {
+                    let yt = self.youtube.read().expect("youtube lock").clone();
+                    let item_id = item.id.clone();
+                    rt.spawn(async move {
+                        let segments = yt.fetch_sponsorblock_segments(&video_id).await;
+                        if segments.is_empty() {
+                            return;
+                        }
+                        let still_playing = {
+                            let mut st = state_arc.state.write().expect("state lock");
+                            if st
+                                .playback
+                                .current_media
+                                .as_ref()
+                                .is_some_and(|m| m.id == item_id)
+                            {
+                                st.playback.sponsor_segments = segments.clone();
+                                true
+                            } else {
+                                false
+                            }
+                        };
+                        if still_playing {
+                            state_arc.broadcast_state();
+                            state_arc.send_shell_command(ShellCommand::SetSponsorSegments {
+                                item_id,
+                                segments,
+                            });
+                        }
+                    });
+                }
             }
             ClientCommand::SeekRelative { offset_sec } => {
                 self.send_shell_command(ShellCommand::SeekRelative { offset_sec });
@@ -956,6 +1008,8 @@ impl StateManager {
                 paused: false,
                 muted: st.playback.muted,
                 is_zapping,
+                sponsor_segments: Vec::new(),
+                osd_notice: None,
             };
 
             if st.playback != next_playback || st.digit_buffer != digit_buffer {
@@ -982,6 +1036,52 @@ impl StateManager {
             && let Some(tx) = guard.as_ref()
         {
             let _ = tx.send(cmd);
+        }
+    }
+
+    fn tokio_runtime_handle(&self) -> Option<tokio::runtime::Handle> {
+        self.tokio_handle
+            .read()
+            .ok()
+            .and_then(|g| g.clone())
+            .or_else(|| tokio::runtime::Handle::try_current().ok())
+    }
+
+    pub fn attach_tokio_handle(&self, handle: tokio::runtime::Handle) {
+        if let Ok(mut guard) = self.tokio_handle.write() {
+            *guard = Some(handle);
+        }
+    }
+
+    pub fn emit_osd_notice(&self, message: impl Into<String>) {
+        let msg = message.into();
+        let seq = self.osd_notice_seq.fetch_add(1, AtomicOrdering::Relaxed) + 1;
+        {
+            let mut st = self.state.write().expect("state lock");
+            st.playback.osd_notice = Some(msg);
+        }
+        self.broadcast_state();
+
+        if let Some(rt) = self.tokio_runtime_handle()
+            && let Some(state_arc) = self.self_weak.upgrade()
+        {
+            rt.spawn(async move {
+                tokio::time::sleep(Duration::from_secs(3)).await;
+                if state_arc.osd_notice_seq.load(AtomicOrdering::Relaxed) == seq {
+                    let cleared = {
+                        let mut st = state_arc.state.write().expect("state lock");
+                        if st.playback.osd_notice.is_some() {
+                            st.playback.osd_notice = None;
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    if cleared {
+                        state_arc.broadcast_state();
+                    }
+                }
+            });
         }
     }
 }
@@ -1063,6 +1163,7 @@ pub async fn serve_on_listener(
     state: Arc<StateManager>,
     ui_dist_dir: &Path,
 ) -> Result<(), MelangeError> {
+    state.attach_tokio_handle(tokio::runtime::Handle::current());
     let app = build_router(state, ui_dist_dir);
     axum::serve(listener, app)
         .await

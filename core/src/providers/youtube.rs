@@ -71,11 +71,20 @@ pub struct YouTubeFeedResponse {
     pub source: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SponsorSegment {
+    pub uuid: String,
+    pub category: String,
+    pub start_sec: f64,
+    pub end_sec: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct YouTubeEndpoints {
     pub oauth_device_code_url: String,
     pub oauth_token_url: String,
     pub innertube_base_url: String,
+    pub sponsorblock_base_url: String,
     pub client_id: String,
     pub client_secret: String,
 }
@@ -96,6 +105,7 @@ impl Default for YouTubeEndpoints {
             oauth_device_code_url: "https://oauth2.googleapis.com/device/code".to_string(),
             oauth_token_url: "https://oauth2.googleapis.com/token".to_string(),
             innertube_base_url: "https://www.youtube.com".to_string(),
+            sponsorblock_base_url: "https://sponsor.ajay.app".to_string(),
             client_id,
             client_secret,
         }
@@ -446,6 +456,39 @@ impl YouTubeProvider {
         }
 
         Ok(updated)
+    }
+
+    pub async fn fetch_sponsorblock_segments(&self, video_id: &str) -> Vec<SponsorSegment> {
+        let base = self.endpoints.sponsorblock_base_url.trim_end_matches('/');
+        if base.is_empty() || video_id.trim().is_empty() {
+            return Vec::new();
+        }
+        let categories_encoded =
+            "%5B%22sponsor%22%2C%22selfpromo%22%2C%22interaction%22%2C%22intro%22%2C%22outro%22%5D";
+        let url = format!(
+            "{base}/api/skipSegments?videoID={}&categories={categories_encoded}",
+            urlencoding_simple(video_id.trim())
+        );
+
+        let Ok(resp) = self
+            .client
+            .get(&url)
+            .timeout(Duration::from_millis(1500))
+            .send()
+            .await
+        else {
+            return Vec::new();
+        };
+
+        if !resp.status().is_success() {
+            return Vec::new();
+        }
+
+        let Ok(body) = resp.text().await else {
+            return Vec::new();
+        };
+
+        parse_sponsorblock_segments(&body)
     }
 
     pub fn innertube_web_context(&self) -> Value {
@@ -1745,4 +1788,62 @@ pub fn merge_youtube_history(
     }
 
     out
+}
+
+#[derive(Deserialize)]
+struct RawSponsorSegment {
+    #[serde(rename = "UUID", default)]
+    uuid: String,
+    #[serde(default)]
+    category: String,
+    #[serde(default)]
+    segment: Vec<f64>,
+}
+
+pub fn parse_sponsorblock_segments(body: &str) -> Vec<SponsorSegment> {
+    let Ok(raw_list) = serde_json::from_str::<Vec<RawSponsorSegment>>(body) else {
+        return Vec::new();
+    };
+    let mut segments: Vec<SponsorSegment> = raw_list
+        .into_iter()
+        .filter_map(|raw| {
+            if raw.segment.len() < 2 {
+                return None;
+            }
+            let start_sec = raw.segment[0].max(0.0);
+            let end_sec = raw.segment[1];
+            if !start_sec.is_finite() || !end_sec.is_finite() || end_sec <= start_sec + 0.5 {
+                return None;
+            }
+            let uuid = if raw.uuid.trim().is_empty() {
+                format!("{start_sec:.2}-{end_sec:.2}")
+            } else {
+                raw.uuid.trim().to_string()
+            };
+            let category = if raw.category.trim().is_empty() {
+                "sponsor".to_string()
+            } else {
+                raw.category.trim().to_string()
+            };
+            Some(SponsorSegment {
+                uuid,
+                category,
+                start_sec,
+                end_sec,
+            })
+        })
+        .collect();
+
+    segments.sort_by(|a, b| a.start_sec.total_cmp(&b.start_sec));
+    segments
+}
+
+pub fn human_sponsor_category(category: &str) -> &'static str {
+    match category {
+        "selfpromo" => "self-promo",
+        "interaction" => "interaction reminder",
+        "intro" => "intro",
+        "outro" => "outro",
+        _ => "sponsor",
+    }
 }

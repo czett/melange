@@ -1,6 +1,7 @@
 mod mpv_gl;
 
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
@@ -15,7 +16,8 @@ use gtk4::{
 use melange_core::{
     AppConfig, AppMode, AudioEngine, CecHandle, Database, EvdevHandle, GamepadHandle, InputRouter,
     KeyAction, M3uXmltvProvider, NavEvent, OverlayKind, PlayerBackend, PlayerController, RunMode,
-    ShellCommand, StateManager, TvheadendProvider, spawn_server_thread,
+    ShellCommand, SponsorSegment, StateManager, TvheadendProvider,
+    providers::youtube::human_sponsor_category, spawn_server_thread,
 };
 use tracing::{error, info, warn};
 use webkit6::WebView;
@@ -310,6 +312,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let webview_cmd = webview.clone();
     let gl_area_cmd = gl_area.clone();
     let db_path_loop = config.db_path.clone();
+    let sponsor_tracker = Rc::new(RefCell::new(SponsorBlockTracker::default()));
     let mut tick_count: u64 = 0;
     glib::timeout_add_local(Duration::from_millis(16), move || {
         while let Ok(ev) = nav_rx.try_recv() {
@@ -324,6 +327,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
                 &gl_area_cmd,
                 &ctrl_nav,
                 &state_nav,
+                &sponsor_tracker,
                 cmd,
             );
         }
@@ -337,14 +341,39 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
         }
 
         tick_count = tick_count.wrapping_add(1);
-        if tick_count.is_multiple_of(31) {
+        if tick_count.is_multiple_of(15) {
             let snap = state_nav.snapshot();
             if let Some(ref item) = snap.playback.current_media {
                 let (pos, dur, paused) = {
                     let ctrl = ctrl_nav.borrow();
                     ctrl.backend().playback_progress()
                 };
-                state_nav.update_playback_progress(pos, dur, paused);
+
+                if !paused
+                    && let Some(seg) = sponsor_tracker.borrow_mut().next_skip(&item.id, pos)
+                {
+                    let seek_res = {
+                        let mut ctrl = ctrl_nav.borrow_mut();
+                        ctrl.backend_mut().seek_absolute(seg.end_sec)
+                    };
+                    match seek_res {
+                        Ok(()) => {
+                            let label = human_sponsor_category(&seg.category);
+                            info!(
+                                item_id = %item.id,
+                                category = %seg.category,
+                                start_sec = seg.start_sec,
+                                end_sec = seg.end_sec,
+                                "skipped sponsorblock segment"
+                            );
+                            state_nav.emit_osd_notice(format!("Skipped {label} segment"));
+                            state_nav.update_playback_progress(seg.end_sec, dur, paused);
+                        }
+                        Err(err) => warn!(error = %err, "sponsorblock seek failed"),
+                    }
+                } else if tick_count.is_multiple_of(31) {
+                    state_nav.update_playback_progress(pos, dur, paused);
+                }
 
                 if tick_count.is_multiple_of(310)
                     && pos > 1.0
@@ -402,6 +431,44 @@ fn toggle_window_fullscreen(window: &ApplicationWindow, state_manager: &StateMan
     state_manager.set_fullscreen(next);
 }
 
+#[derive(Default)]
+struct SponsorBlockTracker {
+    item_id: Option<String>,
+    segments: Vec<SponsorSegment>,
+    skipped_uuids: HashSet<String>,
+}
+
+impl SponsorBlockTracker {
+    fn reset(&mut self, item_id: Option<String>) {
+        self.item_id = item_id;
+        self.segments.clear();
+        self.skipped_uuids.clear();
+    }
+
+    fn set_segments(&mut self, item_id: &str, segments: Vec<SponsorSegment>) {
+        if self.item_id.as_deref() == Some(item_id) {
+            self.segments = segments;
+        }
+    }
+
+    fn next_skip(&mut self, item_id: &str, pos_sec: f64) -> Option<SponsorSegment> {
+        if self.item_id.as_deref() != Some(item_id) {
+            return None;
+        }
+        for seg in &self.segments {
+            if !self.skipped_uuids.contains(&seg.uuid)
+                && pos_sec >= seg.start_sec
+                && pos_sec < seg.end_sec - 0.5
+            {
+                self.skipped_uuids.insert(seg.uuid.clone());
+                return Some(seg.clone());
+            }
+        }
+        None
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn handle_shell_command(
     app: &Application,
     window: &ApplicationWindow,
@@ -409,10 +476,12 @@ fn handle_shell_command(
     gl_area: &GLArea,
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
     state_manager: &StateManager,
+    sponsor_tracker: &Rc<RefCell<SponsorBlockTracker>>,
     cmd: ShellCommand,
 ) {
     match cmd {
         ShellCommand::SelectChannel { channel_id } => {
+            sponsor_tracker.borrow_mut().reset(None);
             let snap = {
                 let mut ctrl = controller.borrow_mut();
                 let target_number = ctrl
@@ -443,6 +512,9 @@ fn handle_shell_command(
             item,
             start_position_sec,
         } => {
+            sponsor_tracker
+                .borrow_mut()
+                .reset(Some(item.id.clone()));
             let res = {
                 let mut ctrl = controller.borrow_mut();
                 ctrl.backend_mut().play_url_at(&item.stream_url, start_position_sec)
@@ -450,6 +522,11 @@ fn handle_shell_command(
             if let Err(err) = res {
                 error!(error = %err, url = %item.stream_url, "failed to play on-demand media");
             }
+        }
+        ShellCommand::SetSponsorSegments { item_id, segments } => {
+            sponsor_tracker
+                .borrow_mut()
+                .set_segments(&item_id, segments);
         }
         ShellCommand::SeekRelative { offset_sec } => {
             let res = {
@@ -488,6 +565,7 @@ fn handle_shell_command(
             toggle_window_fullscreen(window, state_manager);
         }
         ShellCommand::StopPlayback => {
+            sponsor_tracker.borrow_mut().reset(None);
             let mut ctrl = controller.borrow_mut();
             if let Err(err) = ctrl.stop() {
                 error!(error = %err, "failed to stop playback");
