@@ -146,6 +146,16 @@ impl Database {
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS youtube_accounts (
+                profile_id INTEGER PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                account_name TEXT NOT NULL DEFAULT '',
+                account_avatar_url TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             ",
         )?;
 
@@ -511,6 +521,95 @@ impl Database {
             params![key, value],
         )?;
         Ok(())
+    }
+
+    pub fn upsert_youtube_account(&self, account: &YouTubeAccount) -> Result<(), MelangeError> {
+        self.conn.execute(
+            "INSERT INTO youtube_accounts
+             (profile_id, access_token, refresh_token, expires_at, account_name, account_avatar_url, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)
+             ON CONFLICT(profile_id) DO UPDATE SET
+                access_token = excluded.access_token,
+                refresh_token = excluded.refresh_token,
+                expires_at = excluded.expires_at,
+                account_name = excluded.account_name,
+                account_avatar_url = excluded.account_avatar_url,
+                updated_at = CURRENT_TIMESTAMP",
+            params![
+                account.profile_id,
+                account.access_token,
+                account.refresh_token,
+                account.expires_at,
+                account.account_name,
+                account.account_avatar_url,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_youtube_account(&self, profile_id: i64) -> Result<Option<YouTubeAccount>, MelangeError> {
+        self.conn
+            .query_row(
+                "SELECT profile_id, access_token, refresh_token, expires_at, account_name, account_avatar_url, updated_at
+                 FROM youtube_accounts WHERE profile_id = ?1",
+                params![profile_id],
+                |row| {
+                    Ok(YouTubeAccount {
+                        profile_id: row.get(0)?,
+                        access_token: row.get(1)?,
+                        refresh_token: row.get(2)?,
+                        expires_at: row.get(3)?,
+                        account_name: row.get(4)?,
+                        account_avatar_url: row.get(5)?,
+                        updated_at: row.get(6)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn delete_youtube_account(&self, profile_id: i64) -> Result<(), MelangeError> {
+        self.conn.execute(
+            "DELETE FROM youtube_accounts WHERE profile_id = ?1",
+            params![profile_id],
+        )?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct YouTubeAccount {
+    pub profile_id: i64,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_at: i64,
+    pub account_name: String,
+    #[serde(default)]
+    pub account_avatar_url: Option<String>,
+    #[serde(default)]
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct YouTubeAccountSummary {
+    pub profile_id: i64,
+    pub signed_in: bool,
+    pub account_name: String,
+    #[serde(default)]
+    pub account_avatar_url: Option<String>,
+    pub expires_at: i64,
+}
+
+impl From<&YouTubeAccount> for YouTubeAccountSummary {
+    fn from(account: &YouTubeAccount) -> Self {
+        Self {
+            profile_id: account.profile_id,
+            signed_in: true,
+            account_name: account.account_name.clone(),
+            account_avatar_url: account.account_avatar_url.clone(),
+            expires_at: account.expires_at,
+        }
     }
 }
 

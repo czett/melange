@@ -1,11 +1,17 @@
-use std::time::Duration;
+use std::collections::HashMap;
+use std::path::Path;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use tokio::process::Command;
+use tokio::sync::Mutex;
 use tokio::time::timeout;
 use tracing::{debug, warn};
 
+use crate::db::{Database, YouTubeAccount};
 use crate::error::MelangeError;
 use crate::providers::{BoxFuture, MediaItem, OnDemandProvider};
 
@@ -16,12 +22,128 @@ const FALLBACK_PIPED_INSTANCES: &[&str] = &[
 
 const DEFAULT_YTDLP_FEED_QUERY: &str = "Doku Arte ZDF Tagesschau Wissenschaft";
 const PIPED_TIMEOUT: Duration = Duration::from_secs(4);
+const INNERTUBE_TIMEOUT: Duration = Duration::from_secs(6);
 const YTDLP_TIMEOUT: Duration = Duration::from_secs(15);
+
+const DEFAULT_TV_CLIENT_ID: &str =
+    "861556708454-d6dlm3lh05idd8npek18k6be8ba3oc68.apps.googleusercontent.com";
+const DEFAULT_TV_CLIENT_SECRET: &str = "SboVhoG9s0rNafixCSGGKXAT";
+const YOUTUBE_SCOPE: &str = "https://www.googleapis.com/auth/youtube";
+const YOUTUBE_ACTIVATE_URL: &str = "https://www.youtube.com/activate";
+
+const TV_CLIENT_NAME: &str = "TVHTML5";
+const TV_CLIENT_NAME_ID: &str = "7";
+const TV_CLIENT_VERSION: &str = "7.20250212.16.00";
+const TV_USER_AGENT: &str = "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 TV Safari/537.36";
+
+#[derive(Debug, Clone)]
+pub struct YouTubeEndpoints {
+    pub oauth_device_code_url: String,
+    pub oauth_token_url: String,
+    pub innertube_base_url: String,
+    pub client_id: String,
+    pub client_secret: String,
+}
+
+impl Default for YouTubeEndpoints {
+    fn default() -> Self {
+        let client_id = std::env::var("MELANGE_YT_CLIENT_ID")
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| DEFAULT_TV_CLIENT_ID.to_string());
+        let client_secret = std::env::var("MELANGE_YT_CLIENT_SECRET")
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| DEFAULT_TV_CLIENT_SECRET.to_string());
+        Self {
+            oauth_device_code_url: "https://oauth2.googleapis.com/device/code".to_string(),
+            oauth_token_url: "https://oauth2.googleapis.com/token".to_string(),
+            innertube_base_url: "https://www.youtube.com".to_string(),
+            client_id,
+            client_secret,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeviceCodeResponse {
+    pub device_code: String,
+    pub user_code: String,
+    pub verification_url: String,
+    pub expires_in: i64,
+    pub interval: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawDeviceCodeResponse {
+    device_code: String,
+    user_code: String,
+    #[serde(default)]
+    verification_url: Option<String>,
+    #[serde(default)]
+    verification_uri: Option<String>,
+    #[serde(default = "default_expires_in")]
+    expires_in: i64,
+    #[serde(default = "default_interval")]
+    interval: i64,
+}
+
+fn default_expires_in() -> i64 {
+    1800
+}
+
+fn default_interval() -> i64 {
+    5
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OAuthTokenResponse {
+    pub access_token: String,
+    #[serde(default)]
+    pub refresh_token: Option<String>,
+    #[serde(default = "default_token_expires")]
+    pub expires_in: i64,
+    #[serde(default)]
+    pub token_type: Option<String>,
+}
+
+fn default_token_expires() -> i64 {
+    3600
+}
+
+#[derive(Debug, Deserialize)]
+struct OAuthErrorBody {
+    #[serde(default)]
+    error: String,
+    #[serde(default)]
+    error_description: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TokenPollOutcome {
+    Authorized(OAuthTokenResponse),
+    Pending,
+    SlowDown,
+    Expired,
+    Denied,
+    Failed(String),
+}
+
+pub fn now_unix_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
 
 pub struct YouTubeProvider {
     client: Client,
+    endpoints: YouTubeEndpoints,
     piped_urls: Vec<String>,
     enable_ytdlp_fallback: bool,
+    refresh_locks: Arc<Mutex<HashMap<i64, Arc<Mutex<()>>>>>,
 }
 
 impl YouTubeProvider {
@@ -40,9 +162,17 @@ impl YouTubeProvider {
     }
 
     pub fn with_piped_urls(piped_urls: Vec<String>, enable_ytdlp_fallback: bool) -> Self {
+        Self::with_endpoints(YouTubeEndpoints::default(), piped_urls, enable_ytdlp_fallback)
+    }
+
+    pub fn with_endpoints(
+        endpoints: YouTubeEndpoints,
+        piped_urls: Vec<String>,
+        enable_ytdlp_fallback: bool,
+    ) -> Self {
         let client = Client::builder()
-            .timeout(PIPED_TIMEOUT)
-            .user_agent("melange/0.1")
+            .timeout(INNERTUBE_TIMEOUT)
+            .user_agent(TV_USER_AGENT)
             .build()
             .unwrap_or_else(|_| Client::new());
         let cleaned = piped_urls
@@ -52,13 +182,239 @@ impl YouTubeProvider {
             .collect();
         Self {
             client,
+            endpoints,
             piped_urls: cleaned,
             enable_ytdlp_fallback,
+            refresh_locks: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
+    pub fn endpoints(&self) -> &YouTubeEndpoints {
+        &self.endpoints
+    }
+
+    pub fn innertube_tv_context(&self) -> Value {
+        json!({
+            "client": {
+                "clientName": TV_CLIENT_NAME,
+                "clientVersion": TV_CLIENT_VERSION,
+                "platform": "TV",
+                "hl": "de",
+                "gl": "DE",
+                "utcOffsetMinutes": 60
+            },
+            "user": {
+                "lockedSafetyMode": false
+            }
+        })
+    }
+
+    pub async fn start_device_auth(&self) -> Result<DeviceCodeResponse, MelangeError> {
+        let resp = self
+            .client
+            .post(&self.endpoints.oauth_device_code_url)
+            .form(&[
+                ("client_id", self.endpoints.client_id.as_str()),
+                ("scope", YOUTUBE_SCOPE),
+            ])
+            .send()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube device code request failed: {e}")))?;
+
+        let status = resp.status();
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube device code read failed: {e}")))?;
+        if !status.is_success() {
+            return Err(MelangeError::Player(format!(
+                "youtube device code HTTP {status}: {body}"
+            )));
+        }
+
+        let raw: RawDeviceCodeResponse = serde_json::from_str(&body)
+            .map_err(|e| MelangeError::Parse(format!("device code json: {e}")))?;
+        let raw_url = raw
+            .verification_url
+            .or(raw.verification_uri)
+            .unwrap_or_default();
+        let verification_url = normalize_activation_url(&raw_url);
+
+        Ok(DeviceCodeResponse {
+            device_code: raw.device_code,
+            user_code: raw.user_code,
+            verification_url,
+            expires_in: raw.expires_in.max(60),
+            interval: raw.interval.max(1),
+        })
+    }
+
+    pub async fn poll_device_token(&self, device_code: &str) -> Result<TokenPollOutcome, MelangeError> {
+        let resp = self
+            .client
+            .post(&self.endpoints.oauth_token_url)
+            .form(&[
+                ("client_id", self.endpoints.client_id.as_str()),
+                ("client_secret", self.endpoints.client_secret.as_str()),
+                ("device_code", device_code),
+                ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
+            ])
+            .send()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube token poll failed: {e}")))?;
+
+        let status = resp.status();
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube token poll read failed: {e}")))?;
+
+        if status.is_success() {
+            let token: OAuthTokenResponse = serde_json::from_str(&body)
+                .map_err(|e| MelangeError::Parse(format!("oauth token json: {e}")))?;
+            return Ok(TokenPollOutcome::Authorized(token));
+        }
+
+        if let Ok(err_body) = serde_json::from_str::<OAuthErrorBody>(&body) {
+            return Ok(match err_body.error.as_str() {
+                "authorization_pending" => TokenPollOutcome::Pending,
+                "slow_down" => TokenPollOutcome::SlowDown,
+                "expired_token" => TokenPollOutcome::Expired,
+                "access_denied" => TokenPollOutcome::Denied,
+                other => {
+                    let detail = err_body
+                        .error_description
+                        .filter(|d| !d.is_empty())
+                        .unwrap_or_else(|| other.to_string());
+                    TokenPollOutcome::Failed(detail)
+                }
+            });
+        }
+
+        Ok(TokenPollOutcome::Failed(format!(
+            "token endpoint returned HTTP {status}"
+        )))
+    }
+
+    pub async fn refresh_access_token(
+        &self,
+        refresh_token: &str,
+    ) -> Result<OAuthTokenResponse, MelangeError> {
+        let resp = self
+            .client
+            .post(&self.endpoints.oauth_token_url)
+            .form(&[
+                ("client_id", self.endpoints.client_id.as_str()),
+                ("client_secret", self.endpoints.client_secret.as_str()),
+                ("refresh_token", refresh_token),
+                ("grant_type", "refresh_token"),
+            ])
+            .send()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube token refresh failed: {e}")))?;
+
+        let status = resp.status();
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| MelangeError::Player(format!("youtube token refresh read failed: {e}")))?;
+        if !status.is_success() {
+            return Err(MelangeError::Player(format!(
+                "youtube token refresh HTTP {status}: {body}"
+            )));
+        }
+
+        serde_json::from_str(&body)
+            .map_err(|e| MelangeError::Parse(format!("refresh token json: {e}")))
+    }
+
+    pub async fn fetch_account_info(
+        &self,
+        access_token: &str,
+    ) -> Result<(String, Option<String>), MelangeError> {
+        let url = format!(
+            "{}/youtubei/v1/account/account_menu",
+            self.endpoints.innertube_base_url.trim_end_matches('/')
+        );
+        let payload = json!({
+            "context": self.innertube_tv_context()
+        });
+
+        let resp = self
+            .client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .header("X-Youtube-Client-Name", TV_CLIENT_NAME_ID)
+            .header("X-Youtube-Client-Version", TV_CLIENT_VERSION)
+            .header("Origin", "https://www.youtube.com")
+            .bearer_auth(access_token)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| MelangeError::Player(format!("innertube account_menu failed: {e}")))?;
+
+        if !resp.status().is_success() {
+            return Ok(("YouTube Account".to_string(), None));
+        }
+
+        let body = resp.text().await.unwrap_or_default();
+        Ok(parse_account_menu_response(&body)
+            .unwrap_or_else(|| ("YouTube Account".to_string(), None)))
+    }
+
+    pub async fn ensure_valid_token(
+        &self,
+        db_path: Option<&Path>,
+        profile_id: i64,
+        account: YouTubeAccount,
+    ) -> Result<YouTubeAccount, MelangeError> {
+        let lock = {
+            let mut map = self.refresh_locks.lock().await;
+            map.entry(profile_id)
+                .or_insert_with(|| Arc::new(Mutex::new(())))
+                .clone()
+        };
+        let _guard = lock.lock().await;
+
+        let current = if let Some(path) = db_path
+            && let Ok(db) = Database::open(path)
+            && let Ok(Some(fresh_row)) = db.get_youtube_account(profile_id)
+        {
+            fresh_row
+        } else {
+            account
+        };
+
+        let now = now_unix_secs();
+        if current.expires_at > now + 60 {
+            return Ok(current);
+        }
+
+        let refreshed = self.refresh_access_token(&current.refresh_token).await?;
+        let updated = YouTubeAccount {
+            profile_id,
+            access_token: refreshed.access_token,
+            refresh_token: refreshed
+                .refresh_token
+                .filter(|t| !t.is_empty())
+                .unwrap_or_else(|| current.refresh_token.clone()),
+            expires_at: now + refreshed.expires_in.max(60),
+            account_name: current.account_name.clone(),
+            account_avatar_url: current.account_avatar_url.clone(),
+            updated_at: String::new(),
+        };
+
+        if let Some(path) = db_path
+            && let Ok(db) = Database::open(path)
+        {
+            db.upsert_youtube_account(&updated)?;
+        }
+
+        Ok(updated)
+    }
+
     async fn fetch_text(&self, url: &str) -> Option<String> {
-        let resp = match self.client.get(url).send().await {
+        let resp = match self.client.get(url).timeout(PIPED_TIMEOUT).send().await {
             Ok(r) => r,
             Err(err) => {
                 warn!("piped request failed ({url}): {err}");
@@ -377,4 +733,101 @@ fn urlencoding_simple(input: &str) -> String {
         }
     }
     out
+}
+
+fn normalize_activation_url(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed == "https://www.google.com/device" {
+        return YOUTUBE_ACTIVATE_URL.to_string();
+    }
+    trimmed.to_string()
+}
+
+pub fn parse_account_menu_response(body: &str) -> Option<(String, Option<String>)> {
+    let root: Value = serde_json::from_str(body).ok()?;
+    let header = find_object_by_key(&root, "activeAccountHeaderRenderer")?;
+    let name = extract_yt_text(header.get("accountName")?)
+        .or_else(|| header.get("channelHandle").and_then(extract_yt_text))
+        .filter(|s| !s.is_empty())?;
+    let avatar = header
+        .get("accountPhoto")
+        .and_then(extract_best_thumbnail);
+    Some((name, avatar))
+}
+
+fn find_object_by_key<'a>(value: &'a Value, target_key: &str) -> Option<&'a Value> {
+    match value {
+        Value::Object(map) => {
+            if let Some(found) = map.get(target_key) {
+                return Some(found);
+            }
+            for v in map.values() {
+                if let Some(found) = find_object_by_key(v, target_key) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        Value::Array(arr) => {
+            for v in arr {
+                if let Some(found) = find_object_by_key(v, target_key) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn extract_yt_text(val: &Value) -> Option<String> {
+    if let Some(s) = val.as_str() {
+        let trimmed = s.trim();
+        return (!trimmed.is_empty()).then(|| trimmed.to_string());
+    }
+    if let Some(simple) = val.get("simpleText").and_then(Value::as_str) {
+        let trimmed = simple.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    if let Some(runs) = val.get("runs").and_then(Value::as_array) {
+        let mut out = String::new();
+        for run in runs {
+            if let Some(t) = run.get("text").and_then(Value::as_str) {
+                out.push_str(t);
+            }
+        }
+        let trimmed = out.trim();
+        if !trimmed.is_empty() {
+            return Some(trimmed.to_string());
+        }
+    }
+    None
+}
+
+fn extract_best_thumbnail(val: &Value) -> Option<String> {
+    let thumbs = val.get("thumbnails").and_then(Value::as_array)?;
+    let mut best_url: Option<String> = None;
+    let mut best_width: i64 = -1;
+    for t in thumbs {
+        let Some(url) = t.get("url").and_then(Value::as_str) else {
+            continue;
+        };
+        let url = url.trim();
+        if url.is_empty() {
+            continue;
+        }
+        let normalized = if url.starts_with("//") {
+            format!("https:{url}")
+        } else {
+            url.to_string()
+        };
+        let width = t.get("width").and_then(Value::as_i64).unwrap_or(0);
+        if width >= best_width {
+            best_width = width;
+            best_url = Some(normalized);
+        }
+    }
+    best_url
 }

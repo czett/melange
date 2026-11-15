@@ -301,3 +301,62 @@ https://artesimulcast.akamaized.net/hls/live/2030993/artelive_de/master.m3u8
     assert_eq!(updated[0].number, 3);
     assert_eq!(updated[1].number, 1);
 }
+
+#[test]
+fn youtube_accounts_are_isolated_per_profile_and_cascade_on_delete() {
+    use melange_core::YouTubeAccount;
+
+    let db = Database::open_in_memory().expect("open db");
+    let p1 = db.list_profiles().expect("default profile")[0].id;
+    let p2 = db.create_profile("Person 2", "").expect("create p2").id;
+
+    assert!(db.get_youtube_account(p1).expect("get p1").is_none());
+    assert!(db.get_youtube_account(p2).expect("get p2").is_none());
+
+    let acct1 = YouTubeAccount {
+        profile_id: p1,
+        access_token: "access-p1-v1".to_string(),
+        refresh_token: "refresh-p1".to_string(),
+        expires_at: 2_000_000_000,
+        account_name: "Alice".to_string(),
+        account_avatar_url: Some("https://yt3.ggpht.com/alice.jpg".to_string()),
+        updated_at: String::new(),
+    };
+    let acct2 = YouTubeAccount {
+        profile_id: p2,
+        access_token: "access-p2-v1".to_string(),
+        refresh_token: "refresh-p2".to_string(),
+        expires_at: 2_000_000_500,
+        account_name: "Bob".to_string(),
+        account_avatar_url: None,
+        updated_at: String::new(),
+    };
+
+    db.upsert_youtube_account(&acct1).expect("upsert p1");
+    db.upsert_youtube_account(&acct2).expect("upsert p2");
+
+    let got1 = db.get_youtube_account(p1).expect("get p1").expect("some p1");
+    let got2 = db.get_youtube_account(p2).expect("get p2").expect("some p2");
+    assert_eq!(got1.account_name, "Alice");
+    assert_eq!(got1.access_token, "access-p1-v1");
+    assert_eq!(got2.account_name, "Bob");
+    assert_eq!(got2.access_token, "access-p2-v1");
+
+    // Upsert overwrites tokens cleanly on refresh
+    let mut refreshed1 = got1;
+    refreshed1.access_token = "access-p1-v2".to_string();
+    refreshed1.expires_at = 2_000_003_600;
+    db.upsert_youtube_account(&refreshed1).expect("refresh p1");
+    assert_eq!(
+        db.get_youtube_account(p1).unwrap().unwrap().access_token,
+        "access-p1-v2"
+    );
+
+    // Deleting p1's YouTube account leaves p2 untouched
+    db.delete_youtube_account(p1).expect("logout p1");
+    assert!(db.get_youtube_account(p1).unwrap().is_none());
+    assert_eq!(
+        db.get_youtube_account(p2).unwrap().unwrap().account_name,
+        "Bob"
+    );
+}

@@ -266,3 +266,167 @@ async fn test_youtube_provider_fallback_chain() {
     assert_eq!(search.len(), 1);
     assert_eq!(search[0].title, "Fallback Search");
 }
+
+#[tokio::test]
+async fn test_youtube_oauth_device_code_and_token_refresh() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use axum::{Router, http::StatusCode, routing::post};
+    use melange_core::YouTubeAccount;
+    use melange_core::providers::youtube::{
+        TokenPollOutcome, YouTubeEndpoints, now_unix_secs, parse_account_menu_response,
+    };
+
+    let poll_calls = Arc::new(AtomicUsize::new(0));
+    let poll_calls_srv = Arc::clone(&poll_calls);
+
+    let mock_oauth = Router::new()
+        .route(
+            "/device/code",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "device_code": "dev-code-123",
+                    "user_code": "ABCD-EFGH",
+                    "verification_url": "https://www.google.com/device",
+                    "expires_in": 1800,
+                    "interval": 1
+                }))
+            }),
+        )
+        .route(
+            "/token",
+            post(move |axum::Form(params): axum::Form<std::collections::HashMap<String, String>>| {
+                let poll_calls = Arc::clone(&poll_calls_srv);
+                async move {
+                    if params.get("grant_type").map(String::as_str) == Some("refresh_token") {
+                        return (
+                            StatusCode::OK,
+                            axum::Json(serde_json::json!({
+                                "access_token": "fresh-access-token",
+                                "expires_in": 3600,
+                                "token_type": "Bearer"
+                            })),
+                        );
+                    }
+                    let attempt = poll_calls.fetch_add(1, Ordering::SeqCst);
+                    if attempt == 0 {
+                        (
+                            StatusCode::PRECONDITION_REQUIRED,
+                            axum::Json(serde_json::json!({ "error": "authorization_pending" })),
+                        )
+                    } else if attempt == 1 {
+                        (
+                            StatusCode::BAD_REQUEST,
+                            axum::Json(serde_json::json!({ "error": "slow_down" })),
+                        )
+                    } else {
+                        (
+                            StatusCode::OK,
+                            axum::Json(serde_json::json!({
+                                "access_token": "initial-access-token",
+                                "refresh_token": "initial-refresh-token",
+                                "expires_in": 3600,
+                                "token_type": "Bearer"
+                            })),
+                        )
+                    }
+                }
+            }),
+        )
+        .route(
+            "/youtubei/v1/account/account_menu",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "actions": [{
+                        "openPopupAction": {
+                            "popup": {
+                                "multiPageMenuRenderer": {
+                                    "header": {
+                                        "activeAccountHeaderRenderer": {
+                                            "accountName": { "simpleText": "Couch Viewer" },
+                                            "accountPhoto": {
+                                                "thumbnails": [
+                                                    { "url": "https://yt3.ggpht.com/s48.jpg", "width": 48 },
+                                                    { "url": "https://yt3.ggpht.com/s176.jpg", "width": 176 }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }]
+                }))
+            }),
+        );
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(listener, mock_oauth).await;
+    });
+
+    let endpoints = YouTubeEndpoints {
+        oauth_device_code_url: format!("http://{addr}/device/code"),
+        oauth_token_url: format!("http://{addr}/token"),
+        innertube_base_url: format!("http://{addr}"),
+        client_id: "test-client".to_string(),
+        client_secret: "test-secret".to_string(),
+    };
+    let yt = YouTubeProvider::with_endpoints(endpoints, vec![], false);
+
+    // 1. Device code normalized to youtube.com/activate
+    let code = yt.start_device_auth().await.expect("start_device_auth");
+    assert_eq!(code.device_code, "dev-code-123");
+    assert_eq!(code.user_code, "ABCD-EFGH");
+    assert_eq!(code.verification_url, "https://www.youtube.com/activate");
+
+    // 2. Poll pending -> slow_down -> authorized
+    assert_eq!(
+        yt.poll_device_token(&code.device_code).await.unwrap(),
+        TokenPollOutcome::Pending
+    );
+    assert_eq!(
+        yt.poll_device_token(&code.device_code).await.unwrap(),
+        TokenPollOutcome::SlowDown
+    );
+    let tok = match yt.poll_device_token(&code.device_code).await.unwrap() {
+        TokenPollOutcome::Authorized(t) => t,
+        other => panic!("expected Authorized, got {other:?}"),
+    };
+    assert_eq!(tok.access_token, "initial-access-token");
+    assert_eq!(tok.refresh_token.as_deref(), Some("initial-refresh-token"));
+
+    // 3. Account info fetch + parser
+    let (name, avatar) = yt.fetch_account_info(&tok.access_token).await.unwrap();
+    assert_eq!(name, "Couch Viewer");
+    assert_eq!(avatar.as_deref(), Some("https://yt3.ggpht.com/s176.jpg"));
+    assert!(parse_account_menu_response("{}").is_none());
+
+    // 4. Transparent refresh within 60s of expiry persists to SQLite
+    let tmp = TempDir::new().unwrap();
+    let db_path = tmp.path().join("melange.db");
+    let db = Database::open(&db_path).unwrap();
+    let profile_id = db.list_profiles().unwrap()[0].id;
+
+    let expiring = YouTubeAccount {
+        profile_id,
+        access_token: "stale-token".to_string(),
+        refresh_token: "initial-refresh-token".to_string(),
+        expires_at: now_unix_secs() + 30,
+        account_name: name,
+        account_avatar_url: avatar,
+        updated_at: String::new(),
+    };
+    db.upsert_youtube_account(&expiring).unwrap();
+
+    let refreshed = yt
+        .ensure_valid_token(Some(&db_path), profile_id, expiring)
+        .await
+        .expect("ensure_valid_token");
+    assert_eq!(refreshed.access_token, "fresh-access-token");
+    assert_eq!(refreshed.refresh_token, "initial-refresh-token");
+    assert!(refreshed.expires_at > now_unix_secs() + 3000);
+
+    let persisted = db.get_youtube_account(profile_id).unwrap().unwrap();
+    assert_eq!(persisted.access_token, "fresh-access-token");
+}

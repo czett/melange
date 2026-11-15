@@ -11,7 +11,10 @@ pub mod server;
 
 pub use audio::{AudioEngine, SoundKind};
 pub use config::{AppConfig, RunMode};
-pub use db::{Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile, WatchHistoryEntry};
+pub use db::{
+    Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile, WatchHistoryEntry,
+    YouTubeAccount, YouTubeAccountSummary,
+};
 pub use error::MelangeError;
 pub use input::{CecHandle, EvdevHandle, GamepadHandle, InputRouter, NavEvent};
 pub use keymap::{KeyAction, KeymapConfig, normalize_key_name};
