@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { sendCommand } from "../bridge/ws";
+import { melangeState, sendCommand } from "../bridge/ws";
 import {
   KEYMAP_FIELDS,
   type KeymapFieldKey,
@@ -11,6 +11,7 @@ import {
   saveKeymap
 } from "../spatial/keymap";
 import { ensureValidFocus, setFocus } from "../spatial/nav";
+import { YouTubeLoginModal } from "./YouTubeLoginModal";
 import { HapticTile } from "./primitives";
 
 interface Profile {
@@ -136,6 +137,22 @@ export function SettingsView(props: SettingsViewProps) {
   const [info, setInfo] = createSignal<CompanionInfo | null>(null);
   const [presets, setPresets] = createSignal<string[]>(DEFAULT_PRESETS);
   const [capturingField, setCapturingField] = createSignal<KeymapFieldKey | null>(null);
+  const [ytModalOpen, setYtModalOpen] = createSignal(false);
+
+  const ytAccount = () => melangeState().youtube_account ?? null;
+
+  const handleYouTubeAccountClick = async () => {
+    if (ytAccount()?.signed_in) {
+      try {
+        await fetch("/api/youtube/auth/logout", { method: "POST" });
+        sendCommand({ type: "PlaySound", sound: "select" });
+      } catch {
+        // ignore
+      }
+      return;
+    }
+    setYtModalOpen(true);
+  };
 
   const stopCapture = () => {
     if (capturingField() !== null) {
@@ -677,11 +694,41 @@ export function SettingsView(props: SettingsViewProps) {
                 <div class="flex items-center gap-3">
                   <span class="h-2 w-2 rounded-full bg-[#DC2626]" />
                   <div>
-                    <div class="text-[15px] font-semibold">YouTube</div>
-                    <div class="row-muted text-[12px] font-medium">Piped On Demand</div>
+                    <div class="text-[15px] font-semibold">YouTube TV</div>
+                    <div class="row-muted text-[12px] font-medium">
+                      Innertube TV · SponsorBlock Auto-Skip
+                    </div>
                   </div>
                 </div>
                 <span class="row-muted text-[13px] font-medium">Browse ›</span>
+              </HapticTile>
+
+              <HapticTile
+                id="settings-prov-youtube-auth"
+                variant="grouped"
+                radius="16px"
+                neighbors={rightRowNeighbors()}
+                onSelect={() => void handleYouTubeAccountClick()}
+                class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class={`h-2 w-2 rounded-full ${
+                      ytAccount()?.signed_in ? "bg-[#22C55E]" : "bg-white/35"
+                    }`}
+                  />
+                  <div>
+                    <div class="text-[15px] font-semibold">YouTube Account</div>
+                    <div class="row-muted text-[12px] font-medium">
+                      {ytAccount()?.signed_in
+                        ? `Signed in as ${ytAccount()!.account_name} (${props.activeProfile?.name ?? "Default"})`
+                        : `Sign in via QR code for ${props.activeProfile?.name ?? "Default"}`}
+                    </div>
+                  </div>
+                </div>
+                <span class="row-muted text-[13px] font-medium">
+                  {ytAccount()?.signed_in ? "Sign out ›" : "Sign in ›"}
+                </span>
               </HapticTile>
 
               <HapticTile
@@ -773,6 +820,20 @@ export function SettingsView(props: SettingsViewProps) {
           </Show>
         </main>
       </div>
+
+      <Show when={ytModalOpen()}>
+        <YouTubeLoginModal
+          onClose={() => {
+            setYtModalOpen(false);
+            requestAnimationFrame(() => setFocus("settings-prov-youtube-auth", false));
+          }}
+          onSuccess={() => {
+            setYtModalOpen(false);
+            sendCommand({ type: "PlaySound", sound: "select" });
+            requestAnimationFrame(() => setFocus("settings-prov-youtube-auth", false));
+          }}
+        />
+      </Show>
     </div>
   );
 }

@@ -18,7 +18,7 @@ import { ScenicBackdrop } from "./components/ScenicBackdrop";
 import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
 import { loadKeymap, resolveBrowserKeyAction } from "./spatial/keymap";
-import { handleSpatialNav, measureFocused, setInputModality } from "./spatial/nav";
+import { handleSpatialNav, measureFocused, runBackHandlers, setInputModality } from "./spatial/nav";
 
 function mapSearchFallbackKey(key: string): NavEvent | null {
   switch (key) {
@@ -59,6 +59,8 @@ export const App = () => {
         if (!handled && ev === "Back") {
           if (state.overlay !== "None") {
             sendCommand({ type: "SetOverlay", overlay: "None" });
+          } else if (runBackHandlers()) {
+            // Consumed by an in-view modal or drill-down state
           } else if (state.mode !== "Home") {
             sendCommand({ type: "SetMode", mode: "Home" });
           } else {

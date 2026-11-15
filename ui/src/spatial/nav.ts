@@ -14,6 +14,26 @@ export interface FocusTarget {
 
 const targets = new Map<string, FocusTarget>();
 const historyStack: string[] = [];
+const backHandlers: Array<() => boolean> = [];
+
+export function registerBackHandler(handler: () => boolean): () => void {
+  backHandlers.push(handler);
+  return () => {
+    const idx = backHandlers.lastIndexOf(handler);
+    if (idx !== -1) {
+      backHandlers.splice(idx, 1);
+    }
+  };
+}
+
+export function runBackHandlers(): boolean {
+  for (let i = backHandlers.length - 1; i >= 0; i--) {
+    if (backHandlers[i]()) {
+      return true;
+    }
+  }
+  return false;
+}
 
 const [inputModality, setInputModalitySignal] = createSignal<InputModality>("pointer");
 const [focusedId, setFocusedId] = createSignal<string | null>(null);

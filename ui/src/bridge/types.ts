@@ -54,10 +54,51 @@ export interface MediaItem {
   subtitle: string | null;
   description: string | null;
   channel_or_author: string;
+  channel_id?: string | null;
   duration_sec: number;
   thumbnail_url: string | null;
   stream_url: string;
   published_at: string | null;
+}
+
+export interface YouTubeAccountSummary {
+  profile_id: number;
+  signed_in: boolean;
+  account_name: string;
+  account_avatar_url?: string | null;
+  expires_at: number;
+}
+
+export interface YouTubeChannelChip {
+  channel_id: string;
+  title: string;
+  avatar_url?: string | null;
+}
+
+export interface YouTubeFeedResponse {
+  items: MediaItem[];
+  channels: YouTubeChannelChip[];
+  channel_title?: string | null;
+  requires_auth: boolean;
+  source: string;
+}
+
+export interface YouTubeAuthStartResponse {
+  session_id: number;
+  profile_id: number;
+  user_code: string;
+  verification_url: string;
+  qr_svg: string;
+  expires_in: number;
+  interval: number;
+}
+
+export interface YouTubeAuthStatusResponse {
+  status: string;
+  account?: YouTubeAccountSummary | null;
+  user_code?: string | null;
+  verification_url?: string | null;
+  error?: string | null;
 }
 
 export interface WatchHistoryEntry {
@@ -107,6 +148,7 @@ export interface MelangeState {
   playback: PlaybackSnapshot;
   digit_buffer: string;
   continue_watching: WatchHistoryEntry[];
+  youtube_account?: YouTubeAccountSummary | null;
 }
 
 export type NavEvent =
