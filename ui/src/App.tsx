@@ -167,20 +167,20 @@ export const App = () => {
         style={{ opacity: backdropOpacity() }}
       />
 
-      {/* Optional profile wallpaper, smoked into the obsidian-garnet backdrop */}
+      {/* Optional profile wallpaper, smoked into the neutral obsidian backdrop */}
       <Show when={showBackdrop() && melangeState().active_profile?.wallpaper_path}>
         {(wp) => (
           <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden">
             <img
               src={wp()}
               alt=""
-              class="h-full w-full scale-105 object-cover opacity-20 mix-blend-luminosity"
+              class="h-full w-full scale-105 object-cover opacity-25 mix-blend-luminosity"
             />
             <div
               class="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(160deg, rgba(10,1,2,0.72) 0%, rgba(18,3,4,0.58) 55%, rgba(8,1,1,0.82) 100%)"
+                  "linear-gradient(160deg, rgba(14,14,18,0.56) 0%, rgba(16,16,20,0.42) 55%, rgba(10,10,14,0.68) 100%)"
               }}
             />
           </div>

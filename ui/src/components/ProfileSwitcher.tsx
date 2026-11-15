@@ -14,7 +14,7 @@ export const ProfileSwitcher = () => {
 
     onCleanup(() => {
       if (melangeState().mode === "Home") {
-        requestAnimationFrame(() => ensureValidFocus("home-live-pill"));
+        requestAnimationFrame(() => ensureValidFocus("dock-livetv"));
       }
     });
   });
@@ -27,14 +27,14 @@ export const ProfileSwitcher = () => {
     >
       <GlassPanel
         variant="heavy"
-        class="relative w-full max-w-md rounded-[26px] p-7"
+        class="relative w-full max-w-md rounded-[24px] bg-[#141418]/[0.65] p-7"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <div class="flex items-start justify-between gap-4">
           <div>
-            <div class="eyebrow">Who&apos;s watching</div>
-            <h2 class="view-title mt-2 text-[28px]">Switch profile</h2>
-            <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.74]">
+            <div class="text-[13px] font-medium text-white/65">Who&apos;s watching</div>
+            <h2 class="view-title mt-1 text-[28px]">Switch profile</h2>
+            <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/70">
               Personal history, favourites and wallpaper follow each profile.
             </p>
           </div>
@@ -43,7 +43,7 @@ export const ProfileSwitcher = () => {
             variant="pill"
             radius="9999px"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
-            class="shrink-0 text-white"
+            class="shrink-0 bg-white/[0.10] text-white"
           >
             ← Back
           </HapticTile>
@@ -61,14 +61,14 @@ export const ProfileSwitcher = () => {
                   radius="16px"
                   active={isActive()}
                   onSelect={() => sendCommand({ type: "SelectProfile", profile_id: profile.id })}
-                  class="flex items-center justify-between rounded-2xl px-4 py-3.5 text-left"
+                  class="flex items-center justify-between rounded-2xl bg-white/[0.10] px-4 py-3.5 text-left"
                 >
                   <div class="flex items-center gap-3.5">
                     <div
                       class={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold ${
                         isActive()
-                          ? "bg-white text-[#120202]"
-                          : "border border-white/15 bg-white/[0.08] text-white"
+                          ? "bg-white text-[#111113]"
+                          : "border border-white/[0.16] bg-white/[0.10] text-white"
                       }`}
                     >
                       {profile.name.slice(0, 1).toUpperCase()}
@@ -77,7 +77,7 @@ export const ProfileSwitcher = () => {
                       <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                         {profile.name}
                       </div>
-                      <div class="text-[12px] font-medium text-white/[0.74]">Local profile</div>
+                      <div class="text-[12px] font-medium text-white/65">Local profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>

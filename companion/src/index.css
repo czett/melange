@@ -5,19 +5,17 @@
 :root {
   --melange-crimson: #e13a26;
   --melange-crimson-hot: #ff5a42;
-  --melange-deep-red: #831613;
-  --melange-edge: #3d0706;
-  --melange-ink: #160303;
+  --melange-ink: #111113;
 
-  --glass-surface: rgba(12, 2, 2, 0.78);
-  --glass-heavy: rgba(10, 1, 2, 0.86);
-  --glass-inner: rgba(10, 1, 1, 0.64);
-  --glass-blur: blur(40px) saturate(155%);
-  --hairline: rgba(255, 255, 255, 0.11);
+  --glass-surface: rgba(255, 255, 255, 0.10);
+  --glass-heavy: rgba(20, 20, 24, 0.65);
+  --glass-inner: rgba(255, 255, 255, 0.08);
+  --glass-blur: blur(44px) saturate(185%);
+  --hairline: rgba(255, 255, 255, 0.16);
   --hairline-focus: rgba(255, 255, 255, 0.92);
   --shadow-ambient:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 20px 50px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 16px 40px rgba(0, 0, 0, 0.35);
   --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
   --dur-geometry: 140ms;
 }
@@ -25,13 +23,16 @@
 body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  background-color: #0a0102;
+  background-color: #0b0b0e;
   color: #ffffff;
   font-family:
     'Plus Jakarta Sans',
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Display',
+    'SF Pro Text',
     'Inter',
     system-ui,
-    -apple-system,
     sans-serif;
   font-weight: 500;
   font-feature-settings: 'ss01', 'cv11';
@@ -55,12 +56,12 @@ body {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #0a0102;
+  background: #0b0b0e;
   contain: strict;
   isolation: isolate;
 }
 
-/* ───────────────────────── Smoky garnet frosted cards ───────────────────────── */
+/* ───────────────────────── Neutral Apple translucent frosted cards ───────────────────────── */
 
 .glass-card {
   position: relative;
@@ -74,11 +75,11 @@ body {
 .glass-inner {
   position: relative;
   background: var(--glass-inner);
-  border: 1px solid var(--hairline);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
-    border-color 150ms ease,
-    background-color 150ms ease;
+    border-color 140ms ease,
+    background-color 140ms ease;
 }
 
 .glass-inner:focus-visible {
@@ -118,24 +119,29 @@ body {
   background: #ffffff;
   color: var(--melange-ink);
   border: none;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .pill-primary:focus-visible {
   box-shadow:
-    0 0 0 2px rgba(15, 2, 2, 0.72),
+    0 0 0 2px rgba(20, 20, 24, 0.72),
     0 0 0 3.5px rgba(255, 255, 255, 0.92);
 }
 
 .pill-secondary {
   padding: 0 1rem;
-  background: rgba(15, 2, 2, 0.58);
-  color: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   font-weight: 500;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+}
+
+.pill-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.26);
 }
 
 .pill-secondary:active,
@@ -147,14 +153,14 @@ body {
 }
 
 .pill:active {
-  transform: scale(0.965);
+  transform: scale(0.97);
 }
 
 .key {
   position: relative;
-  background: rgba(12, 2, 2, 0.72);
-  border: 1.5px solid var(--hairline);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--hairline);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   color: rgba(255, 255, 255, 0.94);
   font-weight: 600;
   transition:
@@ -162,6 +168,10 @@ body {
     background-color 120ms ease,
     border-color 120ms ease,
     color 120ms ease;
+}
+
+.key:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .key:active,
@@ -172,7 +182,7 @@ body {
 }
 
 .key:active {
-  transform: scale(0.965);
+  transform: scale(0.97);
 }
 
 /* ───────────────────────── Navigation & typography helpers ───────────────────────── */
@@ -185,10 +195,10 @@ body {
   height: 3rem;
   padding: 0.25rem;
   border-radius: 9999px;
-  background: rgba(12, 2, 2, 0.84);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: var(--glass-heavy);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(48px) saturate(185%);
+  -webkit-backdrop-filter: blur(48px) saturate(185%);
   box-shadow: var(--shadow-ambient);
 }
 
@@ -198,13 +208,13 @@ body {
   justify-content: center;
   gap: 0.4rem;
   height: 2.25rem;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   border-radius: 9999px;
   background: transparent;
   font-size: 0.8rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.74);
+  color: rgba(255, 255, 255, 0.78);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     color 120ms ease,
@@ -213,12 +223,12 @@ body {
 
 .nav-link[data-active='true'] {
   background: #ffffff;
-  color: #120202;
+  color: var(--melange-ink);
   font-weight: 600;
 }
 
 .nav-link:active {
-  transform: scale(0.965);
+  transform: scale(0.97);
 }
 
 .nav-link:focus-visible {
@@ -253,11 +263,10 @@ body {
 }
 
 .eyebrow {
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 @media (prefers-reduced-motion: reduce) {

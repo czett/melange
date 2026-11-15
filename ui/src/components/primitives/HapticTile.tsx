@@ -1,7 +1,7 @@
 import { createEffect, onCleanup, onMount, type JSX } from "solid-js";
 import { registerFocusable, setFocus } from "../../spatial/nav";
 
-export type HapticTileVariant = "card" | "row" | "pill" | "icon" | "dock" | "key";
+export type HapticTileVariant = "card" | "row" | "pill" | "icon" | "dock" | "key" | "epg" | "grouped";
 
 export interface HapticTileProps {
   id: string;

@@ -71,7 +71,7 @@ function SegmentButton(props: { item: SegmentedItem }) {
           <span
             class={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
               props.item.active
-                ? "bg-[#120202]/12 text-[#120202]"
+                ? "bg-[#111113]/12 text-[#111113]"
                 : "bg-white/10 text-white/80"
             }`}
           >

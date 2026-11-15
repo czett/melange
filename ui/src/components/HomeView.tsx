@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { computeEpgProgress, formatXmltvTime } from "../bridge/epgTime";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus } from "../spatial/nav";
+import { ensureValidFocus, setFocus } from "../spatial/nav";
 import {
   GlassPanel,
   HapticTile,
@@ -17,20 +17,21 @@ export const HomeView = () => {
   onCleanup(() => window.clearInterval(clockTimer));
 
   onMount(() => {
-    requestAnimationFrame(() => ensureValidFocus("home-live-pill"));
+    requestAnimationFrame(() => {
+      setFocus("dock-livetv", false);
+      ensureValidFocus("dock-livetv");
+    });
   });
 
   const formattedTime = () =>
     now().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
 
   const formattedDate = () =>
-    now()
-      .toLocaleDateString([], {
-        weekday: "long",
-        month: "long",
-        day: "numeric"
-      })
-      .toUpperCase();
+    now().toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long"
+    });
 
   const featuredChannel = createMemo(() => {
     const state = melangeState();
@@ -40,19 +41,6 @@ export const HomeView = () => {
       null
     );
   });
-
-  const featuredNowNext = createMemo(() => {
-    const ch = featuredChannel();
-    if (!ch) return null;
-    return melangeState().epg_now_next[ch.tvg_id] ?? null;
-  });
-
-  const livePillLabel = () => {
-    const ch = featuredChannel();
-    if (!ch) return "Open Live TV";
-    const prog = featuredNowNext()?.now?.title;
-    return prog ? `${ch.name} — ${prog}` : ch.name;
-  };
 
   const profileItems = createMemo<SegmentedItem[]>(() => {
     const activeId = melangeState().active_profile?.id;
@@ -79,10 +67,10 @@ export const HomeView = () => {
 
   return (
     <div class="relative flex h-full w-full flex-col justify-between overflow-hidden px-10 py-6 xl:px-14 xl:py-8">
-      {/* Top Bar: Left couch-tv profile segmented pill · Right utility icon tiles */}
+      {/* Top Bar: Left couch-tv profile segmented pill · Right translucent icon buttons */}
       <header class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2 text-white">
+          <div class="flex items-center gap-2 text-white/90">
             <svg
               class="h-[18px] w-[18px]"
               viewBox="0 0 28 20"
@@ -119,7 +107,7 @@ export const HomeView = () => {
             ariaLabel={melangeState().is_fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             title={melangeState().is_fullscreen ? "Exit Fullscreen (F11)" : "Fullscreen (F11)"}
             onSelect={() => sendCommand({ type: "ToggleFullscreen" })}
-            class="h-10 w-10 rounded-full text-white"
+            class="h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <Show
               when={melangeState().is_fullscreen}
@@ -164,7 +152,7 @@ export const HomeView = () => {
             ariaLabel="Settings"
             title="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
-            class="h-10 w-10 rounded-full text-white"
+            class="h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg
               class="h-4 w-4"
@@ -187,7 +175,7 @@ export const HomeView = () => {
             ariaLabel="Power / Leave Menu"
             title="Leave Melange (Esc)"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "LeaveMenu" })}
-            class="h-10 w-10 rounded-full text-white"
+            class="h-10 w-10 rounded-full bg-white/10 text-white hover:bg-white/20"
           >
             <svg
               class="h-4 w-4"
@@ -205,34 +193,23 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Center Stage: Monumental couch-tv lockscreen clock + Now Playing Live Pill */}
+      {/* Center-Top: Monumental couch-tv / iOS Lockscreen Clock */}
       <section class="my-auto flex flex-col items-center justify-center py-2 text-center">
-        <div class="eyebrow hero-text-shadow">{formattedDate()}</div>
-        <div class="lockscreen-clock mt-1.5">{formattedTime()}</div>
-
-        <div class="mt-4">
-          <HapticTile
-            id="home-live-pill"
-            variant="pill"
-            radius="9999px"
-            onSelect={handleWatchLive}
-            class="px-5 text-[13px] font-semibold text-white"
-          >
-            <span class="live-dot" />
-            <span class="text-white/[0.74]">LIVE</span>
-            <span class="max-w-[34ch] truncate text-white">{livePillLabel()}</span>
-            <span class="text-white/75" aria-hidden="true">
-              Watch →
-            </span>
-          </HapticTile>
+        <div class="hero-text-shadow text-[13px] font-medium tracking-[-0.005em] text-white/85">
+          {formattedDate()}
+        </div>
+        <div class="lockscreen-clock mt-1 select-none bg-gradient-to-b from-white via-white/95 to-white/60 bg-clip-text text-[128px] font-light leading-[0.9] tracking-[-0.04em] text-transparent tabular-nums xl:text-[148px]">
+          {formattedTime()}
         </div>
       </section>
 
-      {/* Horizontal Haptic Rows: Keep Watching + Live TV */}
-      <section class="mx-auto flex w-full max-w-[1380px] flex-col gap-3">
+      {/* Horizontal Translucent Glass Rows: Keep watching + Live TV */}
+      <section class="mx-auto flex w-full max-w-[1380px] flex-col gap-3.5">
         <Show when={keepWatchingItems().length > 0}>
           <div>
-            <div class="eyebrow hero-text-shadow mb-1.5 px-1">Keep Watching</div>
+            <div class="hero-text-shadow mb-1.5 px-1 text-[14px] font-medium text-white/90">
+              Keep watching
+            </div>
             <div class="no-scrollbar flex gap-3.5 overflow-x-auto px-1 py-1.5">
               <For each={keepWatchingItems()}>
                 {(cw) => {
@@ -265,21 +242,15 @@ export const HomeView = () => {
                     <HapticTile
                       id={`home-cw-${cw.item_id}`}
                       variant="row"
-                      radius="20px"
+                      radius="18px"
                       onSelect={resumeItem}
-                      class="flex h-[84px] w-[285px] shrink-0 items-center gap-3 rounded-[20px] p-2.5 text-left xl:h-[90px]"
+                      class="flex h-[84px] w-[290px] shrink-0 items-center gap-3.5 rounded-[18px] border border-white/[0.16] bg-white/[0.11] p-2.5 text-left backdrop-blur-3xl"
                     >
-                      <div class="relative h-[62px] w-[86px] shrink-0 overflow-hidden rounded-[12px] border border-white/10 bg-[#140203]">
+                      <div class="relative aspect-video h-full shrink-0 overflow-hidden rounded-[11px] border border-white/[0.14] bg-[#141418]/45">
                         <Show
                           when={cw.thumbnail_url}
                           fallback={
-                            <div
-                              class="flex h-full w-full items-center justify-center text-[13px] font-bold uppercase tracking-[0.12em] text-white/85"
-                              style={{
-                                background:
-                                  "linear-gradient(145deg, rgba(131,22,19,0.72) 0%, rgba(16,2,3,0.95) 100%)"
-                              }}
-                            >
+                            <div class="flex h-full w-full items-center justify-center bg-white/[0.08] text-[13px] font-semibold uppercase tracking-[0.08em] text-white/85">
                               {cw.provider.slice(0, 2)}
                             </div>
                           }
@@ -297,15 +268,18 @@ export const HomeView = () => {
 
                       <div class="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
                         <div>
-                          <div class="truncate text-[13.5px] font-semibold tracking-[-0.015em] text-white">
+                          <div class="truncate text-[14px] font-semibold leading-tight tracking-[-0.015em] text-white">
                             {cw.title}
                           </div>
-                          <div class="mt-0.5 truncate text-[12px] font-medium text-white/[0.74]">
+                          <div class="mt-0.5 truncate text-[12px] font-medium text-white/65">
                             {cw.provider} · {pct()}%
                           </div>
                         </div>
-                        <div class="progress-track">
-                          <div class="progress-fill" style={{ width: `${pct()}%` }} />
+                        <div class="h-[3px] w-full overflow-hidden rounded-full bg-white/20">
+                          <div
+                            class="h-full rounded-full bg-white"
+                            style={{ width: `${pct()}%` }}
+                          />
                         </div>
                       </div>
                     </HapticTile>
@@ -318,8 +292,8 @@ export const HomeView = () => {
 
         <div>
           <div class="mb-1.5 flex items-center justify-between px-1">
-            <span class="eyebrow hero-text-shadow">Live TV</span>
-            <span class="text-[12px] font-medium tabular-nums text-white/[0.72]">
+            <span class="hero-text-shadow text-[14px] font-medium text-white/90">Live TV</span>
+            <span class="text-[12px] font-medium tabular-nums text-white/60">
               {melangeState().channels.length} channels
             </span>
           </div>
@@ -327,8 +301,12 @@ export const HomeView = () => {
           <Show
             when={liveChannels().length > 0}
             fallback={
-              <GlassPanel variant="surface" class="rounded-[20px] px-5 py-4 text-[13px] font-medium text-white/[0.74]">
-                No live channels configured yet. Open Settings or the Companion app to sync your lineup.
+              <GlassPanel
+                variant="surface"
+                class="rounded-[18px] px-5 py-4 text-[13px] font-medium text-white/75"
+              >
+                No live channels configured yet. Open Settings or the Companion app to sync your
+                lineup.
               </GlassPanel>
             }
           >
@@ -355,23 +333,22 @@ export const HomeView = () => {
                     <HapticTile
                       id={`home-ch-${ch.id}`}
                       variant="row"
-                      radius="20px"
+                      radius="18px"
                       active={isActive()}
                       onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
-                      class="flex h-[84px] w-[285px] shrink-0 items-center gap-3 rounded-[20px] p-2.5 text-left xl:h-[90px]"
+                      class="flex h-[84px] w-[290px] shrink-0 items-center gap-3.5 rounded-[18px] border border-white/[0.16] bg-white/[0.11] p-2.5 text-left backdrop-blur-3xl"
                     >
                       <div
-                        class="relative flex h-[62px] w-[86px] shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-white/10"
-                        style={{
-                          background: isActive()
-                            ? "linear-gradient(145deg, rgba(225,58,38,0.68) 0%, rgba(131,22,19,0.85) 100%)"
-                            : "linear-gradient(145deg, rgba(131,22,19,0.52) 0%, rgba(16,2,3,0.92) 100%)"
-                        }}
+                        class={`relative flex aspect-video h-full shrink-0 items-center justify-center overflow-hidden rounded-[11px] border ${
+                          isActive()
+                            ? "border-white/35 bg-white/[0.16]"
+                            : "border-white/[0.14] bg-[#141418]/45"
+                        }`}
                       >
                         <Show
                           when={ch.logo_url}
                           fallback={
-                            <span class="text-[20px] font-bold tracking-[-0.03em] tabular-nums text-white">
+                            <span class="text-[18px] font-semibold tracking-[-0.02em] tabular-nums text-white">
                               {ch.number}
                             </span>
                           }
@@ -380,7 +357,7 @@ export const HomeView = () => {
                             <img
                               src={logo()}
                               alt={ch.name}
-                              class="max-h-10 max-w-[68px] object-contain"
+                              class="max-h-9 max-w-[78px] object-contain"
                               loading="lazy"
                             />
                           )}
@@ -392,19 +369,17 @@ export const HomeView = () => {
 
                       <div class="flex min-w-0 flex-1 flex-col justify-between self-stretch py-0.5">
                         <div>
-                          <div class="flex items-center gap-1.5">
-                            <span class="truncate text-[13.5px] font-semibold tracking-[-0.015em] text-white">
-                              {ch.name}
-                            </span>
+                          <div class="truncate text-[14px] font-semibold leading-tight tracking-[-0.015em] text-white">
+                            {ch.name}
                           </div>
-                          <div class="mt-0.5 truncate text-[12px] font-medium text-white/[0.74]">
+                          <div class="mt-0.5 truncate text-[12px] font-medium text-white/65">
                             {subtitle()}
                           </div>
                         </div>
 
-                        <div class="progress-track">
+                        <div class="h-[3px] w-full overflow-hidden rounded-full bg-white/20">
                           <div
-                            class="progress-fill"
+                            class="h-full rounded-full bg-[#E13A26]"
                             style={{ width: `${nowProg() ? progressPct() : isActive() ? 100 : 0}%` }}
                           />
                         </div>
@@ -418,15 +393,20 @@ export const HomeView = () => {
         </div>
       </section>
 
-      {/* Bottom centered tvOS Squircle App Dock */}
-      <footer class="flex justify-center pt-2">
-        <GlassPanel variant="dock" as="nav" class="flex items-center gap-2 px-3 py-2">
+      {/* Bottom centered tvOS / couch-tv App Dock */}
+      <footer class="flex justify-center pt-5">
+        <GlassPanel
+          variant="dock"
+          as="nav"
+          class="flex items-center gap-2.5 rounded-[24px] border border-white/[0.18] bg-white/[0.11] p-2 backdrop-blur-3xl"
+        >
           <HapticTile
             id="dock-livetv"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="Live TV"
             onSelect={handleWatchLive}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon
               app="LiveTv"
@@ -439,9 +419,10 @@ export const HomeView = () => {
           <HapticTile
             id="dock-epg"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="Program Guide"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon
               app="FullEpg"
@@ -454,9 +435,10 @@ export const HomeView = () => {
           <HapticTile
             id="dock-mediathek"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="Mediathek"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Mediathek" })}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon app="Mediathek" label="Mediathek" focusId="dock-mediathek" />
           </HapticTile>
@@ -464,9 +446,10 @@ export const HomeView = () => {
           <HapticTile
             id="dock-youtube"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="YouTube"
             onSelect={() => sendCommand({ type: "SetMode", mode: "YouTube" })}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon app="YouTube" label="YouTube" focusId="dock-youtube" />
           </HapticTile>
@@ -474,9 +457,10 @@ export const HomeView = () => {
           <HapticTile
             id="dock-media"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="Media"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Media" })}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon app="Media" label="Media" focusId="dock-media" />
           </HapticTile>
@@ -484,9 +468,10 @@ export const HomeView = () => {
           <HapticTile
             id="dock-settings"
             variant="dock"
-            radius="18px"
+            radius="14px"
+            ariaLabel="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
-            class="rounded-[18px] px-1.5 py-1"
+            class="group relative"
           >
             <SquircleIcon app="Settings" label="Settings" focusId="dock-settings" />
           </HapticTile>

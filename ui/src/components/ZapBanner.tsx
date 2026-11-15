@@ -63,10 +63,13 @@ export const ZapBanner = () => {
         transform: isVisible() ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)"
       }}
     >
-      <GlassPanel variant="heavy" class="w-full max-w-4xl rounded-[24px] px-7 py-5">
+      <GlassPanel
+        variant="heavy"
+        class="w-full max-w-4xl rounded-[24px] bg-[#141418]/[0.65] px-7 py-5"
+      >
         <div class="flex items-center justify-between gap-6">
           <div class="flex items-center gap-5">
-            <div class="flex h-12 min-w-[3.25rem] items-center justify-center rounded-2xl border border-white/15 bg-white/[0.08] px-3 text-2xl font-bold tracking-[-0.035em] tabular-nums text-white">
+            <div class="flex h-12 min-w-[3.25rem] items-center justify-center rounded-2xl border border-white/[0.16] bg-white/[0.10] px-3 text-2xl font-bold tracking-[-0.035em] tabular-nums text-white">
               {melangeState().digit_buffer || melangeState().playback.channel_number || "—"}
             </div>
             <div>
@@ -92,13 +95,13 @@ export const ZapBanner = () => {
                   </span>
                 </Show>
               </div>
-              <p class="eyebrow mt-1">
+              <p class="mt-0.5 text-[13px] font-medium text-white/65">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
           </div>
 
-          <div class="text-right text-[12px] font-medium tabular-nums text-white/[0.78]">
+          <div class="text-right text-[12px] font-medium tabular-nums text-white/75">
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
@@ -116,9 +119,9 @@ export const ZapBanner = () => {
             </p>
             <Show when={nowNext()?.next}>
               {(next) => (
-                <p class="shrink-0 text-[12px] font-medium text-white/[0.74]">
+                <p class="shrink-0 text-[12px] font-medium text-white/70">
                   Next: <span class="font-semibold text-white">{next().title}</span>{" "}
-                  <span class="tabular-nums text-white/[0.66]">
+                  <span class="tabular-nums text-white/60">
                     ({formatXmltvTime(next().start_time)})
                   </span>
                 </p>

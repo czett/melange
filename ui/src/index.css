@@ -16,9 +16,12 @@ body,
   color: var(--text-primary);
   font-family:
     "Plus Jakarta Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    "SF Pro Text",
     "Inter",
     system-ui,
-    -apple-system,
     sans-serif;
   font-weight: 500;
   font-feature-settings: "ss01", "cv11";

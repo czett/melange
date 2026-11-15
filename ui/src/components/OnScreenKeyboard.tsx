@@ -58,15 +58,15 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
     >
       <GlassPanel
         variant="heavy"
-        class="flex w-full max-w-3xl flex-col gap-5 rounded-[26px] p-7"
+        class="flex w-full max-w-3xl flex-col gap-5 rounded-[24px] bg-[#141418]/[0.65] p-7"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <div class="flex items-center justify-between gap-4">
-          <div class="eyebrow">Search</div>
-          <div class="chip font-semibold">Type or D-pad + OK</div>
+          <div class="text-[14px] font-medium text-white/85">Search</div>
+          <div class="chip font-medium">Type or D-pad + OK</div>
         </div>
 
-        <div class="flex min-h-[3.25rem] items-center justify-between rounded-2xl border border-white/15 bg-[rgba(10,1,2,0.7)] px-5 py-3 text-lg font-semibold tracking-[-0.02em] text-white">
+        <div class="flex min-h-[3.25rem] items-center justify-between rounded-2xl border border-white/[0.16] bg-white/[0.08] px-5 py-3 text-lg font-semibold tracking-[-0.02em] text-white">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>
@@ -104,7 +104,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={() => props.onChange(props.value + " ")}
-              class="text-white"
+              class="bg-white/[0.10] text-white"
             >
               Space
             </HapticTile>
@@ -113,7 +113,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={backspace}
-              class="text-white"
+              class="bg-white/[0.10] text-white"
             >
               Backspace
             </HapticTile>
@@ -122,7 +122,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={clear}
-              class="text-white"
+              class="bg-white/[0.10] text-white"
             >
               Clear
             </HapticTile>
@@ -140,7 +140,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               variant="pill"
               radius="9999px"
               onSelect={props.onClose}
-              class="text-white"
+              class="bg-white/[0.10] text-white"
             >
               Cancel
             </HapticTile>

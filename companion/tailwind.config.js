@@ -8,23 +8,32 @@ export default {
           crimson: '#E13A26',
           hot: '#FF5A42',
           deep: '#831613',
-          edge: '#3D0706',
-          ink: '#160303',
+          ink: '#111113',
         },
-        garnet: {
-          glass: 'rgba(15, 2, 2, 0.76)',
-          inner: 'rgba(10, 1, 1, 0.62)',
+        obsidian: {
+          glass: 'rgba(255, 255, 255, 0.10)',
+          heavy: 'rgba(20, 20, 24, 0.62)',
+          inner: 'rgba(255, 255, 255, 0.08)',
         },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: [
+          'Plus Jakarta Sans',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Display',
+          'SF Pro Text',
+          'Inter',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       letterSpacing: {
         display: '-0.035em',
         editorial: '-0.02em',
       },
       boxShadow: {
-        ambient: '0 14px 36px rgba(15, 2, 2, 0.42)',
+        ambient: '0 16px 40px rgba(0, 0, 0, 0.35)',
       },
       transitionTimingFunction: {
         spring: 'cubic-bezier(0.22, 1, 0.36, 1)',

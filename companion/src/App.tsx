@@ -194,7 +194,7 @@ export default function App() {
             when={statusMsg()}
             fallback={<span class="eyebrow">Companion</span>}
           >
-            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold tracking-[-0.01em] text-[#120202]">
+            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold tracking-[-0.01em] text-[#111113]">
               {statusMsg()}
             </span>
           </Show>
@@ -239,7 +239,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-bold tracking-[-0.01em] text-[#120202] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#120202]/60 active:scale-95"
+                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-bold tracking-[-0.01em] text-[#111113] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#141418]/60 active:scale-95"
                 >
                   OK
                 </button>
@@ -423,7 +423,7 @@ export default function App() {
                       fallback={
                         <div class="flex items-center justify-between gap-3">
                           <div class="flex items-center gap-3">
-                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-[#120202]">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-[#111113]">
                               {p.name.slice(0, 1).toUpperCase()}
                             </span>
                             <div>

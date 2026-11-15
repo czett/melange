@@ -73,16 +73,16 @@ export function PlayerOsd() {
       <div class="pointer-events-none fixed inset-x-0 bottom-0 z-30 p-8">
         <GlassPanel
           variant="heavy"
-          class="pointer-events-auto mx-auto flex max-w-4xl flex-col gap-4 rounded-[24px] px-7 py-5"
+          class="pointer-events-auto mx-auto flex max-w-4xl flex-col gap-4 rounded-[24px] bg-[#141418]/[0.65] px-7 py-5"
           onClick={(e: MouseEvent) => e.stopPropagation()}
         >
           <div class="flex items-center justify-between gap-4">
             <div class="min-w-0">
-              <div class="eyebrow flex items-center gap-2 truncate">
+              <div class="flex items-center gap-2 truncate text-[13px] font-medium text-white/70">
                 <span class="live-dot" />
                 <span>{playback().subtitle ?? "On Demand"}</span>
               </div>
-              <div class="mt-1.5 truncate text-[22px] font-semibold leading-tight tracking-[-0.03em] text-white">
+              <div class="mt-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.03em] text-white">
                 {playback().title ?? "Playing"}
               </div>
             </div>
@@ -93,7 +93,7 @@ export function PlayerOsd() {
                 variant="pill"
                 radius="9999px"
                 onSelect={() => seek(-15)}
-                class="tabular-nums text-white"
+                class="bg-white/[0.10] tabular-nums text-white"
               >
                 -15s
               </HapticTile>
@@ -112,7 +112,7 @@ export function PlayerOsd() {
                 variant="pill"
                 radius="9999px"
                 onSelect={() => seek(30)}
-                class="tabular-nums text-white"
+                class="bg-white/[0.10] tabular-nums text-white"
               >
                 +30s
               </HapticTile>
@@ -121,7 +121,7 @@ export function PlayerOsd() {
                 variant="pill"
                 radius="9999px"
                 onSelect={() => sendCommand({ type: "SetMode", mode: "Home" })}
-                class="text-white"
+                class="bg-white/[0.10] text-white"
               >
                 ← Back
               </HapticTile>
@@ -129,7 +129,7 @@ export function PlayerOsd() {
           </div>
 
           <div class="flex items-center gap-4">
-            <span class="w-14 text-right text-[12px] font-semibold tabular-nums text-white/[0.86]">
+            <span class="w-14 text-right text-[12px] font-semibold tabular-nums text-white/85">
               {formatTime(playback().position_sec)}
             </span>
             <div class="progress-track flex-1">
@@ -138,7 +138,7 @@ export function PlayerOsd() {
                 style={{ width: `${progressPct()}%` }}
               />
             </div>
-            <span class="w-14 text-[12px] font-medium tabular-nums text-white/[0.74]">
+            <span class="w-14 text-[12px] font-medium tabular-nums text-white/70">
               {formatTime(playback().duration_sec)}
             </span>
           </div>

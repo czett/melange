@@ -30,7 +30,7 @@ function categoryBadge(
 ): string {
   const raw = (item.channel_or_author || "").trim();
   if (raw.length > 0) return raw;
-  return provider === "local" ? "LOCAL MEDIA" : fallback;
+  return provider === "local" ? "Local Media" : fallback;
 }
 
 export function OnDemandView(props: OnDemandViewProps) {
@@ -162,7 +162,7 @@ export function OnDemandView(props: OnDemandViewProps) {
       <header class="mb-7 flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-3">
           <div class="flex items-center gap-3">
-            <div class="eyebrow">{props.subtitle}</div>
+            <div class="text-[13px] font-medium text-white/65">{props.subtitle}</div>
             <SegmentedPill items={providerTabs()} />
           </div>
           <h1 class="view-title">{props.title}</h1>
@@ -174,7 +174,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             variant="pill"
             radius="9999px"
             onSelect={openKeyboard}
-            class="min-w-[15rem] justify-between text-white"
+            class="min-w-[15rem] justify-between bg-white/[0.10] text-white"
           >
             <span class="flex min-w-0 items-center gap-2">
               <svg
@@ -190,9 +190,7 @@ export function OnDemandView(props: OnDemandViewProps) {
               </svg>
               <span class="truncate">{query() ? query() : "Search"}</span>
             </span>
-            <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">
-              OK
-            </span>
+            <span class="text-[11px] font-medium text-white/60">OK</span>
           </HapticTile>
 
           <HapticTile
@@ -200,7 +198,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             variant="pill"
             radius="9999px"
             onSelect={() => void loadFeed(props.provider)}
-            class="text-white"
+            class="bg-white/[0.10] text-white"
           >
             Refresh
           </HapticTile>
@@ -210,7 +208,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             variant="pill"
             radius="9999px"
             onSelect={props.onBack}
-            class="text-white"
+            class="bg-white/[0.10] text-white"
           >
             ← Home
           </HapticTile>
@@ -222,11 +220,11 @@ export function OnDemandView(props: OnDemandViewProps) {
           <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
             <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>
               {() => (
-                <GlassPanel variant="heavy" class="animate-pulse overflow-hidden rounded-[20px]">
-                  <div class="aspect-video w-full bg-white/[0.04]" />
+                <GlassPanel variant="surface" class="animate-pulse overflow-hidden rounded-[20px]">
+                  <div class="aspect-video w-full bg-white/[0.06]" />
                   <div class="space-y-2.5 p-4">
-                    <div class="h-2.5 w-20 rounded-full bg-white/10" />
-                    <div class="h-3.5 w-4/5 rounded-full bg-white/[0.14]" />
+                    <div class="h-2.5 w-20 rounded-full bg-white/15" />
+                    <div class="h-3.5 w-4/5 rounded-full bg-white/20" />
                   </div>
                 </GlassPanel>
               )}
@@ -236,15 +234,18 @@ export function OnDemandView(props: OnDemandViewProps) {
 
         <Show when={!loading() && errorMsg()}>
           {(err) => (
-            <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
+            <GlassPanel
+              variant="heavy"
+              class="max-w-xl rounded-[24px] bg-[#141418]/[0.65] p-7"
+            >
               <div class="flex items-center gap-2">
                 <span class="live-dot" />
-                <span class="eyebrow">Feed unavailable</span>
+                <span class="text-[13px] font-medium text-white/70">Feed unavailable</span>
               </div>
-              <div class="mt-3 text-lg font-semibold tracking-[-0.02em] text-white">
+              <div class="mt-2.5 text-lg font-semibold tracking-[-0.02em] text-white">
                 Failed to load {props.title}
               </div>
-              <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.74]">
+              <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/70">
                 {err()}
               </div>
             </GlassPanel>
@@ -252,11 +253,14 @@ export function OnDemandView(props: OnDemandViewProps) {
         </Show>
 
         <Show when={!loading() && !errorMsg() && items().length === 0}>
-          <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
+          <GlassPanel
+            variant="heavy"
+            class="max-w-xl rounded-[24px] bg-[#141418]/[0.65] p-7"
+          >
             <div class="text-lg font-semibold tracking-[-0.02em] text-white">
               No items available
             </div>
-            <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.74]">
+            <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/70">
               {props.provider === "local"
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : "No results returned. Check your network connection or try a different search."}
@@ -273,32 +277,26 @@ export function OnDemandView(props: OnDemandViewProps) {
                   variant="card"
                   radius="20px"
                   onSelect={() => playItem(item)}
-                  class="flex h-full flex-col overflow-hidden rounded-[20px] text-left"
+                  class="flex h-full flex-col overflow-hidden rounded-[20px] bg-white/[0.10] text-left"
                 >
                   <Show
                     when={item.thumbnail_url}
                     fallback={
                       <div class="flex h-full w-full flex-col justify-between overflow-hidden">
-                        <div
-                          class="relative flex aspect-video w-full flex-col justify-between overflow-hidden p-4"
-                          style={{
-                            background:
-                              "linear-gradient(138deg, rgba(131,22,19,0.58) 0%, rgba(28,4,5,0.92) 55%, rgba(10,1,2,0.98) 100%)"
-                          }}
-                        >
+                        <div class="relative flex aspect-video w-full flex-col justify-between overflow-hidden bg-gradient-to-br from-white/[0.14] via-white/[0.06] to-[#141418]/75 p-4">
                           <div class="flex items-center justify-between gap-2">
-                            <span class="chip max-w-[68%] truncate font-semibold uppercase tracking-[0.12em] text-white/90">
+                            <span class="chip max-w-[68%] truncate text-white/90">
                               {categoryBadge(item, props.provider, props.subtitle)}
                             </span>
                             <Show when={item.duration_sec > 0}>
-                              <span class="chip shrink-0 font-semibold tabular-nums text-white/85">
+                              <span class="chip shrink-0 tabular-nums text-white/90">
                                 {formatDuration(item.duration_sec)}
                               </span>
                             </Show>
                           </div>
                           <div class="flex items-center gap-2">
-                            <span class="h-[3px] w-10 rounded-full bg-[#E13A26]" />
-                            <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                            <span class="h-[3px] w-8 rounded-full bg-white/50" />
+                            <span class="text-[12px] font-medium capitalize text-white/65">
                               {props.provider}
                             </span>
                           </div>
@@ -309,7 +307,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                             {item.title}
                           </div>
                           <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-1 text-[12px] font-medium text-white/[0.74]">
+                            <div class="line-clamp-1 text-[12px] font-medium text-white/65">
                               {item.subtitle || item.description}
                             </div>
                           </Show>
@@ -319,7 +317,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                   >
                     {(thumb) => (
                       <>
-                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#0E0202]">
+                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#141418]/60">
                           <img
                             src={thumb()}
                             alt={item.title}
@@ -330,18 +328,18 @@ export function OnDemandView(props: OnDemandViewProps) {
                             class="pointer-events-none absolute inset-0"
                             style={{
                               background:
-                                "linear-gradient(180deg, transparent 52%, rgba(10,1,2,0.78) 100%)"
+                                "linear-gradient(180deg, transparent 54%, rgba(0, 0, 0, 0.56) 100%)"
                             }}
                           />
                           <Show when={item.duration_sec > 0}>
-                            <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(10,1,2,0.84)] font-semibold tabular-nums text-white backdrop-blur-md">
+                            <span class="chip absolute bottom-2.5 right-2.5 border-white/[0.18] bg-[#141418]/[0.76] tabular-nums text-white backdrop-blur-md">
                               {formatDuration(item.duration_sec)}
                             </span>
                           </Show>
                         </div>
 
                         <div class="flex flex-col gap-1 px-4 py-3.5">
-                          <div class="truncate text-[12px] font-medium text-white/[0.74]">
+                          <div class="truncate text-[12px] font-medium text-white/65">
                             {item.channel_or_author}
                             <Show when={item.subtitle}>
                               <span> · {item.subtitle}</span>

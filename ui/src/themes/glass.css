@@ -1,49 +1,52 @@
 /*
- * melange — Optical Fluted Glass design system
+ * melange — Neutral Apple / couch-tv Translucent Glass design system
  *
  * Rules:
  *  - Zero neon glows and zero double-border focus rings.
- *  - Surfaces are smoky translucent garnet frosted glass, never bright opaque red fills.
- *  - #E13A26 is reserved for live dots, 2px progress bars, and the refracted light field.
- *  - Focus feedback is single-layer and tactile: clean inversion, subtle fill, or 1px hairline.
+ *  - UI chrome is neutral smoky-white / obsidian translucent glass; color comes
+ *    from the atmospheric fluted light field behind and real media artwork.
+ *  - #E13A26 is reserved for live dots, 2px/3px live progress bars, and the
+ *    refracted background light field.
+ *  - Focus feedback is single-layer and tactile: snappy 140ms tvOS scale lift,
+ *    neutral white glass brightening, and crisp 1px white rim.
  */
 :root {
-  /* Light field palette */
+  /* Semantic Accent & Ink */
   --melange-crimson: #e13a26;
   --melange-crimson-hot: #ff5a42;
-  --melange-deep-red: #831613;
-  --melange-edge: #3d0706;
-  --melange-ink: #160303;
+  --melange-ink: #111113;
 
-  /* Ink */
+  /* Typography Ink */
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.74);
   --text-muted: rgba(255, 255, 255, 0.58);
 
-  /* Optical smoky garnet frosted glass */
-  --glass-surface: rgba(12, 2, 2, 0.78);
-  --glass-heavy: rgba(10, 1, 2, 0.86);
-  --glass-dock: rgba(14, 2, 3, 0.82);
-  --glass-surface-home: rgba(12, 2, 2, 0.78);
-  --glass-surface-focus: rgba(26, 4, 5, 0.90);
-  --glass-inner: rgba(10, 1, 1, 0.62);
-  --glass-inner-focus: rgba(255, 255, 255, 0.1);
-  --modal-scrim: rgba(6, 1, 1, 0.88);
-  --glass-blur: blur(40px) saturate(155%);
-  --glass-blur-heavy: blur(48px) saturate(160%);
-  --glass-blur-dock: blur(44px) saturate(165%);
-  --hairline: rgba(255, 255, 255, 0.11);
-  --hairline-heavy: rgba(255, 255, 255, 0.13);
+  /* Neutral Apple / couch-tv Translucent Glass */
+  --glass-surface: rgba(255, 255, 255, 0.09);
+  --glass-heavy: rgba(20, 20, 24, 0.62);
+  --glass-dock: rgba(255, 255, 255, 0.11);
+  --glass-focus: rgba(255, 255, 255, 0.18);
+  --glass-inner: rgba(255, 255, 255, 0.08);
+  --modal-scrim: rgba(10, 10, 14, 0.56);
+
+  --glass-blur: blur(44px) saturate(185%);
+  --glass-blur-heavy: blur(56px) saturate(190%);
+  --glass-blur-dock: blur(48px) saturate(185%);
+
+  --hairline: rgba(255, 255, 255, 0.16);
+  --hairline-heavy: rgba(255, 255, 255, 0.18);
   --hairline-focus: rgba(255, 255, 255, 0.92);
+
   --shadow-ambient:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 20px 50px rgba(0, 0, 0, 0.55);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 16px 40px rgba(0, 0, 0, 0.35);
   --shadow-heavy:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    0 24px 64px rgba(0, 0, 0, 0.65);
-  --shadow-dock:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 56px rgba(0, 0, 0, 0.62);
+    0 24px 64px rgba(0, 0, 0, 0.48);
+  --shadow-dock:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 20px 48px rgba(0, 0, 0, 0.42);
+  --shadow-focus: 0 20px 48px rgba(0, 0, 0, 0.48);
 
   /* Motion */
   --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -57,30 +60,28 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #0a0102;
+  background: #0b0b0e;
   contain: strict;
   isolation: isolate;
 }
 
-/* LiveTv HUD over raw libmpv video: top/bottom vignette only. */
+/* LiveTv HUD over raw libmpv video: neutral top/bottom vignette only. */
 .video-scrim {
   background: linear-gradient(
     180deg,
-    rgba(14, 2, 2, 0.4) 0%,
-    rgba(14, 2, 2, 0) 26%,
-    rgba(14, 2, 2, 0) 64%,
-    rgba(14, 2, 2, 0.62) 100%
+    rgba(10, 10, 14, 0.38) 0%,
+    rgba(10, 10, 14, 0) 26%,
+    rgba(10, 10, 14, 0) 64%,
+    rgba(10, 10, 14, 0.62) 100%
   );
 }
 
-/* Modal scrim for overlays (EPG, keyboard, profile switcher) — zero bleed-through. */
+/* Modal scrim for overlays (EPG, keyboard, profile switcher). */
 .modal-scrim {
   background: var(--modal-scrim);
-  backdrop-filter: blur(36px) saturate(140%);
-  -webkit-backdrop-filter: blur(36px) saturate(140%);
+  backdrop-filter: blur(40px) saturate(165%);
+  -webkit-backdrop-filter: blur(40px) saturate(165%);
 }
-
-/* ───────────────────────── Surfaces ───────────────────────── */
 
 /* ───────────────────────── Unified Primitives ───────────────────────── */
 
@@ -110,41 +111,50 @@
   background: var(--glass-dock);
   backdrop-filter: var(--glass-blur-dock);
   -webkit-backdrop-filter: var(--glass-blur-dock);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   box-shadow: var(--shadow-dock);
-  border-radius: 30px;
+  border-radius: 24px;
 }
 
 .glass-panel--scrim {
   background: var(--modal-scrim);
-  backdrop-filter: blur(40px) saturate(145%);
-  -webkit-backdrop-filter: blur(40px) saturate(145%);
+  backdrop-filter: blur(40px) saturate(165%);
+  -webkit-backdrop-filter: blur(40px) saturate(165%);
 }
 
-/* Snappy tvOS haptic tile (140ms tactile physics, single-layer 1.5px rim) */
+/* Snappy tvOS haptic tile (140ms tactile physics, crisp 1px rim) */
 .haptic-tile {
   position: relative;
-  background: rgba(12, 2, 2, 0.72);
-  border: 1.5px solid rgba(255, 255, 255, 0.11);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ambient);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     background-color 120ms ease,
     border-color 120ms ease,
+    box-shadow 120ms ease,
     color 120ms ease;
   will-change: transform;
 }
 
+.haptic-tile:not([data-focused="true"]):hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
 .haptic-tile[data-focused="true"] {
   transform: scale(1.045);
+  background: var(--glass-focus);
   border-color: var(--hairline-focus);
-  background: var(--glass-surface-focus);
+  box-shadow: var(--shadow-focus);
   z-index: 2;
 }
 
 .haptic-tile[data-pressed="true"],
 .haptic-tile:active {
-  transform: scale(0.965);
+  transform: scale(0.97);
 }
 
 .haptic-tile--pill {
@@ -155,6 +165,7 @@
   height: 2.25rem;
   padding: 0 1rem;
   border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.10);
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
@@ -163,46 +174,129 @@
 
 .haptic-tile--pill[data-active="true"] {
   background: #ffffff;
-  color: #120202;
+  color: var(--melange-ink);
   border-color: #ffffff;
 }
 
 .haptic-tile--pill[data-active="true"][data-focused="true"] {
   background: #ffffff;
-  color: #120202;
+  color: var(--melange-ink);
   border-color: #ffffff;
-  transform: scale(1.055);
+  transform: scale(1.045);
+  box-shadow: var(--shadow-focus);
 }
 
 .haptic-tile--icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.haptic-tile--icon:not([data-focused="true"]):hover {
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.haptic-tile--icon[data-focused="true"] {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: var(--hairline-focus);
+  transform: scale(1.06);
+  box-shadow: var(--shadow-focus);
 }
 
 .haptic-tile--dock {
+  width: 82px;
+  height: 52px;
+  padding: 0;
+  border-radius: 14px;
   background: transparent;
-  border: 1.5px solid transparent;
-  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.34);
+}
+
+.haptic-tile--dock:not([data-focused="true"]):hover {
+  transform: scale(1.05);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.60);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.44);
+  z-index: 4;
 }
 
 .haptic-tile--dock[data-focused="true"] {
-  background: rgba(255, 255, 255, 0.10);
+  transform: scale(1.08);
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.52);
+  z-index: 5;
+}
+
+.haptic-tile--dock[data-pressed="true"],
+.haptic-tile--dock:active {
+  transform: scale(0.97);
+}
+
+.haptic-tile--epg {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+.haptic-tile--epg:not([data-focused="true"]):hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.haptic-tile--epg[data-focused="true"] {
+  transform: scale(1.012);
+  background: rgba(255, 255, 255, 0.18);
   border-color: var(--hairline-focus);
-  transform: scale(1.075);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.92),
+    0 10px 24px rgba(0, 0, 0, 0.34);
+  z-index: 3;
+}
+
+.haptic-tile--grouped {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.haptic-tile--grouped:not([data-focused="true"]):hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.haptic-tile--grouped[data-focused="true"] {
+  transform: scale(1.015);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: var(--hairline-focus);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+  z-index: 3;
 }
 
 .haptic-tile--key {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.94);
   font-weight: 600;
 }
 
 .haptic-tile--key[data-focused="true"] {
   background: #ffffff;
   border-color: #ffffff;
-  color: #120202;
+  color: var(--melange-ink);
   transform: scale(1.055);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.42);
 }
 
 /* Segmented capsule switcher (couch-tv style) */
@@ -212,11 +306,13 @@
   gap: 0.25rem;
   padding: 0.25rem;
   border-radius: 9999px;
-  background: rgba(12, 2, 2, 0.80);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(32px) saturate(150%);
-  -webkit-backdrop-filter: blur(32px) saturate(150%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    0 12px 32px rgba(0, 0, 0, 0.30);
 }
 
 .segmented-item {
@@ -227,13 +323,13 @@
   height: 1.875rem;
   padding: 0 0.875rem;
   border-radius: 9999px;
-  border: 1.5px solid transparent;
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.76);
-  background: transparent;
+  color: rgba(255, 255, 255, 0.80);
+  background: rgba(255, 255, 255, 0.10);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     background-color 120ms ease,
@@ -243,23 +339,28 @@
 
 .segmented-item[data-active="true"] {
   background: #ffffff;
-  color: #120202;
+  color: var(--melange-ink);
   font-weight: 600;
+}
+
+.segmented-item:not([data-active="true"]):hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 .segmented-item[data-focused="true"] {
   border-color: var(--hairline-focus);
-  transform: scale(1.04);
+  transform: scale(1.045);
 }
 
 .segmented-item:not([data-active="true"])[data-focused="true"] {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.20);
   color: #ffffff;
 }
 
 .segmented-item[data-pressed="true"],
 .segmented-item:active {
-  transform: scale(0.965);
+  transform: scale(0.97);
 }
 
 /* Static meta chip (non-interactive) */
@@ -270,12 +371,12 @@
   height: 1.5rem;
   padding: 0 0.625rem;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.90);
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -286,7 +387,7 @@
   background: #ffffff;
 }
 
-/* ───────────────────────── Indicators ───────────────────────── */
+/* ───────────────────────── Indicators & Typography ───────────────────────── */
 
 .progress-track {
   position: relative;
@@ -294,7 +395,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .progress-fill {
@@ -324,21 +425,27 @@
 }
 
 .eyebrow {
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .lockscreen-clock {
-  font-weight: 700;
-  font-size: clamp(4.75rem, 9.2vw, 7.75rem);
-  line-height: 0.95;
-  letter-spacing: -0.05em;
+  font-weight: 300;
+  font-size: clamp(6.5rem, 11vw, 9.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  color: #ffffff;
-  text-shadow: 0 8px 32px rgba(8, 1, 1, 0.68);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.95) 55%,
+    rgba(255, 255, 255, 0.60) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .view-title {
@@ -350,7 +457,7 @@
 }
 
 .hero-text-shadow {
-  text-shadow: 0 2px 16px rgba(8, 1, 1, 0.65);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
 }
 
 /* ───────────────────────── Fallback spatial focus reticle ───────────────────────── */
@@ -361,7 +468,7 @@
   left: 0;
   pointer-events: none;
   z-index: 60;
-  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.92);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     width var(--dur-geometry) var(--ease-spring),

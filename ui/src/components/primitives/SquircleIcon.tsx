@@ -16,25 +16,25 @@ export interface SquircleIconProps {
   active?: boolean;
 }
 
-const APP_STYLES: Record<SquircleApp, { gradient: string; accent?: boolean }> = {
+const APP_STYLES: Record<SquircleApp, { background: string; accent?: boolean }> = {
   LiveTv: {
-    gradient: "linear-gradient(145deg, #E13A26 0%, #831613 68%, #2B0505 100%)",
+    background: "linear-gradient(155deg, #F04A34 0%, #E13A26 56%, #B42314 100%)",
     accent: true
   },
   FullEpg: {
-    gradient: "linear-gradient(145deg, #9E1E19 0%, #520C0A 65%, #1D0304 100%)"
+    background: "linear-gradient(155deg, #3D3D42 0%, #2C2C2E 58%, #1C1C1E 100%)"
   },
   Mediathek: {
-    gradient: "linear-gradient(145deg, #B5281C 0%, #65100E 65%, #240405 100%)"
+    background: "linear-gradient(155deg, #2E96FF 0%, #0A84FF 56%, #0066D6 100%)"
   },
   YouTube: {
-    gradient: "linear-gradient(145deg, #E13A26 0%, #6D110F 65%, #220404 100%)"
+    background: "linear-gradient(155deg, #FF1F4B 0%, #FF0033 56%, #CC0029 100%)"
   },
   Media: {
-    gradient: "linear-gradient(145deg, #6E1514 0%, #370808 65%, #160203 100%)"
+    background: "linear-gradient(155deg, #7472F2 0%, #5E5CE6 56%, #4543C6 100%)"
   },
   Settings: {
-    gradient: "linear-gradient(145deg, #4B1011 0%, #240607 65%, #110203 100%)"
+    background: "linear-gradient(155deg, #3D3D42 0%, #2C2C2E 58%, #1C1C1E 100%)"
   }
 };
 
@@ -47,7 +47,7 @@ function AppGlyph(props: { app: SquircleApp }) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.9"
           stroke-linecap="round"
           stroke-linejoin="round"
         >
@@ -63,12 +63,12 @@ function AppGlyph(props: { app: SquircleApp }) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.9"
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <rect x="3" y="4" width="18" height="16" rx="3" />
-          <path d="M8 9h8M8 13h5M8 17h3" />
+          <rect x="3" y="4.5" width="18" height="15" rx="3" />
+          <path d="M7.5 9.5h9M7.5 13h6M7.5 16.5h3.5" />
         </svg>
       );
     case "Mediathek":
@@ -78,27 +78,19 @@ function AppGlyph(props: { app: SquircleApp }) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.9"
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14" />
-          <path d="M9 17V7l7 5-7 5Z" fill="currentColor" stroke="none" />
+          <rect x="3.5" y="4.5" width="17" height="15" rx="3.5" />
+          <polygon points="10,8.5 16.2,12 10,15.5" fill="currentColor" stroke="none" />
         </svg>
       );
     case "YouTube":
       return (
-        <svg
-          class="h-6 w-6 text-white"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect x="2.5" y="5.5" width="19" height="13" rx="4" />
-          <polygon points="10,9 16,12 10,15" fill="currentColor" stroke="none" />
+        <svg class="h-7 w-9" viewBox="0 0 36 26" fill="none">
+          <rect x="2" y="2" width="32" height="22" rx="6.5" fill="#FFFFFF" />
+          <polygon points="15,8.5 24,13 15,17.5" fill="#FF0033" />
         </svg>
       );
     case "Media":
@@ -108,12 +100,12 @@ function AppGlyph(props: { app: SquircleApp }) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.9"
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-          <path d="M10.5 11.5 15 14l-4.5 2.5v-5Z" fill="currentColor" stroke="none" />
+          <path d="M3.5 7.5a2.2 2.2 0 0 1 2.2-2.2h4l2 2h6.6a2.2 2.2 0 0 1 2.2 2.2v7.3a2.2 2.2 0 0 1-2.2 2.2H5.7a2.2 2.2 0 0 1-2.2-2.2V7.5Z" />
+          <polygon points="10.5,11 15.2,13.5 10.5,16" fill="currentColor" stroke="none" />
         </svg>
       );
     case "Settings":
@@ -123,7 +115,7 @@ function AppGlyph(props: { app: SquircleApp }) {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          stroke-width="2"
+          stroke-width="1.85"
           stroke-linecap="round"
           stroke-linejoin="round"
         >
@@ -139,31 +131,35 @@ export function SquircleIcon(props: SquircleIconProps) {
   const spec = () => APP_STYLES[props.app];
 
   return (
-    <div class="flex flex-col items-center gap-1.5 px-1 py-0.5">
+    <div class="relative h-full w-full">
+      {/* Floating tvOS tooltip pill above tile on focus or hover */}
+      <span
+        class={`pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/[0.18] bg-[#141418]/[0.82] px-3 py-1 text-[11.5px] font-medium tracking-[-0.01em] text-white shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-all duration-150 ${
+          focused()
+            ? "translate-y-0 opacity-100"
+            : "translate-y-1 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+        }`}
+      >
+        {props.label}
+      </span>
+
+      {/* Full-bleed 82x52 rounded-[14px] app tile */}
       <div
-        class="relative flex h-[50px] w-[66px] items-center justify-center rounded-[16px] border border-white/[0.18]"
+        class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[13px]"
         style={{
-          background: spec().gradient,
-          "box-shadow":
-            "inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 10px 24px rgba(0, 0, 0, 0.48)"
+          background: spec().background,
+          "box-shadow": "inset 0 1px 0 rgba(255, 255, 255, 0.28)"
         }}
       >
         <AppGlyph app={props.app} />
         <Show when={props.active || spec().accent}>
           <span
             class={`absolute right-2 top-2 h-1.5 w-1.5 rounded-full ${
-              props.active ? "bg-[#FEED65]" : "bg-white/60"
+              props.active ? "bg-white" : "bg-white/55"
             }`}
           />
         </Show>
       </div>
-      <span
-        class={`text-[11px] font-semibold leading-none tracking-[-0.01em] transition-colors duration-150 ${
-          focused() || props.active ? "text-white" : "text-white/[0.74]"
-        }`}
-      >
-        {props.label}
-      </span>
     </div>
   );
 }
