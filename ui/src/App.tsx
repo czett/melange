@@ -159,6 +159,16 @@ export const App = () => {
           if (state.mode === "Mediathek" || state.mode === "YouTube") {
             sendCommand({ type: "SetOverlay", overlay: "SearchKeyboard" });
           }
+        } else if (
+          state.mode === "LiveTv" &&
+          state.overlay === "None" &&
+          (action === "Left" || action === "Right")
+        ) {
+          sendCommand({
+            type: "SeekRelative",
+            offset_sec: action === "Left" ? -10 : 10
+          });
+          sendCommand({ type: "SetOverlay", overlay: "PlayerOsd" });
         } else {
           emitLocalNavEvent(action);
         }

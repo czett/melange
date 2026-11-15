@@ -484,6 +484,7 @@ fn handle_shell_command(
             sponsor_tracker.borrow_mut().reset(None);
             let snap = {
                 let mut ctrl = controller.borrow_mut();
+                let _ = ctrl.backend_mut().set_playback_speed(1.0);
                 let target_number = ctrl
                     .channels()
                     .iter()
@@ -515,8 +516,15 @@ fn handle_shell_command(
             sponsor_tracker
                 .borrow_mut()
                 .reset(Some(item.id.clone()));
+            let snap = state_manager.snapshot();
             let res = {
                 let mut ctrl = controller.borrow_mut();
+                let _ = ctrl
+                    .backend_mut()
+                    .set_max_quality(&snap.playback.max_quality);
+                let _ = ctrl
+                    .backend_mut()
+                    .set_playback_speed(snap.playback.playback_speed);
                 ctrl.backend_mut().play_url_at(&item.stream_url, start_position_sec)
             };
             if let Err(err) = res {
@@ -533,8 +541,49 @@ fn handle_shell_command(
                 let mut ctrl = controller.borrow_mut();
                 ctrl.backend_mut().seek_relative(offset_sec)
             };
+            match res {
+                Ok(()) => {
+                    let (pos, dur, paused) = controller.borrow().backend().playback_progress();
+                    state_manager.update_playback_progress(pos, dur, paused);
+                }
+                Err(err) => error!(error = %err, "failed to seek"),
+            }
+        }
+        ShellCommand::SetPlaybackSpeed { speed } => {
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                ctrl.backend_mut().set_playback_speed(speed)
+            };
             if let Err(err) = res {
-                error!(error = %err, "failed to seek");
+                error!(error = %err, speed, "failed to set playback speed");
+            }
+        }
+        ShellCommand::SetMaxQuality { quality } => {
+            let snap = state_manager.snapshot();
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                if let Err(err) = ctrl.backend_mut().set_max_quality(&quality) {
+                    Err(err)
+                } else if let Some(ref item) = snap.playback.current_media {
+                    let (live_pos, _, _) = ctrl.backend().playback_progress();
+                    let resume_pos = if live_pos > 0.5 {
+                        live_pos
+                    } else {
+                        snap.playback.position_sec
+                    };
+                    let reload_res = ctrl.backend_mut().play_url_at(&item.stream_url, resume_pos);
+                    if reload_res.is_ok() && (snap.playback.playback_speed - 1.0).abs() > 0.01 {
+                        let _ = ctrl
+                            .backend_mut()
+                            .set_playback_speed(snap.playback.playback_speed);
+                    }
+                    reload_res
+                } else {
+                    Ok(())
+                }
+            };
+            if let Err(err) = res {
+                error!(error = %err, %quality, "failed to apply max quality");
             }
         }
         ShellCommand::TogglePause => {
@@ -567,6 +616,7 @@ fn handle_shell_command(
         ShellCommand::StopPlayback => {
             sponsor_tracker.borrow_mut().reset(None);
             let mut ctrl = controller.borrow_mut();
+            let _ = ctrl.backend_mut().set_playback_speed(1.0);
             if let Err(err) = ctrl.stop() {
                 error!(error = %err, "failed to stop playback");
             }

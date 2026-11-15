@@ -1002,3 +1002,467 @@ async fn test_sponsorblock_fetch_timeout_and_play_media_hook() {
         Some("Skipped sponsor segment")
     );
 }
+
+#[test]
+fn test_innertube_continuation_and_playlist_parsing() {
+    use melange_core::providers::youtube::parse_innertube_browse_full;
+
+    // 1. Continuation token + video items
+    let feed_with_cont = r#"{
+        "contents": {
+            "twoColumnBrowseResultsRenderer": {
+                "tabs": [{
+                    "tabRenderer": {
+                        "content": {
+                            "richGridRenderer": {
+                                "contents": [
+                                    {
+                                        "richItemRenderer": {
+                                            "content": {
+                                                "videoRenderer": {
+                                                    "videoId": "contVid1",
+                                                    "title": { "simpleText": "First Chunk Video" },
+                                                    "lengthText": { "simpleText": "10:00" }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    {
+                                        "continuationItemRenderer": {
+                                            "continuationEndpoint": {
+                                                "continuationCommand": {
+                                                    "token": "4qmFsgI_NEXT_CHUNK_TOKEN"
+                                                }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }]
+            }
+        }
+    }"#;
+
+    let parsed = parse_innertube_browse_full(feed_with_cont, true).expect("parse cont");
+    assert_eq!(parsed.items.len(), 1);
+    assert_eq!(parsed.items[0].id, "yt:contVid1");
+    assert_eq!(
+        parsed.next_continuation.as_deref(),
+        Some("4qmFsgI_NEXT_CHUNK_TOKEN")
+    );
+
+    // 2. Playlists extraction across tileRenderer, gridPlaylistRenderer, and lockupViewModel
+    let playlists_fixture = r#"{
+        "contents": {
+            "tvSurfaceContentRenderer": {
+                "content": {
+                    "sectionListRenderer": {
+                        "contents": [
+                            {
+                                "tileRenderer": {
+                                    "contentId": "WL",
+                                    "contentType": "TILE_CONTENT_TYPE_PLAYLIST",
+                                    "header": {
+                                        "tileHeaderRenderer": {
+                                            "thumbnail": {
+                                                "thumbnails": [{ "url": "https://i.ytimg.com/vi/wl1/hq720.jpg", "width": 1280 }]
+                                            },
+                                            "thumbnailOverlays": [
+                                                { "thumbnailOverlaySidePanelRenderer": { "text": { "simpleText": "18 videos" } } }
+                                            ]
+                                        }
+                                    },
+                                    "metadata": {
+                                        "tileMetadataRenderer": {
+                                            "title": { "simpleText": "Watch Later" }
+                                        }
+                                    },
+                                    "onSelectCommand": {
+                                        "browseEndpoint": { "browseId": "VLWL" }
+                                    }
+                                }
+                            },
+                            {
+                                "gridPlaylistRenderer": {
+                                    "playlistId": "LL",
+                                    "title": { "simpleText": "Liked videos" },
+                                    "videoCountText": { "runs": [{ "text": "42 videos" }] },
+                                    "thumbnail": {
+                                        "thumbnails": [{ "url": "https://i.ytimg.com/vi/ll1/hqdefault.jpg", "width": 480 }]
+                                    }
+                                }
+                            },
+                            {
+                                "lockupViewModel": {
+                                    "contentId": "PLcustom999",
+                                    "contentType": "LOCKUP_CONTENT_TYPE_PLAYLIST",
+                                    "metadata": {
+                                        "lockupMetadataViewModel": {
+                                            "title": { "content": "Documentaries" }
+                                        }
+                                    },
+                                    "contentImage": {
+                                        "collectionThumbnailViewModel": {
+                                            "primaryThumbnail": {
+                                                "thumbnailViewModel": {
+                                                    "image": {
+                                                        "sources": [{ "url": "https://i.ytimg.com/vi/doc1/hq720.jpg", "width": 1280 }]
+                                                    },
+                                                    "overlays": [{
+                                                        "thumbnailOverlayBadgeViewModel": {
+                                                            "thumbnailBadges": [{
+                                                                "thumbnailBadgeViewModel": {
+                                                                    "text": "9 videos"
+                                                                }
+                                                            }]
+                                                        }
+                                                    }]
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "rendererContext": {
+                                        "commandContext": {
+                                            "onTap": {
+                                                "innertubeCommand": {
+                                                    "browseEndpoint": { "browseId": "VLPLcustom999" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }"#;
+
+    let pl_parsed = parse_innertube_browse_full(playlists_fixture, true).expect("parse playlists");
+    assert!(pl_parsed.items.is_empty());
+    assert_eq!(pl_parsed.playlists.len(), 3);
+    assert_eq!(pl_parsed.playlists[0].playlist_id, "WL");
+    assert_eq!(pl_parsed.playlists[0].title, "Watch Later");
+    assert_eq!(
+        pl_parsed.playlists[0].item_count.as_deref(),
+        Some("18 videos")
+    );
+    assert_eq!(pl_parsed.playlists[1].playlist_id, "LL");
+    assert_eq!(pl_parsed.playlists[1].title, "Liked videos");
+    assert_eq!(pl_parsed.playlists[2].playlist_id, "PLcustom999");
+    assert_eq!(pl_parsed.playlists[2].title, "Documentaries");
+    assert_eq!(
+        pl_parsed.playlists[2].item_count.as_deref(),
+        Some("9 videos")
+    );
+
+    // 3. Playlist detail browse parses playlistVideoRenderer + playlistHeaderRenderer title
+    let playlist_detail_fixture = r#"{
+        "header": {
+            "playlistHeaderRenderer": {
+                "title": { "simpleText": "Documentaries" }
+            }
+        },
+        "contents": {
+            "playlistVideoListRenderer": {
+                "contents": [
+                    {
+                        "playlistVideoRenderer": {
+                            "videoId": "plItem1",
+                            "title": { "runs": [{ "text": "Ocean Abyss" }] },
+                            "shortBylineText": { "runs": [{ "text": "ARTEde" }] },
+                            "lengthText": { "simpleText": "52:10" }
+                        }
+                    },
+                    {
+                        "continuationItemRenderer": {
+                            "continuationEndpoint": {
+                                "continuationCommand": { "token": "PL_CONT_2" }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }"#;
+
+    let detail = parse_innertube_browse_full(playlist_detail_fixture, true).expect("parse detail");
+    assert_eq!(detail.header_title.as_deref(), Some("Documentaries"));
+    assert_eq!(detail.items.len(), 1);
+    assert_eq!(detail.items[0].id, "yt:plItem1");
+    assert_eq!(detail.items[0].duration_sec, 3130);
+    assert_eq!(detail.next_continuation.as_deref(), Some("PL_CONT_2"));
+}
+
+#[tokio::test]
+async fn test_youtube_continuation_and_playlists_http_routes() {
+    use axum::{Router, routing::post};
+    use melange_core::YouTubeAccount;
+    use melange_core::providers::youtube::{YouTubeEndpoints, YouTubeFeedResponse};
+
+    let mock_yt = Router::new().route(
+        "/youtubei/v1/browse",
+        post(|axum::Json(body): axum::Json<serde_json::Value>| async move {
+            if let Some(cont) = body.get("continuation").and_then(|v| v.as_str())
+                && cont == "TOK_PAGE_2"
+            {
+                return axum::Json(serde_json::json!({
+                        "onResponseReceivedActions": [{
+                            "appendContinuationItemsAction": {
+                                "continuationItems": [
+                                    {
+                                        "tileRenderer": {
+                                            "contentId": "page2Vid",
+                                            "metadata": {
+                                                "tileMetadataRenderer": {
+                                                    "title": { "simpleText": "Page 2 Video" }
+                                                }
+                                            },
+                                            "onSelectCommand": {
+                                                "watchEndpoint": { "videoId": "page2Vid" }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        }]
+                    }));
+            }
+
+            let browse_id = body["browseId"].as_str().unwrap_or("");
+            match browse_id {
+                "FEplaylist_aggregation" => axum::Json(serde_json::json!({
+                    "contents": {
+                        "tileRenderer": {
+                            "contentId": "WL",
+                            "contentType": "TILE_CONTENT_TYPE_PLAYLIST",
+                            "metadata": {
+                                "tileMetadataRenderer": {
+                                    "title": { "simpleText": "Watch Later" }
+                                }
+                            },
+                            "onSelectCommand": {
+                                "browseEndpoint": { "browseId": "VLWL" }
+                            }
+                        }
+                    }
+                })),
+                "VLWL" => axum::Json(serde_json::json!({
+                    "header": {
+                        "playlistHeaderRenderer": {
+                            "title": { "simpleText": "Watch Later" }
+                        }
+                    },
+                    "contents": {
+                        "playlistVideoRenderer": {
+                            "videoId": "wlVideo1",
+                            "title": { "simpleText": "Saved For Later" },
+                            "lengthText": { "simpleText": "14:20" }
+                        }
+                    }
+                })),
+                _ => axum::Json(serde_json::json!({
+                    "contents": {
+                        "sectionListRenderer": {
+                            "contents": [
+                                {
+                                    "tileRenderer": {
+                                        "contentId": "page1Vid",
+                                        "metadata": {
+                                            "tileMetadataRenderer": {
+                                                "title": { "simpleText": "Page 1 Video" }
+                                            }
+                                        },
+                                        "onSelectCommand": {
+                                            "watchEndpoint": { "videoId": "page1Vid" }
+                                        }
+                                    }
+                                },
+                                {
+                                    "continuationItemRenderer": {
+                                        "continuationEndpoint": {
+                                            "continuationCommand": { "token": "TOK_PAGE_2" }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                })),
+            }
+        }),
+    );
+
+    let mock_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let mock_addr = mock_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(mock_listener, mock_yt).await;
+    });
+
+    let tmp = TempDir::new().unwrap();
+    let db_path = tmp.path().join("melange.db");
+    let db = Database::open(&db_path).unwrap();
+    let profiles = db.list_profiles().unwrap();
+    let pid = profiles[0].id;
+
+    let state = StateManager::new(profiles, vec![], vec![], Arc::new(AudioEngine::noop()));
+    state.attach_db_path(db_path.clone());
+    state.set_youtube_provider(Arc::new(YouTubeProvider::with_endpoints(
+        YouTubeEndpoints {
+            innertube_base_url: format!("http://{mock_addr}"),
+            ..Default::default()
+        },
+        vec![],
+        false,
+    )));
+
+    let app_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let app_addr = app_listener.local_addr().unwrap();
+    let ui_dir = tmp.path().to_path_buf();
+    tokio::spawn(async move {
+        let _ = serve_on_listener(app_listener, state, &ui_dir).await;
+    });
+
+    let client = reqwest::Client::new();
+
+    // Unauthenticated playlists requires auth
+    let pl_unauth: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=playlists"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(pl_unauth.requires_auth);
+
+    // Seed signed-in YouTube account
+    db.upsert_youtube_account(&YouTubeAccount {
+        profile_id: pid,
+        access_token: "valid-token".to_string(),
+        refresh_token: "refresh-token".to_string(),
+        expires_at: melange_core::providers::youtube::now_unix_secs() + 3600,
+        account_name: "Tester".to_string(),
+        account_avatar_url: None,
+        updated_at: String::new(),
+    })
+    .unwrap();
+
+    // Fetch For You + continuation chunk
+    let page1: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=foryou"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(page1.items[0].id, "yt:page1Vid");
+    assert_eq!(page1.next_continuation.as_deref(), Some("TOK_PAGE_2"));
+
+    let page2: YouTubeFeedResponse = client
+        .get(format!(
+            "http://{app_addr}/api/youtube/feed?tab=foryou&continuation=TOK_PAGE_2"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(page2.items.len(), 1);
+    assert_eq!(page2.items[0].id, "yt:page2Vid");
+    assert!(page2.next_continuation.is_none());
+
+    // Fetch Playlists + drill into Watch Later playlist
+    let playlists_resp: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=playlists"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(!playlists_resp.requires_auth);
+    assert_eq!(playlists_resp.playlists.len(), 1);
+    assert_eq!(playlists_resp.playlists[0].playlist_id, "WL");
+
+    let wl_detail: YouTubeFeedResponse = client
+        .get(format!(
+            "http://{app_addr}/api/youtube/feed?tab=playlist&playlist_id=WL"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(wl_detail.channel_title.as_deref(), Some("Watch Later"));
+    assert_eq!(wl_detail.items.len(), 1);
+    assert_eq!(wl_detail.items[0].id, "yt:wlVideo1");
+}
+
+#[test]
+fn test_playback_speed_quality_commands_and_direct_seek_nav() {
+    use melange_core::{AppMode, ClientCommand, NavEvent, OverlayKind, ShellCommand};
+
+    let state = StateManager::new(vec![], vec![], vec![], Arc::new(AudioEngine::noop()));
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.attach_shell_sender(tx);
+
+    // Defaults
+    let init = state.snapshot();
+    assert_eq!(init.playback.playback_speed, 1.0);
+    assert_eq!(init.playback.max_quality, "auto");
+
+    // SetPlaybackSpeed updates snapshot + emits ShellCommand (and clamps out-of-range)
+    state.apply_client_command(ClientCommand::SetPlaybackSpeed { speed: 1.5 });
+    assert_eq!(state.snapshot().playback.playback_speed, 1.5);
+    match rx.try_recv().unwrap() {
+        ShellCommand::SetPlaybackSpeed { speed } => assert_eq!(speed, 1.5),
+        other => panic!("expected SetPlaybackSpeed, got {other:?}"),
+    }
+
+    state.apply_client_command(ClientCommand::SetPlaybackSpeed { speed: 10.0 });
+    assert_eq!(state.snapshot().playback.playback_speed, 4.0);
+    let _ = rx.try_recv();
+
+    // SetMaxQuality normalizes & emits ShellCommand
+    state.apply_client_command(ClientCommand::SetMaxQuality {
+        quality: "1080p".to_string(),
+    });
+    assert_eq!(state.snapshot().playback.max_quality, "1080p");
+    match rx.try_recv().unwrap() {
+        ShellCommand::SetMaxQuality { quality } => assert_eq!(quality, "1080p"),
+        other => panic!("expected SetMaxQuality, got {other:?}"),
+    }
+
+    state.apply_client_command(ClientCommand::SetMaxQuality {
+        quality: "invalid".to_string(),
+    });
+    assert_eq!(state.snapshot().playback.max_quality, "auto");
+    let _ = rx.try_recv();
+
+    // Direct Left/Right seek when mode == LiveTv and overlay == None
+    state.set_mode(AppMode::LiveTv);
+    assert_eq!(state.snapshot().overlay, OverlayKind::None);
+
+    state.handle_nav_event(NavEvent::Left);
+    assert_eq!(state.snapshot().overlay, OverlayKind::PlayerOsd);
+    match rx.try_recv().unwrap() {
+        ShellCommand::SeekRelative { offset_sec } => assert_eq!(offset_sec, -10.0),
+        other => panic!("expected SeekRelative(-10), got {other:?}"),
+    }
+
+    // Reset overlay to None and test Right (+10s)
+    state.set_overlay(OverlayKind::None);
+    state.handle_nav_event(NavEvent::Right);
+    assert_eq!(state.snapshot().overlay, OverlayKind::PlayerOsd);
+    match rx.try_recv().unwrap() {
+        ShellCommand::SeekRelative { offset_sec } => assert_eq!(offset_sec, 10.0),
+        other => panic!("expected SeekRelative(10), got {other:?}"),
+    }
+}

@@ -7,9 +7,14 @@ import {
   onCleanup,
   onMount
 } from "solid-js";
-import type { MediaItem, YouTubeChannelChip, YouTubeFeedResponse } from "../bridge/types";
+import type {
+  MediaItem,
+  YouTubeChannelChip,
+  YouTubeFeedResponse,
+  YouTubePlaylistItem
+} from "../bridge/types";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, registerBackHandler, setFocus } from "../spatial/nav";
+import { ensureValidFocus, focusedId, registerBackHandler, setFocus } from "../spatial/nav";
 import { OnScreenKeyboard } from "./OnScreenKeyboard";
 import { YouTubeLoginModal } from "./YouTubeLoginModal";
 import { GlassPanel, HapticTile, SegmentedPill, type SegmentedItem } from "./primitives";
@@ -21,7 +26,7 @@ interface OnDemandViewProps {
   onBack: () => void;
 }
 
-type YouTubeTab = "foryou" | "subscriptions" | "history" | "search";
+type YouTubeTab = "foryou" | "subscriptions" | "playlists" | "history" | "search";
 
 function youtubeTabLabel(tab: YouTubeTab): string {
   switch (tab) {
@@ -29,6 +34,8 @@ function youtubeTabLabel(tab: YouTubeTab): string {
       return "For You";
     case "subscriptions":
       return "Subscriptions";
+    case "playlists":
+      return "Playlists";
     case "history":
       return "History";
     case "search":
@@ -151,6 +158,9 @@ function editorialPosterTheme(
 export function OnDemandView(props: OnDemandViewProps) {
   const [items, setItems] = createSignal<MediaItem[]>([]);
   const [channels, setChannels] = createSignal<YouTubeChannelChip[]>([]);
+  const [playlists, setPlaylists] = createSignal<YouTubePlaylistItem[]>([]);
+  const [nextContinuation, setNextContinuation] = createSignal<string | null>(null);
+  const [loadingMore, setLoadingMore] = createSignal(false);
   const [requiresAuth, setRequiresAuth] = createSignal(false);
   const [loading, setLoading] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal<string | null>(null);
@@ -160,7 +170,13 @@ export function OnDemandView(props: OnDemandViewProps) {
   const [activeChannel, setActiveChannel] = createSignal<{ id: string; title: string } | null>(
     null
   );
+  const [activePlaylist, setActivePlaylist] = createSignal<{ id: string; title: string } | null>(
+    null
+  );
   const [loginModalOpen, setLoginModalOpen] = createSignal(false);
+
+  let loadSeq = 0;
+  let scrollContainerRef: HTMLDivElement | undefined;
 
   const keyboardOpen = () => melangeState().overlay === "SearchKeyboard";
   const ytAccount = () => melangeState().youtube_account ?? null;
@@ -176,29 +192,51 @@ export function OnDemandView(props: OnDemandViewProps) {
     );
   };
 
-  const loadYouTubeTab = async (tab: YouTubeTab, channelOverride?: { id: string; title: string } | null) => {
+  const loadYouTubeTab = async (
+    tab: YouTubeTab,
+    channelOverride?: { id: string; title: string } | null,
+    playlistOverride?: { id: string; title: string } | null
+  ) => {
     const channel = channelOverride !== undefined ? channelOverride : activeChannel();
-    if (!channel && tab === "search" && query().trim()) {
+    const playlist = playlistOverride !== undefined ? playlistOverride : activePlaylist();
+    if (!channel && !playlist && tab === "search" && query().trim()) {
       await runSearch(query());
       return;
     }
 
+    const seq = ++loadSeq;
     setLoading(true);
+    setLoadingMore(false);
+    setNextContinuation(null);
     setErrorMsg(null);
     setRequiresAuth(false);
 
     try {
-      const url = channel
-        ? `/api/youtube/feed?tab=channel&channel_id=${encodeURIComponent(channel.id)}`
-        : `/api/youtube/feed?tab=${encodeURIComponent(tab === "search" ? "foryou" : tab)}`;
+      let url: string;
+      if (channel) {
+        url = `/api/youtube/feed?tab=channel&channel_id=${encodeURIComponent(channel.id)}`;
+      } else if (playlist) {
+        url = `/api/youtube/feed?tab=playlist&playlist_id=${encodeURIComponent(playlist.id)}`;
+      } else {
+        url = `/api/youtube/feed?tab=${encodeURIComponent(tab === "search" ? "foryou" : tab)}`;
+      }
+
       const res = await fetch(url);
+      if (seq !== loadSeq) return;
+
       if (res.ok) {
         const data = (await res.json()) as YouTubeFeedResponse;
+        if (seq !== loadSeq) return;
         setItems(data.items ?? []);
         setChannels(data.channels ?? []);
+        setPlaylists(data.playlists ?? []);
+        setNextContinuation(data.next_continuation ?? null);
         setRequiresAuth(Boolean(data.requires_auth));
         if (channel && data.channel_title && data.channel_title !== channel.title) {
           setActiveChannel({ id: channel.id, title: data.channel_title });
+        }
+        if (playlist && data.channel_title && data.channel_title !== playlist.title) {
+          setActivePlaylist({ id: playlist.id, title: data.channel_title });
         }
       } else {
         let detail = `HTTP ${res.status}`;
@@ -208,29 +246,109 @@ export function OnDemandView(props: OnDemandViewProps) {
         } catch {
           // ignore
         }
+        if (seq !== loadSeq) return;
         setErrorMsg(detail);
         setItems([]);
         setChannels([]);
+        setPlaylists([]);
       }
     } catch (err) {
+      if (seq !== loadSeq) return;
       setErrorMsg(err instanceof Error ? err.message : "Network error");
       setItems([]);
       setChannels([]);
+      setPlaylists([]);
     } finally {
-      setLoading(false);
-      requestAnimationFrame(() => {
-        if (loginModalOpen()) return;
-        const first = items()[0];
-        if (first) {
-          ensureValidFocus(`od-item-${first.id}`);
-        } else if (requiresAuth()) {
-          ensureValidFocus("yt-subs-signin");
-        } else if (channel) {
-          ensureValidFocus("yt-channel-back");
-        } else {
-          ensureValidFocus("od-back");
-        }
-      });
+      if (seq === loadSeq) {
+        setLoading(false);
+        requestAnimationFrame(() => {
+          if (loginModalOpen()) return;
+          const firstPl = playlists()[0];
+          const first = items()[0];
+          if (tab === "playlists" && !playlist && !channel && firstPl) {
+            ensureValidFocus(`yt-pl-${firstPl.playlist_id}`);
+          } else if (first) {
+            ensureValidFocus(`od-item-${first.id}`);
+          } else if (requiresAuth()) {
+            ensureValidFocus("yt-subs-signin");
+          } else if (playlist) {
+            ensureValidFocus("yt-playlist-back");
+          } else if (channel) {
+            ensureValidFocus("yt-channel-back");
+          } else {
+            ensureValidFocus("od-back");
+          }
+        });
+      }
+    }
+  };
+
+  const loadMoreContinuation = async () => {
+    const token = nextContinuation();
+    if (props.provider !== "youtube" || !token || loading() || loadingMore()) {
+      return;
+    }
+
+    const seq = loadSeq;
+    const effectiveTab = activePlaylist()
+      ? "playlist"
+      : activeChannel()
+        ? "channel"
+        : ytTab() === "search"
+          ? "foryou"
+          : ytTab();
+
+    setLoadingMore(true);
+    try {
+      const res = await fetch(
+        `/api/youtube/feed?tab=${encodeURIComponent(effectiveTab)}&continuation=${encodeURIComponent(token)}`
+      );
+      if (seq !== loadSeq) return;
+      if (!res.ok) {
+        setNextContinuation(null);
+        return;
+      }
+      const data = (await res.json()) as YouTubeFeedResponse;
+      if (seq !== loadSeq) return;
+
+      const incomingItems = data.items ?? [];
+      if (incomingItems.length > 0) {
+        setItems((prev) => {
+          const seen = new Set(prev.map((i) => i.id));
+          const merged = [...prev];
+          for (const item of incomingItems) {
+            if (!seen.has(item.id)) {
+              seen.add(item.id);
+              merged.push(item);
+            }
+          }
+          return merged;
+        });
+      }
+
+      const incomingPlaylists = data.playlists ?? [];
+      if (incomingPlaylists.length > 0) {
+        setPlaylists((prev) => {
+          const seen = new Set(prev.map((p) => p.playlist_id));
+          const merged = [...prev];
+          for (const pl of incomingPlaylists) {
+            if (!seen.has(pl.playlist_id)) {
+              seen.add(pl.playlist_id);
+              merged.push(pl);
+            }
+          }
+          return merged;
+        });
+      }
+
+      const nextTok = data.next_continuation ?? null;
+      setNextContinuation(nextTok && nextTok !== token ? nextTok : null);
+    } catch {
+      // Keep current items on transient continuation errors
+    } finally {
+      if (seq === loadSeq) {
+        setLoadingMore(false);
+      }
     }
   };
 
@@ -240,14 +358,20 @@ export function OnDemandView(props: OnDemandViewProps) {
       return;
     }
 
+    const seq = ++loadSeq;
     setLoading(true);
+    setLoadingMore(false);
+    setNextContinuation(null);
     setErrorMsg(null);
     setChannels([]);
+    setPlaylists([]);
     setRequiresAuth(false);
     try {
       const res = await fetch(`/api/ondemand/feed?provider=${encodeURIComponent(provider)}`);
+      if (seq !== loadSeq) return;
       if (res.ok) {
         const data = (await res.json()) as MediaItem[];
+        if (seq !== loadSeq) return;
         setItems(data);
       } else {
         let detail = `HTTP ${res.status}`;
@@ -257,18 +381,22 @@ export function OnDemandView(props: OnDemandViewProps) {
         } catch {
           // ignore
         }
+        if (seq !== loadSeq) return;
         setErrorMsg(detail);
         setItems([]);
       }
     } catch (err) {
+      if (seq !== loadSeq) return;
       setErrorMsg(err instanceof Error ? err.message : "Network error");
       setItems([]);
     } finally {
-      setLoading(false);
-      requestAnimationFrame(() => {
-        const first = items()[0];
-        ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
-      });
+      if (seq === loadSeq) {
+        setLoading(false);
+        requestAnimationFrame(() => {
+          const first = items()[0];
+          ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
+        });
+      }
     }
   };
 
@@ -279,6 +407,7 @@ export function OnDemandView(props: OnDemandViewProps) {
       if (props.provider === "youtube") {
         setYtTab("foryou");
         setActiveChannel(null);
+        setActivePlaylist(null);
       }
       await loadFeed(props.provider);
       return;
@@ -287,18 +416,25 @@ export function OnDemandView(props: OnDemandViewProps) {
     if (props.provider === "youtube") {
       setYtTab("search");
       setActiveChannel(null);
+      setActivePlaylist(null);
       setChannels([]);
+      setPlaylists([]);
+      setNextContinuation(null);
       setRequiresAuth(false);
     }
 
+    const seq = ++loadSeq;
     setLoading(true);
+    setLoadingMore(false);
     setErrorMsg(null);
     try {
       const res = await fetch(
         `/api/ondemand/search?provider=${encodeURIComponent(props.provider)}&q=${encodeURIComponent(trimmed)}`
       );
+      if (seq !== loadSeq) return;
       if (res.ok) {
         const data = (await res.json()) as MediaItem[];
+        if (seq !== loadSeq) return;
         setItems(data);
       } else {
         let detail = `HTTP ${res.status}`;
@@ -308,40 +444,58 @@ export function OnDemandView(props: OnDemandViewProps) {
         } catch {
           // ignore
         }
+        if (seq !== loadSeq) return;
         setErrorMsg(detail);
         setItems([]);
       }
     } catch (err) {
+      if (seq !== loadSeq) return;
       setErrorMsg(err instanceof Error ? err.message : "Network error");
       setItems([]);
     } finally {
-      setLoading(false);
-      requestAnimationFrame(() => {
-        const first = items()[0];
-        ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
-      });
+      if (seq === loadSeq) {
+        setLoading(false);
+        requestAnimationFrame(() => {
+          const first = items()[0];
+          ensureValidFocus(first ? `od-item-${first.id}` : "od-back");
+        });
+      }
     }
   };
 
   const selectYouTubeTab = (tab: YouTubeTab) => {
     setActiveChannel(null);
+    setActivePlaylist(null);
     if (tab === "search") {
       openKeyboard();
       return;
     }
     setYtTab(tab);
-    void loadYouTubeTab(tab, null);
+    void loadYouTubeTab(tab, null, null);
   };
 
   const openChannel = (channelId: string, title: string) => {
     const ch = { id: channelId, title: title || "Channel" };
+    setActivePlaylist(null);
     setActiveChannel(ch);
-    void loadYouTubeTab(ytTab(), ch);
+    void loadYouTubeTab(ytTab(), ch, null);
   };
 
   const closeChannel = () => {
     setActiveChannel(null);
-    void loadYouTubeTab(ytTab(), null);
+    void loadYouTubeTab(ytTab(), null, activePlaylist());
+  };
+
+  const openPlaylist = (playlistId: string, title: string) => {
+    const pl = { id: playlistId, title: title || "Playlist" };
+    setActiveChannel(null);
+    setActivePlaylist(pl);
+    void loadYouTubeTab("playlists", null, pl);
+  };
+
+  const closePlaylist = () => {
+    setActivePlaylist(null);
+    void loadYouTubeTab("playlists", null, null);
   };
 
   const handleAccountAction = async () => {
@@ -357,11 +511,57 @@ export function OnDemandView(props: OnDemandViewProps) {
     setLoginModalOpen(true);
   };
 
+  const handleGridScroll = () => {
+    if (!scrollContainerRef || props.provider !== "youtube") return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef;
+    if (scrollHeight - scrollTop - clientHeight < 360) {
+      void loadMoreContinuation();
+    }
+  };
+
+  // Auto-load next continuation chunk when D-Pad/keyboard focus enters the last 2 rows
+  createEffect(() => {
+    const fid = focusedId();
+    if (!fid || props.provider !== "youtube" || loading() || loadingMore() || !nextContinuation()) {
+      return;
+    }
+    const cols =
+      typeof window !== "undefined"
+        ? window.innerWidth >= 1024
+          ? 4
+          : window.innerWidth >= 768
+            ? 3
+            : 2
+        : 4;
+    const threshold = cols * 2;
+
+    if (ytTab() === "playlists" && !activePlaylist() && !activeChannel()) {
+      const list = playlists();
+      if (list.length === 0) return;
+      const idx = list.findIndex((p) => `yt-pl-${p.playlist_id}` === fid);
+      if (idx !== -1 && idx >= Math.max(0, list.length - threshold)) {
+        void loadMoreContinuation();
+      }
+      return;
+    }
+
+    const list = items();
+    if (list.length === 0) return;
+    const idx = list.findIndex((i) => `od-item-${i.id}` === fid || `od-ch-${i.id}` === fid);
+    if (idx !== -1 && idx >= Math.max(0, list.length - threshold)) {
+      void loadMoreContinuation();
+    }
+  });
+
   onMount(() => {
     requestAnimationFrame(() => ensureValidFocus("od-back"));
     const unsubBack = registerBackHandler(() => {
       if (props.provider === "youtube" && activeChannel() !== null) {
         closeChannel();
+        return true;
+      }
+      if (props.provider === "youtube" && activePlaylist() !== null) {
+        closePlaylist();
         return true;
       }
       return false;
@@ -374,6 +574,7 @@ export function OnDemandView(props: OnDemandViewProps) {
     void melangeState().active_profile?.id;
     setQuery("");
     setActiveChannel(null);
+    setActivePlaylist(null);
     setYtTab("foryou");
     void loadFeed(provider);
   });
@@ -411,35 +612,49 @@ export function OnDemandView(props: OnDemandViewProps) {
       id: "foryou",
       focusId: "yt-sub-foryou",
       label: "For You",
-      active: !activeChannel() && ytTab() === "foryou",
+      active: !activeChannel() && !activePlaylist() && ytTab() === "foryou",
       onSelect: () => selectYouTubeTab("foryou")
     },
     {
       id: "subscriptions",
       focusId: "yt-sub-subscriptions",
       label: "Subscriptions",
-      active: !activeChannel() && ytTab() === "subscriptions",
+      active: !activeChannel() && !activePlaylist() && ytTab() === "subscriptions",
       onSelect: () => selectYouTubeTab("subscriptions")
+    },
+    {
+      id: "playlists",
+      focusId: "yt-sub-playlists",
+      label: "Playlists",
+      active: !activeChannel() && !activePlaylist() && ytTab() === "playlists",
+      onSelect: () => selectYouTubeTab("playlists")
     },
     {
       id: "history",
       focusId: "yt-sub-history",
       label: "History",
-      active: !activeChannel() && ytTab() === "history",
+      active: !activeChannel() && !activePlaylist() && ytTab() === "history",
       onSelect: () => selectYouTubeTab("history")
     },
     {
       id: "search",
       focusId: "yt-sub-search",
       label: query() ? `Search: ${query()}` : "Search",
-      active: !activeChannel() && ytTab() === "search",
+      active: !activeChannel() && !activePlaylist() && ytTab() === "search",
       onSelect: () => selectYouTubeTab("search")
     }
   ]);
 
+  const showingPlaylistsGrid = () =>
+    props.provider === "youtube" &&
+    ytTab() === "playlists" &&
+    !activeChannel() &&
+    !activePlaylist();
+
   const displayedTitle = () => {
-    if (props.provider === "youtube" && activeChannel()) {
-      return activeChannel()!.title;
+    if (props.provider === "youtube") {
+      if (activeChannel()) return activeChannel()!.title;
+      if (activePlaylist()) return activePlaylist()!.title;
     }
     return props.title;
   };
@@ -447,6 +662,7 @@ export function OnDemandView(props: OnDemandViewProps) {
   const displayedSubtitle = () => {
     if (props.provider === "youtube") {
       if (activeChannel()) return "Channel uploads";
+      if (activePlaylist()) return "Playlist";
       if (ytTab() === "search" && query()) return `Results for "${query()}"`;
       if (ytAccount()?.signed_in) return `Signed in as ${ytAccount()!.account_name}`;
       return "Guest feed";
@@ -460,7 +676,7 @@ export function OnDemandView(props: OnDemandViewProps) {
         <div class="flex flex-col gap-3">
           <div class="flex flex-wrap items-center gap-3">
             <SegmentedPill items={providerTabs()} />
-            <Show when={props.provider === "youtube" && !activeChannel()}>
+            <Show when={props.provider === "youtube" && !activeChannel() && !activePlaylist()}>
               <SegmentedPill items={youtubeTabs()} />
             </Show>
             <Show when={props.provider === "youtube" && activeChannel()}>
@@ -471,7 +687,18 @@ export function OnDemandView(props: OnDemandViewProps) {
                 active={true}
                 onSelect={closeChannel}
               >
-                ← Back to {youtubeTabLabel(ytTab())}
+                ← Back to {activePlaylist() ? activePlaylist()!.title : youtubeTabLabel(ytTab())}
+              </HapticTile>
+            </Show>
+            <Show when={props.provider === "youtube" && !activeChannel() && activePlaylist()}>
+              <HapticTile
+                id="yt-playlist-back"
+                variant="pill"
+                radius="9999px"
+                active={true}
+                onSelect={closePlaylist}
+              >
+                ← Back to Playlists
               </HapticTile>
             </Show>
           </div>
@@ -569,11 +796,16 @@ export function OnDemandView(props: OnDemandViewProps) {
         </div>
       </header>
 
-      <div class="no-scrollbar -mx-3 flex-1 overflow-y-auto px-3 py-2">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleGridScroll}
+        class="no-scrollbar -mx-3 flex-1 overflow-y-auto px-3 py-2"
+      >
         <Show
           when={
             props.provider === "youtube" &&
             !activeChannel() &&
+            !activePlaylist() &&
             ytTab() === "subscriptions" &&
             channels().length > 0 &&
             !loading()
@@ -651,7 +883,7 @@ export function OnDemandView(props: OnDemandViewProps) {
               <span class="text-[12px] font-semibold text-white/80">YouTube Account</span>
             </div>
             <div class="mt-2.5 text-[20px] font-semibold tracking-[-0.02em] text-white">
-              Sign in to view Subscriptions
+              Sign in to view {ytTab() === "playlists" ? "Playlists" : "Subscriptions"}
             </div>
             <p class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/75">
               Connect your YouTube account for profile &ldquo;
@@ -672,7 +904,14 @@ export function OnDemandView(props: OnDemandViewProps) {
           </GlassPanel>
         </Show>
 
-        <Show when={!loading() && !errorMsg() && !requiresAuth() && items().length === 0}>
+        <Show
+          when={
+            !loading() &&
+            !errorMsg() &&
+            !requiresAuth() &&
+            (showingPlaylistsGrid() ? playlists().length === 0 : items().length === 0)
+          }
+        >
           <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
             <div class="text-[18px] font-semibold tracking-[-0.02em] text-white">
               No items available
@@ -682,13 +921,88 @@ export function OnDemandView(props: OnDemandViewProps) {
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : props.provider === "youtube" && ytTab() === "history"
                   ? "No watch history recorded yet. Videos you watch in Melange or on your signed-in YouTube account appear here."
-                  : "No results returned. Check your network connection or try a different search."}
+                  : props.provider === "youtube" && showingPlaylistsGrid()
+                    ? "No playlists found on your YouTube account yet."
+                    : "No results returned. Check your network connection or try a different search."}
             </div>
           </GlassPanel>
         </Show>
 
-        <Show when={!loading() && items().length > 0}>
-          <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
+        <Show when={!loading() && showingPlaylistsGrid() && playlists().length > 0}>
+          <div class="grid grid-cols-2 gap-5 pb-6 md:grid-cols-3 lg:grid-cols-4">
+            <For each={playlists()}>
+              {(pl) => (
+                <HapticTile
+                  id={`yt-pl-${pl.playlist_id}`}
+                  variant="card"
+                  radius="18px"
+                  onSelect={() => openPlaylist(pl.playlist_id, pl.title)}
+                  class="flex h-full flex-col overflow-hidden rounded-[18px] text-left"
+                >
+                  <Show
+                    when={pl.thumbnail_url}
+                    fallback={
+                      <div
+                        class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14]"
+                        style={{
+                          background: "linear-gradient(155deg, #991B1B 0%, #141218 100%)"
+                        }}
+                      >
+                        <Show when={pl.item_count}>
+                          {(count) => (
+                            <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/20 bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
+                              {count()}
+                            </span>
+                          )}
+                        </Show>
+                        <span class="select-none px-4 text-center text-xl font-bold tracking-tight text-white/90">
+                          Playlist
+                        </span>
+                      </div>
+                    }
+                  >
+                    {(thumb) => (
+                      <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
+                        <img
+                          src={thumb()}
+                          alt={pl.title}
+                          class="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                        <div
+                          class="pointer-events-none absolute inset-0"
+                          style={{
+                            background:
+                              "linear-gradient(180deg, transparent 56%, rgba(8, 10, 14, 0.54) 100%)"
+                          }}
+                        />
+                        <Show when={pl.item_count}>
+                          {(count) => (
+                            <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/[0.12] bg-black/55 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
+                              {count()}
+                            </span>
+                          )}
+                        </Show>
+                      </div>
+                    )}
+                  </Show>
+
+                  <div class="flex flex-col gap-1 px-4 py-3.5">
+                    <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
+                      {pl.title}
+                    </div>
+                    <div class="truncate text-[12px] font-medium text-white/75">
+                      {pl.item_count ?? "YouTube Playlist"}
+                    </div>
+                  </div>
+                </HapticTile>
+              )}
+            </For>
+          </div>
+        </Show>
+
+        <Show when={!loading() && !showingPlaylistsGrid() && items().length > 0}>
+          <div class="grid grid-cols-2 gap-5 pb-6 md:grid-cols-3 lg:grid-cols-4">
             <For each={items()}>
               {(item) => (
                 <div class="flex flex-col gap-1.5">
@@ -803,6 +1117,15 @@ export function OnDemandView(props: OnDemandViewProps) {
                 </div>
               )}
             </For>
+          </div>
+        </Show>
+
+        <Show when={loadingMore()}>
+          <div class="flex justify-center pb-8 pt-2">
+            <div class="inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.08] px-4 py-1.5 text-[12px] font-medium text-white/85 backdrop-blur-md">
+              <span class="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <span>Loading more…</span>
+            </div>
           </div>
         </Show>
       </div>

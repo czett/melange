@@ -1,7 +1,19 @@
-import { For, Show, createEffect, onCleanup } from "solid-js";
-import { melangeState, sendCommand } from "../bridge/ws";
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { melangeState, onNavEvent, sendCommand } from "../bridge/ws";
 import { ensureValidFocus, setFocus } from "../spatial/nav";
 import { GlassPanel, HapticTile } from "./primitives";
+
+const SPEED_PRESETS = [0.75, 1.0, 1.25, 1.5, 2.0] as const;
+const QUALITY_PRESETS = ["auto", "1080p", "720p", "480p", "2160p"] as const;
+
+function formatSpeed(speed: number): string {
+  const rounded = Math.round(speed * 100) / 100;
+  return Number.isInteger(rounded) ? `${rounded.toFixed(1)}x` : `${rounded}x`;
+}
+
+function formatQuality(quality: string): string {
+  return quality === "auto" || !quality ? "Auto" : quality;
+}
 
 function formatTime(sec: number): string {
   if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -19,7 +31,11 @@ export function PlayerOsd() {
   const playback = () => melangeState().playback;
   const visible = () => melangeState().overlay === "PlayerOsd";
 
+  const [optimisticSpeed, setOptimisticSpeed] = createSignal<number | null>(null);
+  const [optimisticQuality, setOptimisticQuality] = createSignal<string | null>(null);
+
   let hideTimer: number | undefined;
+  let wasVisible = false;
 
   const resetHideTimer = () => {
     if (hideTimer !== undefined) {
@@ -33,16 +49,45 @@ export function PlayerOsd() {
   };
 
   createEffect(() => {
-    if (visible()) {
+    const isNow = visible();
+    if (isNow && !wasVisible) {
       resetHideTimer();
       requestAnimationFrame(() => {
         setFocus("osd-toggle-pause", false);
         ensureValidFocus("osd-toggle-pause");
       });
-    } else if (hideTimer !== undefined) {
+    } else if (!isNow && wasVisible && hideTimer !== undefined) {
       window.clearTimeout(hideTimer);
       hideTimer = undefined;
     }
+    wasVisible = isNow;
+  });
+
+  createEffect(() => {
+    const serverSpeed = playback().playback_speed;
+    if (serverSpeed !== undefined && optimisticSpeed() !== null) {
+      if (Math.abs(serverSpeed - optimisticSpeed()!) < 0.01) {
+        setOptimisticSpeed(null);
+      }
+    }
+  });
+
+  createEffect(() => {
+    const serverQuality = playback().max_quality;
+    if (serverQuality !== undefined && optimisticQuality() !== null) {
+      if (serverQuality === optimisticQuality()) {
+        setOptimisticQuality(null);
+      }
+    }
+  });
+
+  onMount(() => {
+    const unsubNav = onNavEvent((ev) => {
+      if (visible() && (ev === "Up" || ev === "Down" || ev === "Left" || ev === "Right" || ev === "Select")) {
+        resetHideTimer();
+      }
+    });
+    onCleanup(unsubNav);
   });
 
   onCleanup(() => {
@@ -50,6 +95,27 @@ export function PlayerOsd() {
       window.clearTimeout(hideTimer);
     }
   });
+
+  const currentSpeed = () => optimisticSpeed() ?? playback().playback_speed ?? 1.0;
+  const currentQuality = () => optimisticQuality() ?? playback().max_quality ?? "auto";
+
+  const cycleSpeed = () => {
+    resetHideTimer();
+    const cur = currentSpeed();
+    const idx = SPEED_PRESETS.findIndex((s) => Math.abs(s - cur) < 0.05);
+    const next = SPEED_PRESETS[(idx + 1) % SPEED_PRESETS.length];
+    setOptimisticSpeed(next);
+    sendCommand({ type: "SetPlaybackSpeed", speed: next });
+  };
+
+  const cycleQuality = () => {
+    resetHideTimer();
+    const cur = currentQuality().toLowerCase();
+    const idx = QUALITY_PRESETS.findIndex((q) => q === cur);
+    const next = QUALITY_PRESETS[(idx + 1) % QUALITY_PRESETS.length];
+    setOptimisticQuality(next);
+    sendCommand({ type: "SetMaxQuality", quality: next });
+  };
 
   const progressPct = () => {
     const dur = playback().duration_sec;
@@ -105,7 +171,7 @@ export function PlayerOsd() {
         <div class="pointer-events-none fixed inset-x-0 bottom-0 z-30 p-8">
           <GlassPanel
             variant="heavy"
-            class="pointer-events-auto mx-auto flex max-w-4xl flex-col gap-4 rounded-[24px] px-7 py-5"
+            class="pointer-events-auto mx-auto flex max-w-5xl flex-col gap-4 rounded-[24px] px-7 py-5"
             onClick={(e: MouseEvent) => e.stopPropagation()}
           >
             <div class="flex items-center justify-between gap-4">
@@ -119,7 +185,7 @@ export function PlayerOsd() {
                 </div>
               </div>
 
-              <div class="flex shrink-0 items-center gap-2.5">
+              <div class="flex shrink-0 items-center gap-2">
                 <HapticTile
                   id="osd-seek-back"
                   variant="pill"
@@ -135,7 +201,7 @@ export function PlayerOsd() {
                   radius="9999px"
                   active={true}
                   onSelect={togglePause}
-                  class="min-w-[5.5rem]"
+                  class="min-w-[5rem]"
                 >
                   {playback().paused ? "Play" : "Pause"}
                 </HapticTile>
@@ -147,6 +213,26 @@ export function PlayerOsd() {
                   class="tabular-nums"
                 >
                   +30s
+                </HapticTile>
+                <HapticTile
+                  id="osd-speed"
+                  variant="pill"
+                  radius="9999px"
+                  ariaLabel="Playback speed"
+                  onSelect={cycleSpeed}
+                  class="min-w-[4.25rem] tabular-nums"
+                >
+                  {formatSpeed(currentSpeed())}
+                </HapticTile>
+                <HapticTile
+                  id="osd-quality"
+                  variant="pill"
+                  radius="9999px"
+                  ariaLabel="Max quality"
+                  onSelect={cycleQuality}
+                  class="min-w-[4.5rem] tabular-nums"
+                >
+                  {formatQuality(currentQuality())}
                 </HapticTile>
                 <HapticTile
                   id="osd-back"

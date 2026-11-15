@@ -16,7 +16,8 @@ pub use m3u_xmltv::{M3uXmltvProvider, SyncReport};
 pub use mediathek::MediathekProvider;
 pub use tvheadend::TvheadendProvider;
 pub use youtube::{
-    SponsorSegment, YouTubeChannelChip, YouTubeFeedResponse, YouTubeFeedTab, YouTubeProvider,
+    SponsorSegment, YouTubeChannelChip, YouTubeFeedResponse, YouTubeFeedTab, YouTubePlaylistItem,
+    YouTubeProvider,
 };
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

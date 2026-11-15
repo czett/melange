@@ -75,10 +75,19 @@ export interface YouTubeChannelChip {
   avatar_url?: string | null;
 }
 
+export interface YouTubePlaylistItem {
+  playlist_id: string;
+  title: string;
+  item_count?: string | null;
+  thumbnail_url?: string | null;
+}
+
 export interface YouTubeFeedResponse {
   items: MediaItem[];
   channels: YouTubeChannelChip[];
+  playlists?: YouTubePlaylistItem[];
   channel_title?: string | null;
+  next_continuation?: string | null;
   requires_auth: boolean;
   source: string;
 }
@@ -135,6 +144,8 @@ export interface PlaybackSnapshot {
   is_zapping: boolean;
   sponsor_segments?: SponsorSegment[];
   osd_notice?: string | null;
+  playback_speed?: number;
+  max_quality?: string;
 }
 
 export interface MelangeState {
@@ -222,6 +233,8 @@ export type ClientCommand =
   | { type: "PlaySound"; sound: SoundKind }
   | { type: "PlayMedia"; item: MediaItem; resume: boolean }
   | { type: "SeekRelative"; offset_sec: number }
+  | { type: "SetPlaybackSpeed"; speed: number }
+  | { type: "SetMaxQuality"; quality: string }
   | { type: "TogglePause" }
   | { type: "ToggleFullscreen" }
   | { type: "SetKeyCapture"; active: boolean }

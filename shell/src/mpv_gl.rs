@@ -115,6 +115,16 @@ fn get_proc_address_cb(resolver: &Arc<GlProcResolver>, name: &str) -> *mut c_voi
     resolver.get_proc_address(name)
 }
 
+pub fn ytdl_format_for_quality(quality: &str) -> &'static str {
+    match quality.trim().to_ascii_lowercase().as_str() {
+        "2160p" | "4k" => "bestvideo[height<=2160]+bestaudio/best[height<=2160]/best",
+        "1080p" => "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
+        "720p" => "bestvideo[height<=720]+bestaudio/best[height<=720]/best",
+        "480p" => "bestvideo[height<=480]+bestaudio/best[height<=480]/best",
+        _ => "bestvideo+bestaudio/best",
+    }
+}
+
 pub struct MpvPlayer {
     render_ctx: Option<RenderContext<'static>>,
     resolver: Option<Arc<GlProcResolver>>,
@@ -129,10 +139,7 @@ impl MpvPlayer {
             init.set_property("keep-open", "always")?;
             init.set_property("idle", "yes")?;
             init.set_property("ytdl", "yes")?;
-            init.set_property(
-                "ytdl-format",
-                "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best",
-            )?;
+            init.set_property("ytdl-format", ytdl_format_for_quality("auto"))?;
             init.set_property("network-timeout", 15)?;
             init.set_property(
                 "user-agent",
@@ -229,6 +236,20 @@ impl MpvPlayer {
         self.mpv
             .command("seek", &[pos.as_str(), "absolute"])
             .map_err(|e| MelangeError::Player(format!("absolute seek failed: {e}")))
+    }
+
+    pub fn set_playback_speed(&mut self, speed: f64) -> Result<(), MelangeError> {
+        let clean = speed.clamp(0.25, 4.0);
+        self.mpv
+            .set_property("speed", clean)
+            .map_err(|e| MelangeError::Player(format!("set speed failed: {e}")))
+    }
+
+    pub fn set_max_quality(&mut self, quality: &str) -> Result<(), MelangeError> {
+        let fmt = ytdl_format_for_quality(quality);
+        self.mpv
+            .set_property("ytdl-format", fmt)
+            .map_err(|e| MelangeError::Player(format!("set ytdl-format failed: {e}")))
     }
 
     pub fn playback_progress(&self) -> (f64, f64, bool) {

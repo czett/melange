@@ -47,6 +47,8 @@ const SEARCH_VIDEOS_PARAMS: &str = "EgIQAQ==";
 pub enum YouTubeFeedTab {
     ForYou,
     Subscriptions,
+    Playlists,
+    Playlist(String),
     History,
     Channel(String),
 }
@@ -59,13 +61,27 @@ pub struct YouTubeChannelChip {
     pub avatar_url: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct YouTubePlaylistItem {
+    pub playlist_id: String,
+    pub title: String,
+    #[serde(default)]
+    pub item_count: Option<String>,
+    #[serde(default)]
+    pub thumbnail_url: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct YouTubeFeedResponse {
     pub items: Vec<MediaItem>,
     #[serde(default)]
     pub channels: Vec<YouTubeChannelChip>,
     #[serde(default)]
+    pub playlists: Vec<YouTubePlaylistItem>,
+    #[serde(default)]
     pub channel_title: Option<String>,
+    #[serde(default)]
+    pub next_continuation: Option<String>,
     #[serde(default)]
     pub requires_auth: bool,
     pub source: String,
@@ -559,6 +575,19 @@ impl YouTubeProvider {
         access_token: Option<&str>,
         filter_shorts: bool,
     ) -> Result<InnertubeBrowseParsed, MelangeError> {
+        let full = self
+            .innertube_browse_full(browse_id, params, access_token, filter_shorts)
+            .await?;
+        Ok((full.items, full.channels, full.header_title))
+    }
+
+    pub async fn innertube_browse_full(
+        &self,
+        browse_id: &str,
+        params: Option<&str>,
+        access_token: Option<&str>,
+        filter_shorts: bool,
+    ) -> Result<InnertubeBrowseResult, MelangeError> {
         let mut body = json!({
             "context": self.innertube_tv_context(),
             "browseId": browse_id,
@@ -569,8 +598,8 @@ impl YouTubeProvider {
 
         match self.innertube_post("browse", body, access_token, false).await {
             Ok(text) => {
-                let parsed = parse_innertube_browse_response(&text, filter_shorts)?;
-                if !parsed.0.is_empty() || !parsed.1.is_empty() || access_token.is_some() {
+                let parsed = parse_innertube_browse_full(&text, filter_shorts)?;
+                if !parsed.is_empty() || access_token.is_some() {
                     return Ok(parsed);
                 }
             }
@@ -589,7 +618,40 @@ impl YouTubeProvider {
         let text = self
             .innertube_post("browse", web_body, access_token, true)
             .await?;
-        parse_innertube_browse_response(&text, filter_shorts)
+        parse_innertube_browse_full(&text, filter_shorts)
+    }
+
+    pub async fn innertube_browse_continuation(
+        &self,
+        continuation: &str,
+        access_token: Option<&str>,
+        filter_shorts: bool,
+    ) -> Result<InnertubeBrowseResult, MelangeError> {
+        let tv_body = json!({
+            "context": self.innertube_tv_context(),
+            "continuation": continuation,
+        });
+
+        match self.innertube_post("browse", tv_body, access_token, false).await {
+            Ok(text) => {
+                let parsed = parse_innertube_browse_full(&text, filter_shorts)?;
+                if !parsed.is_empty() {
+                    return Ok(parsed);
+                }
+            }
+            Err(err) => {
+                debug!(error = %err, "TVHTML5 continuation browse failed, trying WEB context");
+            }
+        }
+
+        let web_body = json!({
+            "context": self.innertube_web_context(),
+            "continuation": continuation,
+        });
+        let text = self
+            .innertube_post("browse", web_body, access_token, true)
+            .await?;
+        parse_innertube_browse_full(&text, filter_shorts)
     }
 
     pub async fn innertube_search(
@@ -620,6 +682,35 @@ impl YouTubeProvider {
         parse_innertube_search_response(&text)
     }
 
+    pub async fn fetch_continuation_with_account(
+        &self,
+        continuation: &str,
+        account: Option<&YouTubeAccount>,
+        filter_shorts: bool,
+    ) -> Result<YouTubeFeedResponse, MelangeError> {
+        let clean = continuation.trim();
+        if clean.is_empty() {
+            return Err(MelangeError::Parse("empty continuation token".to_string()));
+        }
+        let token = account.map(|a| a.access_token.as_str());
+        let parsed = self
+            .innertube_browse_continuation(clean, token, filter_shorts)
+            .await?;
+        Ok(YouTubeFeedResponse {
+            items: parsed.items,
+            channels: parsed.channels,
+            playlists: parsed.playlists,
+            channel_title: parsed.header_title,
+            next_continuation: parsed.next_continuation,
+            requires_auth: false,
+            source: if token.is_some() {
+                "innertube-auth".to_string()
+            } else {
+                "innertube-guest".to_string()
+            },
+        })
+    }
+
     pub async fn fetch_feed_with_account(
         &self,
         tab: YouTubeFeedTab,
@@ -631,14 +722,16 @@ impl YouTubeProvider {
             YouTubeFeedTab::ForYou => {
                 if let Some(tok) = token {
                     match self
-                        .innertube_browse("FEwhat_to_watch", None, Some(tok), true)
+                        .innertube_browse_full("FEwhat_to_watch", None, Some(tok), true)
                         .await
                     {
-                        Ok((items, channels, _)) if !items.is_empty() => {
+                        Ok(res) if !res.items.is_empty() => {
                             return Ok(YouTubeFeedResponse {
-                                items,
-                                channels,
+                                items: res.items,
+                                channels: res.channels,
+                                playlists: Vec::new(),
                                 channel_title: None,
+                                next_continuation: res.next_continuation,
                                 requires_auth: false,
                                 source: "innertube-auth".to_string(),
                             });
@@ -649,14 +742,17 @@ impl YouTubeProvider {
                 }
 
                 for browse_id in ["FEwhat_to_watch", "FEtrending"] {
-                    if let Ok((items, channels, _)) =
-                        self.innertube_browse(browse_id, None, None, true).await
-                        && !items.is_empty()
+                    if let Ok(res) = self
+                        .innertube_browse_full(browse_id, None, None, true)
+                        .await
+                        && !res.items.is_empty()
                     {
                         return Ok(YouTubeFeedResponse {
-                            items,
-                            channels,
+                            items: res.items,
+                            channels: res.channels,
+                            playlists: Vec::new(),
                             channel_title: None,
+                            next_continuation: res.next_continuation,
                             requires_auth: false,
                             source: "innertube-guest".to_string(),
                         });
@@ -667,7 +763,9 @@ impl YouTubeProvider {
                     return Ok(YouTubeFeedResponse {
                         items,
                         channels: Vec::new(),
+                        playlists: Vec::new(),
                         channel_title: None,
+                        next_continuation: None,
                         requires_auth: false,
                         source: "piped".to_string(),
                     });
@@ -678,7 +776,9 @@ impl YouTubeProvider {
                     return Ok(YouTubeFeedResponse {
                         items,
                         channels: Vec::new(),
+                        playlists: Vec::new(),
                         channel_title: None,
+                        next_continuation: None,
                         requires_auth: false,
                         source: "ytdlp".to_string(),
                     });
@@ -693,34 +793,108 @@ impl YouTubeProvider {
                     return Ok(YouTubeFeedResponse {
                         items: Vec::new(),
                         channels: Vec::new(),
+                        playlists: Vec::new(),
                         channel_title: None,
+                        next_continuation: None,
                         requires_auth: true,
                         source: "auth-required".to_string(),
                     });
                 };
 
-                let (items, mut channels, _) = self
-                    .innertube_browse("FEsubscriptions", None, Some(tok), true)
+                let mut res = self
+                    .innertube_browse_full("FEsubscriptions", None, Some(tok), true)
                     .await?;
-                if channels.is_empty() {
-                    channels = derive_channel_chips(&items);
+                if res.channels.is_empty() {
+                    res.channels = derive_channel_chips(&res.items);
                 }
                 Ok(YouTubeFeedResponse {
-                    items,
-                    channels,
+                    items: res.items,
+                    channels: res.channels,
+                    playlists: Vec::new(),
                     channel_title: None,
+                    next_continuation: res.next_continuation,
                     requires_auth: false,
                     source: "innertube-auth".to_string(),
                 })
             }
+            YouTubeFeedTab::Playlists => {
+                let Some(tok) = token else {
+                    return Ok(YouTubeFeedResponse {
+                        items: Vec::new(),
+                        channels: Vec::new(),
+                        playlists: Vec::new(),
+                        channel_title: None,
+                        next_continuation: None,
+                        requires_auth: true,
+                        source: "auth-required".to_string(),
+                    });
+                };
+
+                let mut res = self
+                    .innertube_browse_full("FEplaylist_aggregation", None, Some(tok), true)
+                    .await?;
+                if res.playlists.is_empty() {
+                    // Fallback to WEB context if TVHTML5 returned no playlists
+                    let web_body = json!({
+                        "context": self.innertube_web_context(),
+                        "browseId": "FEplaylist_aggregation",
+                    });
+                    if let Ok(text) = self.innertube_post("browse", web_body, Some(tok), true).await
+                        && let Ok(web_res) = parse_innertube_browse_full(&text, true)
+                        && !web_res.playlists.is_empty()
+                    {
+                        res = web_res;
+                    }
+                }
+                Ok(YouTubeFeedResponse {
+                    items: Vec::new(),
+                    channels: Vec::new(),
+                    playlists: res.playlists,
+                    channel_title: None,
+                    next_continuation: res.next_continuation,
+                    requires_auth: false,
+                    source: "innertube-auth".to_string(),
+                })
+            }
+            YouTubeFeedTab::Playlist(playlist_id) => {
+                let clean_id = playlist_id.trim();
+                if clean_id.is_empty() {
+                    return Err(MelangeError::Parse("empty playlist_id".to_string()));
+                }
+                let browse_id = if clean_id.starts_with("VL") {
+                    clean_id.to_string()
+                } else {
+                    format!("VL{clean_id}")
+                };
+                let res = self
+                    .innertube_browse_full(&browse_id, None, token, false)
+                    .await?;
+                Ok(YouTubeFeedResponse {
+                    items: res.items,
+                    channels: res.channels,
+                    playlists: Vec::new(),
+                    channel_title: res.header_title,
+                    next_continuation: res.next_continuation,
+                    requires_auth: false,
+                    source: if token.is_some() {
+                        "innertube-auth".to_string()
+                    } else {
+                        "innertube-guest".to_string()
+                    },
+                })
+            }
             YouTubeFeedTab::History => {
                 let mut remote_items = Vec::new();
+                let mut next_continuation = None;
                 if let Some(tok) = token {
                     match self
-                        .innertube_browse("FEhistory", None, Some(tok), true)
+                        .innertube_browse_full("FEhistory", None, Some(tok), true)
                         .await
                     {
-                        Ok((items, _, _)) => remote_items = items,
+                        Ok(res) => {
+                            remote_items = res.items;
+                            next_continuation = res.next_continuation;
+                        }
                         Err(err) => warn!(error = %err, "authenticated FEhistory failed; using local history"),
                     }
                 }
@@ -729,7 +903,9 @@ impl YouTubeProvider {
                 Ok(YouTubeFeedResponse {
                     items: merged,
                     channels: Vec::new(),
+                    playlists: Vec::new(),
                     channel_title: None,
+                    next_continuation,
                     requires_auth: false,
                     source: if token.is_some() {
                         "innertube-auth".to_string()
@@ -743,26 +919,31 @@ impl YouTubeProvider {
                 if clean_id.is_empty() {
                     return Err(MelangeError::Parse("empty channel_id".to_string()));
                 }
-                let (mut items, channels, mut channel_title) = self
-                    .innertube_browse(clean_id, Some(CHANNEL_VIDEOS_PARAMS), token, true)
+                let mut res = self
+                    .innertube_browse_full(clean_id, Some(CHANNEL_VIDEOS_PARAMS), token, true)
                     .await
-                    .unwrap_or_else(|_| (Vec::new(), Vec::new(), None));
-                if items.is_empty() {
-                    let (fallback_items, _, fallback_title) = self
-                        .innertube_browse(clean_id, None, token, true)
+                    .unwrap_or_default();
+                if res.items.is_empty() {
+                    let fallback = self
+                        .innertube_browse_full(clean_id, None, token, true)
                         .await?;
-                    items = fallback_items;
-                    if channel_title.is_none() {
-                        channel_title = fallback_title;
+                    res.items = fallback.items;
+                    if res.header_title.is_none() {
+                        res.header_title = fallback.header_title;
+                    }
+                    if res.next_continuation.is_none() {
+                        res.next_continuation = fallback.next_continuation;
                     }
                 }
-                if channel_title.is_none() {
-                    channel_title = items.first().map(|i| i.channel_or_author.clone());
+                if res.header_title.is_none() {
+                    res.header_title = res.items.first().map(|i| i.channel_or_author.clone());
                 }
                 Ok(YouTubeFeedResponse {
-                    items,
-                    channels,
-                    channel_title,
+                    items: res.items,
+                    channels: res.channels,
+                    playlists: Vec::new(),
+                    channel_title: res.header_title,
+                    next_continuation: res.next_continuation,
                     requires_auth: false,
                     source: if token.is_some() {
                         "innertube-auth".to_string()
@@ -1184,7 +1365,10 @@ fn extract_yt_text(val: &Value) -> Option<String> {
 }
 
 fn extract_best_thumbnail(val: &Value) -> Option<String> {
-    let thumbs = val.get("thumbnails").and_then(Value::as_array)?;
+    let thumbs = val
+        .get("thumbnails")
+        .or_else(|| val.get("sources"))
+        .and_then(Value::as_array)?;
     let mut best_url: Option<String> = None;
     let mut best_width: i64 = -1;
     for t in thumbs {
@@ -1211,10 +1395,25 @@ fn extract_best_thumbnail(val: &Value) -> Option<String> {
 
 pub type InnertubeBrowseParsed = (Vec<MediaItem>, Vec<YouTubeChannelChip>, Option<String>);
 
-pub fn parse_innertube_browse_response(
+#[derive(Debug, Clone, Default)]
+pub struct InnertubeBrowseResult {
+    pub items: Vec<MediaItem>,
+    pub channels: Vec<YouTubeChannelChip>,
+    pub playlists: Vec<YouTubePlaylistItem>,
+    pub header_title: Option<String>,
+    pub next_continuation: Option<String>,
+}
+
+impl InnertubeBrowseResult {
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty() && self.channels.is_empty() && self.playlists.is_empty()
+    }
+}
+
+pub fn parse_innertube_browse_full(
     body: &str,
     filter_shorts: bool,
-) -> Result<InnertubeBrowseParsed, MelangeError> {
+) -> Result<InnertubeBrowseResult, MelangeError> {
     let root: Value = serde_json::from_str(body)
         .map_err(|e| MelangeError::Parse(format!("innertube browse json: {e}")))?;
 
@@ -1222,19 +1421,43 @@ pub fn parse_innertube_browse_response(
     let mut seen_ids = HashSet::new();
     let mut channels = Vec::new();
     let mut seen_channels = HashSet::new();
+    let mut playlists = Vec::new();
+    let mut seen_playlists = HashSet::new();
+    let mut next_continuation = None;
 
-    let channel_title = extract_channel_header_title(&root);
-    collect_innertube_renderers(
-        &root,
+    let header_title = extract_channel_header_title(&root);
+    let mut collector = InnertubeCollector {
         filter_shorts,
-        &mut items,
-        &mut seen_ids,
-        &mut channels,
-        &mut seen_channels,
-        channel_title.as_deref(),
-    );
+        items: &mut items,
+        seen_ids: &mut seen_ids,
+        channels: &mut channels,
+        seen_channels: &mut seen_channels,
+        playlists: &mut playlists,
+        seen_playlists: &mut seen_playlists,
+        next_continuation: &mut next_continuation,
+        fallback_channel: header_title.as_deref(),
+    };
+    collect_innertube_renderers(&root, &mut collector);
 
-    Ok((items, channels, channel_title))
+    if next_continuation.is_none() {
+        next_continuation = extract_fallback_continuation(&root);
+    }
+
+    Ok(InnertubeBrowseResult {
+        items,
+        channels,
+        playlists,
+        header_title,
+        next_continuation,
+    })
+}
+
+pub fn parse_innertube_browse_response(
+    body: &str,
+    filter_shorts: bool,
+) -> Result<InnertubeBrowseParsed, MelangeError> {
+    let full = parse_innertube_browse_full(body, filter_shorts)?;
+    Ok((full.items, full.channels, full.header_title))
 }
 
 pub fn parse_innertube_search_response(body: &str) -> Result<Vec<MediaItem>, MelangeError> {
@@ -1245,30 +1468,51 @@ pub fn parse_innertube_search_response(body: &str) -> Result<Vec<MediaItem>, Mel
     let mut seen_ids = HashSet::new();
     let mut channels = Vec::new();
     let mut seen_channels = HashSet::new();
+    let mut playlists = Vec::new();
+    let mut seen_playlists = HashSet::new();
+    let mut next_continuation = None;
 
-    collect_innertube_renderers(
-        &root,
-        false,
-        &mut items,
-        &mut seen_ids,
-        &mut channels,
-        &mut seen_channels,
-        None,
-    );
+    let mut collector = InnertubeCollector {
+        filter_shorts: false,
+        items: &mut items,
+        seen_ids: &mut seen_ids,
+        channels: &mut channels,
+        seen_channels: &mut seen_channels,
+        playlists: &mut playlists,
+        seen_playlists: &mut seen_playlists,
+        next_continuation: &mut next_continuation,
+        fallback_channel: None,
+    };
+    collect_innertube_renderers(&root, &mut collector);
 
     Ok(items)
 }
 
+struct InnertubeCollector<'a> {
+    filter_shorts: bool,
+    items: &'a mut Vec<MediaItem>,
+    seen_ids: &'a mut HashSet<String>,
+    channels: &'a mut Vec<YouTubeChannelChip>,
+    seen_channels: &'a mut HashSet<String>,
+    playlists: &'a mut Vec<YouTubePlaylistItem>,
+    seen_playlists: &'a mut HashSet<String>,
+    next_continuation: &'a mut Option<String>,
+    fallback_channel: Option<&'a str>,
+}
+
 fn extract_channel_header_title(root: &Value) -> Option<String> {
-    if let Some(c4) = find_object_by_key(root, "c4TabbedHeaderRenderer")
-        && let Some(t) = c4.get("title").and_then(extract_yt_text)
-    {
-        return Some(t);
-    }
-    if let Some(meta) = find_object_by_key(root, "channelMetadataRenderer")
-        && let Some(t) = meta.get("title").and_then(extract_yt_text)
-    {
-        return Some(t);
+    for key in [
+        "c4TabbedHeaderRenderer",
+        "channelMetadataRenderer",
+        "playlistHeaderRenderer",
+        "playlistMetadataRenderer",
+        "playlistSidebarPrimaryInfoRenderer",
+    ] {
+        if let Some(obj) = find_object_by_key(root, key)
+            && let Some(t) = obj.get("title").and_then(extract_yt_text)
+        {
+            return Some(t);
+        }
     }
     if let Some(page) = find_object_by_key(root, "pageHeaderRenderer")
         && let Some(t) = page.get("pageTitle").and_then(extract_yt_text)
@@ -1278,75 +1522,354 @@ fn extract_channel_header_title(root: &Value) -> Option<String> {
     None
 }
 
-fn collect_innertube_renderers(
-    node: &Value,
-    filter_shorts: bool,
-    items: &mut Vec<MediaItem>,
-    seen_ids: &mut HashSet<String>,
-    channels: &mut Vec<YouTubeChannelChip>,
-    seen_channels: &mut HashSet<String>,
-    fallback_channel: Option<&str>,
-) {
+fn extract_continuation_token(node: &Value) -> Option<String> {
+    if let Some(tok) = find_object_by_key(node, "continuationCommand")
+        .and_then(|c| c.get("token"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        return Some(tok.to_string());
+    }
+    find_object_by_key(node, "nextContinuationData")
+        .and_then(|c| c.get("continuation"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+}
+
+fn extract_fallback_continuation(root: &Value) -> Option<String> {
+    find_object_by_key(root, "nextContinuationData")
+        .and_then(|c| c.get("continuation"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)
+}
+
+fn collect_innertube_renderers(node: &Value, ctx: &mut InnertubeCollector<'_>) {
     match node {
         Value::Object(map) => {
-            if let Some(tile) = map.get("tileRenderer") {
-                if let Some(chip) = parse_channel_tile_renderer(tile)
-                    && seen_channels.insert(chip.channel_id.clone())
-                {
-                    channels.push(chip);
-                } else if let Some(item) = parse_tile_renderer(tile, filter_shorts, fallback_channel)
-                    && seen_ids.insert(item.id.clone())
-                {
-                    items.push(item);
+            if let Some(cont) = map.get("continuationItemRenderer") {
+                if ctx.next_continuation.is_none() {
+                    *ctx.next_continuation = extract_continuation_token(cont);
                 }
                 return;
             }
-            for key in ["gridVideoRenderer", "videoRenderer", "compactVideoRenderer"] {
+            if let Some(tile) = map.get("tileRenderer") {
+                if let Some(chip) = parse_channel_tile_renderer(tile)
+                    && ctx.seen_channels.insert(chip.channel_id.clone())
+                {
+                    ctx.channels.push(chip);
+                } else if let Some(pl) = parse_playlist_tile_renderer(tile)
+                    && ctx.seen_playlists.insert(pl.playlist_id.clone())
+                {
+                    ctx.playlists.push(pl);
+                } else if let Some(item) =
+                    parse_tile_renderer(tile, ctx.filter_shorts, ctx.fallback_channel)
+                    && ctx.seen_ids.insert(item.id.clone())
+                {
+                    ctx.items.push(item);
+                }
+                return;
+            }
+            if let Some(lockup) = map.get("lockupViewModel")
+                && let Some(pl) = parse_lockup_playlist_renderer(lockup)
+                && ctx.seen_playlists.insert(pl.playlist_id.clone())
+            {
+                ctx.playlists.push(pl);
+                return;
+            }
+            for key in [
+                "gridPlaylistRenderer",
+                "playlistRenderer",
+                "compactPlaylistRenderer",
+            ] {
                 if let Some(renderer) = map.get(key) {
-                    if let Some(item) =
-                        parse_web_video_renderer(renderer, filter_shorts, fallback_channel)
-                        && seen_ids.insert(item.id.clone())
+                    if let Some(pl) = parse_web_playlist_renderer(renderer)
+                        && ctx.seen_playlists.insert(pl.playlist_id.clone())
                     {
-                        items.push(item);
+                        ctx.playlists.push(pl);
                     }
                     return;
                 }
             }
-            for key in ["channelListItemRenderer", "channelRenderer", "gridChannelRenderer"] {
+            for key in [
+                "gridVideoRenderer",
+                "videoRenderer",
+                "compactVideoRenderer",
+                "playlistVideoRenderer",
+            ] {
+                if let Some(renderer) = map.get(key) {
+                    if let Some(item) =
+                        parse_web_video_renderer(renderer, ctx.filter_shorts, ctx.fallback_channel)
+                        && ctx.seen_ids.insert(item.id.clone())
+                    {
+                        ctx.items.push(item);
+                    }
+                    return;
+                }
+            }
+            for key in [
+                "channelListItemRenderer",
+                "channelRenderer",
+                "gridChannelRenderer",
+            ] {
                 if let Some(renderer) = map.get(key)
                     && let Some(chip) = parse_channel_list_renderer(renderer)
-                    && seen_channels.insert(chip.channel_id.clone())
+                    && ctx.seen_channels.insert(chip.channel_id.clone())
                 {
-                    channels.push(chip);
+                    ctx.channels.push(chip);
                 }
             }
             for v in map.values() {
-                collect_innertube_renderers(
-                    v,
-                    filter_shorts,
-                    items,
-                    seen_ids,
-                    channels,
-                    seen_channels,
-                    fallback_channel,
-                );
+                collect_innertube_renderers(v, ctx);
             }
         }
         Value::Array(arr) => {
             for v in arr {
-                collect_innertube_renderers(
-                    v,
-                    filter_shorts,
-                    items,
-                    seen_ids,
-                    channels,
-                    seen_channels,
-                    fallback_channel,
-                );
+                collect_innertube_renderers(v, ctx);
             }
         }
         _ => {}
     }
+}
+
+fn normalize_playlist_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let stripped = trimmed.strip_prefix("VL").unwrap_or(trimmed).trim();
+    if stripped.is_empty() {
+        None
+    } else {
+        Some(stripped.to_string())
+    }
+}
+
+fn is_playlist_id_prefix(id: &str) -> bool {
+    id.starts_with("VL")
+        || id.starts_with("PL")
+        || id == "WL"
+        || id == "LL"
+        || id == "FL"
+        || id.starts_with("RD")
+}
+
+fn parse_playlist_tile_renderer(tile: &Value) -> Option<YouTubePlaylistItem> {
+    if tile
+        .get("onSelectCommand")
+        .and_then(|c| find_object_by_key(c, "watchEndpoint"))
+        .is_some()
+    {
+        return None;
+    }
+
+    let content_type = tile
+        .get("contentType")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let browse_id = find_object_by_key(tile, "browseEndpoint")
+        .and_then(|b| b.get("browseId"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let content_id = tile
+        .get("contentId")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+
+    let is_playlist = content_type.eq_ignore_ascii_case("TILE_CONTENT_TYPE_PLAYLIST")
+        || browse_id.is_some_and(|id| id.starts_with("VL"))
+        || content_id.is_some_and(is_playlist_id_prefix);
+    if !is_playlist {
+        return None;
+    }
+
+    let playlist_id = browse_id
+        .and_then(normalize_playlist_id)
+        .or_else(|| content_id.and_then(normalize_playlist_id))?;
+
+    let meta = tile
+        .get("metadata")
+        .and_then(|m| m.get("tileMetadataRenderer"));
+    let title = meta
+        .and_then(|m| m.get("title"))
+        .and_then(extract_yt_text)
+        .or_else(|| tile.get("title").and_then(extract_yt_text))?;
+
+    let header = tile
+        .get("header")
+        .and_then(|h| h.get("tileHeaderRenderer"));
+    let thumbnail_url = header
+        .and_then(|h| h.get("thumbnail"))
+        .and_then(extract_best_thumbnail)
+        .or_else(|| tile.get("thumbnail").and_then(extract_best_thumbnail));
+
+    let item_count = header
+        .and_then(extract_playlist_overlay_count)
+        .or_else(|| extract_playlist_overlay_count(tile))
+        .or_else(|| {
+            meta.and_then(|m| m.get("lines"))
+                .and_then(Value::as_array)
+                .and_then(|lines| {
+                    for line in lines {
+                        if let Some(items) = line
+                            .get("lineRenderer")
+                            .and_then(|lr| lr.get("items"))
+                            .and_then(Value::as_array)
+                        {
+                            for li in items {
+                                if let Some(t) = li
+                                    .get("lineItemRenderer")
+                                    .and_then(|lir| lir.get("text"))
+                                    .and_then(extract_yt_text)
+                                    && !t.is_empty()
+                                {
+                                    return Some(t);
+                                }
+                            }
+                        }
+                    }
+                    None
+                })
+        });
+
+    Some(YouTubePlaylistItem {
+        playlist_id,
+        title,
+        item_count,
+        thumbnail_url,
+    })
+}
+
+fn parse_web_playlist_renderer(renderer: &Value) -> Option<YouTubePlaylistItem> {
+    let raw_id = renderer
+        .get("playlistId")
+        .and_then(Value::as_str)
+        .or_else(|| {
+            find_object_by_key(renderer, "browseEndpoint")
+                .and_then(|b| b.get("browseId"))
+                .and_then(Value::as_str)
+        })?;
+    let playlist_id = normalize_playlist_id(raw_id)?;
+    let title = renderer.get("title").and_then(extract_yt_text)?;
+
+    let item_count = renderer
+        .get("videoCountText")
+        .and_then(extract_yt_text)
+        .or_else(|| {
+            renderer
+                .get("videoCount")
+                .and_then(extract_yt_text)
+                .map(|c| {
+                    if c.chars().all(|ch| ch.is_ascii_digit()) {
+                        format!("{c} videos")
+                    } else {
+                        c
+                    }
+                })
+        })
+        .or_else(|| {
+            renderer
+                .get("videoCountShortText")
+                .and_then(extract_yt_text)
+        })
+        .or_else(|| extract_playlist_overlay_count(renderer));
+
+    let thumbnail_url = renderer
+        .get("thumbnails")
+        .and_then(Value::as_array)
+        .and_then(|arr| arr.first())
+        .and_then(extract_best_thumbnail)
+        .or_else(|| renderer.get("thumbnail").and_then(extract_best_thumbnail))
+        .or_else(|| {
+            find_object_by_key(renderer, "playlistVideoThumbnailRenderer")
+                .and_then(|t| t.get("thumbnail"))
+                .and_then(extract_best_thumbnail)
+        })
+        .or_else(|| {
+            find_object_by_key(renderer, "playlistCustomThumbnailRenderer")
+                .and_then(|t| t.get("thumbnail"))
+                .and_then(extract_best_thumbnail)
+        });
+
+    Some(YouTubePlaylistItem {
+        playlist_id,
+        title,
+        item_count,
+        thumbnail_url,
+    })
+}
+
+fn parse_lockup_playlist_renderer(lockup: &Value) -> Option<YouTubePlaylistItem> {
+    let content_type = lockup
+        .get("contentType")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let browse_id = find_object_by_key(lockup, "browseEndpoint")
+        .and_then(|b| b.get("browseId"))
+        .and_then(Value::as_str);
+    let content_id = lockup.get("contentId").and_then(Value::as_str);
+
+    let is_playlist = content_type.eq_ignore_ascii_case("LOCKUP_CONTENT_TYPE_PLAYLIST")
+        || browse_id.is_some_and(|id| id.starts_with("VL"))
+        || content_id.is_some_and(is_playlist_id_prefix);
+    if !is_playlist {
+        return None;
+    }
+
+    let playlist_id = browse_id
+        .and_then(normalize_playlist_id)
+        .or_else(|| content_id.and_then(normalize_playlist_id))?;
+
+    let title = lockup
+        .get("metadata")
+        .and_then(|m| m.get("lockupMetadataViewModel"))
+        .and_then(|lm| lm.get("title"))
+        .and_then(|t| t.get("content"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string)?;
+
+    let thumbnail_url = find_object_by_key(lockup, "thumbnailViewModel")
+        .and_then(|tvm| tvm.get("image"))
+        .and_then(extract_best_thumbnail);
+
+    let item_count = find_object_by_key(lockup, "thumbnailBadgeViewModel")
+        .and_then(|b| b.get("text"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(ToString::to_string);
+
+    Some(YouTubePlaylistItem {
+        playlist_id,
+        title,
+        item_count,
+        thumbnail_url,
+    })
+}
+
+fn extract_playlist_overlay_count(node: &Value) -> Option<String> {
+    let overlays = node.get("thumbnailOverlays").and_then(Value::as_array)?;
+    for ov in overlays {
+        if let Some(sp) = ov.get("thumbnailOverlaySidePanelRenderer")
+            && let Some(t) = sp.get("text").and_then(extract_yt_text)
+        {
+            return Some(t);
+        }
+        if let Some(bp) = ov.get("thumbnailOverlayBottomPanelRenderer")
+            && let Some(t) = bp.get("text").and_then(extract_yt_text)
+        {
+            return Some(t);
+        }
+    }
+    None
 }
 
 fn is_short_renderer(val: &Value) -> bool {
@@ -1479,6 +2002,16 @@ fn parse_tile_renderer(
     if filter_shorts && is_short_renderer(tile) {
         return None;
     }
+    if tile
+        .get("contentType")
+        .and_then(Value::as_str)
+        .is_some_and(|c| {
+            c.eq_ignore_ascii_case("TILE_CONTENT_TYPE_PLAYLIST")
+                || c.eq_ignore_ascii_case("TILE_CONTENT_TYPE_CHANNEL")
+        })
+    {
+        return None;
+    }
 
     let video_id = tile
         .get("onSelectCommand")
@@ -1491,7 +2024,7 @@ fn parse_tile_renderer(
             tile.get("contentId")
                 .and_then(Value::as_str)
                 .map(str::trim)
-                .filter(|s| !s.is_empty() && !s.starts_with("UC"))
+                .filter(|s| !s.is_empty() && !s.starts_with("UC") && !is_playlist_id_prefix(s))
         })?
         .to_string();
 

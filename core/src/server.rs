@@ -77,6 +77,18 @@ pub struct PlaybackSnapshot {
     pub sponsor_segments: Vec<SponsorSegment>,
     #[serde(default)]
     pub osd_notice: Option<String>,
+    #[serde(default = "default_playback_speed")]
+    pub playback_speed: f64,
+    #[serde(default = "default_max_quality")]
+    pub max_quality: String,
+}
+
+fn default_playback_speed() -> f64 {
+    1.0
+}
+
+fn default_max_quality() -> String {
+    "auto".to_string()
 }
 
 impl Default for PlaybackSnapshot {
@@ -95,6 +107,8 @@ impl Default for PlaybackSnapshot {
             is_zapping: false,
             sponsor_segments: Vec::new(),
             osd_notice: None,
+            playback_speed: 1.0,
+            max_quality: "auto".to_string(),
         }
     }
 }
@@ -146,6 +160,8 @@ pub enum ClientCommand {
     PlaySound { sound: SoundKind },
     PlayMedia { item: MediaItem, resume: bool },
     SeekRelative { offset_sec: f64 },
+    SetPlaybackSpeed { speed: f64 },
+    SetMaxQuality { quality: String },
     TogglePause,
     ToggleFullscreen,
     SetKeyCapture { active: bool },
@@ -178,6 +194,8 @@ pub enum ShellCommand {
     PlayMedia { item: MediaItem, start_position_sec: f64 },
     SetSponsorSegments { item_id: String, segments: Vec<SponsorSegment> },
     SeekRelative { offset_sec: f64 },
+    SetPlaybackSpeed { speed: f64 },
+    SetMaxQuality { quality: String },
     TogglePause,
     StopPlayback,
     ToggleFullscreen,
@@ -244,8 +262,10 @@ fn clear_playback_on_exit(st: &mut MelangeState, next_mode: AppMode) -> LeaveLiv
             _ => None,
         };
         let preserved_mute = st.playback.muted;
+        let preserved_quality = st.playback.max_quality.clone();
         st.playback = PlaybackSnapshot {
             muted: preserved_mute,
+            max_quality: preserved_quality,
             ..PlaybackSnapshot::default()
         };
         st.digit_buffer.clear();
@@ -609,9 +629,9 @@ impl StateManager {
     }
 
     pub fn handle_nav_event(&self, event: NavEvent) {
-        let _ = self.ws_tx.send(ServerMessage::NavEvent { event });
-
         let mut changed = false;
+        let mut forward_nav_to_ui = true;
+        let mut seek_offset: Option<f64> = None;
         let mut leave_res = LeaveLiveTvResult {
             stopped: false,
             pending_progress: None,
@@ -640,6 +660,14 @@ impl StateManager {
                         other => other,
                     };
                     changed = true;
+                }
+                NavEvent::Left | NavEvent::Right
+                    if st.mode == AppMode::LiveTv && st.overlay == OverlayKind::None =>
+                {
+                    seek_offset = Some(if event == NavEvent::Left { -10.0 } else { 10.0 });
+                    st.overlay = OverlayKind::PlayerOsd;
+                    changed = true;
+                    forward_nav_to_ui = false;
                 }
                 NavEvent::Home => {
                     let next_mode = if st.mode == AppMode::Home {
@@ -674,9 +702,15 @@ impl StateManager {
             }
         }
 
+        if forward_nav_to_ui {
+            let _ = self.ws_tx.send(ServerMessage::NavEvent { event });
+        }
         self.persist_pending_progress(leave_res.pending_progress);
         if changed {
             self.broadcast_state();
+        }
+        if let Some(offset_sec) = seek_offset {
+            self.send_shell_command(ShellCommand::SeekRelative { offset_sec });
         }
         if leave_res.stopped {
             self.send_shell_command(ShellCommand::StopPlayback);
@@ -763,6 +797,7 @@ impl StateManager {
                         st.playback.paused = false;
                         st.playback.state = PlaybackState::Buffering;
                         st.playback.is_zapping = true;
+                        st.playback.playback_speed = 1.0;
                         found = true;
                     }
                 }
@@ -894,6 +929,7 @@ impl StateManager {
                     st.playback.is_zapping = false;
                     st.playback.sponsor_segments.clear();
                     st.playback.osd_notice = None;
+                    st.playback.playback_speed = 1.0;
                 }
                 self.audio.play(SoundKind::Select);
                 self.broadcast_state();
@@ -940,6 +976,36 @@ impl StateManager {
             }
             ClientCommand::SeekRelative { offset_sec } => {
                 self.send_shell_command(ShellCommand::SeekRelative { offset_sec });
+            }
+            ClientCommand::SetPlaybackSpeed { speed } => {
+                if !speed.is_finite() {
+                    return;
+                }
+                let clean = (speed.clamp(0.25, 4.0) * 100.0).round() / 100.0;
+                {
+                    let mut st = self.state.write().expect("state lock");
+                    st.playback.playback_speed = clean;
+                }
+                self.broadcast_state();
+                self.send_shell_command(ShellCommand::SetPlaybackSpeed { speed: clean });
+            }
+            ClientCommand::SetMaxQuality { quality } => {
+                let normalized = match quality.trim().to_ascii_lowercase().as_str() {
+                    "2160p" | "4k" => "2160p",
+                    "1080p" => "1080p",
+                    "720p" => "720p",
+                    "480p" => "480p",
+                    _ => "auto",
+                }
+                .to_string();
+                {
+                    let mut st = self.state.write().expect("state lock");
+                    st.playback.max_quality = normalized.clone();
+                }
+                self.broadcast_state();
+                self.send_shell_command(ShellCommand::SetMaxQuality {
+                    quality: normalized,
+                });
             }
             ClientCommand::TogglePause => {
                 {
@@ -1010,6 +1076,8 @@ impl StateManager {
                 is_zapping,
                 sponsor_segments: Vec::new(),
                 osd_notice: None,
+                playback_speed: st.playback.playback_speed,
+                max_quality: st.playback.max_quality.clone(),
             };
 
             if st.playback != next_playback || st.digit_buffer != digit_buffer {
@@ -1367,6 +1435,10 @@ struct YouTubeFeedQuery {
     tab: String,
     #[serde(default)]
     channel_id: String,
+    #[serde(default)]
+    playlist_id: String,
+    #[serde(default)]
+    continuation: Option<String>,
 }
 
 fn default_yt_tab() -> String {
@@ -1628,16 +1700,40 @@ async fn youtube_feed_handler(
     State(state): State<Arc<StateManager>>,
     Query(params): Query<YouTubeFeedQuery>,
 ) -> impl IntoResponse {
+    let account = state.active_youtube_account().await;
+    let yt = state.youtube.read().expect("youtube lock").clone();
+
+    if let Some(ref cont) = params.continuation
+        && !cont.trim().is_empty()
+    {
+        let tab_lower = params.tab.trim().to_ascii_lowercase();
+        let filter_shorts = tab_lower != "playlist";
+        return match yt
+            .fetch_continuation_with_account(cont, account.as_ref(), filter_shorts)
+            .await
+        {
+            Ok(resp) => Json(resp).into_response(),
+            Err(err) => {
+                warn!(tab = %params.tab, error = %err, "youtube continuation failed");
+                (
+                    StatusCode::BAD_GATEWAY,
+                    Json(serde_json::json!({ "error": err.to_string() })),
+                )
+                    .into_response()
+            }
+        };
+    }
+
     let tab = match params.tab.trim().to_ascii_lowercase().as_str() {
         "subscriptions" | "subs" => YouTubeFeedTab::Subscriptions,
+        "playlists" => YouTubeFeedTab::Playlists,
+        "playlist" => YouTubeFeedTab::Playlist(params.playlist_id.clone()),
         "history" => YouTubeFeedTab::History,
         "channel" => YouTubeFeedTab::Channel(params.channel_id.clone()),
         _ => YouTubeFeedTab::ForYou,
     };
 
-    let account = state.active_youtube_account().await;
     let local_history = state.snapshot().continue_watching;
-    let yt = state.youtube.read().expect("youtube lock").clone();
 
     match yt
         .fetch_feed_with_account(tab, account.as_ref(), &local_history)
