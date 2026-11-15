@@ -71,7 +71,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
             {props.value ? (
               <span>{props.value}</span>
             ) : (
-              <span class="font-medium text-white/45">Type to search...</span>
+              <span class="font-medium text-white/60">Type to search...</span>
             )}
             <span class="inline-block h-5 w-0.5 animate-pulse bg-white/85" />
           </div>

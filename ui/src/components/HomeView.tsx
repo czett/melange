@@ -220,7 +220,7 @@ export const HomeView = () => {
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/55 bg-clip-text text-[156px] font-semibold leading-[0.9] tracking-[-0.04em] text-transparent tabular-nums xl:text-[172px]">
+        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/60 bg-clip-text text-[168px] font-semibold leading-[0.9] tracking-[-0.04em] text-transparent tabular-nums">
           {formattedTime()}
         </div>
       </section>
@@ -299,7 +299,7 @@ export const HomeView = () => {
                             <span class="shrink-0 rounded-[5px] bg-white/[0.10] px-1.5 py-[1px] text-[10.5px] font-semibold leading-tight text-white/85">
                               {providerLabel(cw.provider)}
                             </span>
-                            <span class="truncate text-[12px] font-medium leading-[1.2] text-white/[0.60]">
+                            <span class="truncate text-[12px] font-medium leading-[1.2] text-white/80">
                               {formatRemaining(cw.position_sec, cw.duration_sec)}
                             </span>
                           </div>
@@ -323,7 +323,7 @@ export const HomeView = () => {
           <div class="mb-1.5 flex items-center justify-between px-1">
             <span class="text-[15px] font-semibold tracking-[-0.015em] text-white/95">Live TV</span>
             <Show when={melangeState().channels.length > 0}>
-              <span class="text-[12px] font-medium tabular-nums text-white/[0.62]">
+              <span class="text-[12px] font-medium tabular-nums text-white/80">
                 {melangeState().channels.length} channels
               </span>
             </Show>
@@ -334,7 +334,7 @@ export const HomeView = () => {
             fallback={
               <GlassPanel
                 variant="surface"
-                class="rounded-[18px] px-5 py-4 text-[13px] font-medium text-white/[0.62]"
+                class="rounded-[18px] px-5 py-4 text-[13px] font-medium text-white/80"
               >
                 No live channels configured yet. Open Settings or the Companion app to sync your
                 lineup.
@@ -386,7 +386,7 @@ export const HomeView = () => {
                         >
                           {(logo) => (
                             <>
-                              <span class="absolute left-2 top-1.5 text-[10px] font-semibold leading-none tabular-nums text-white/55">
+                              <span class="absolute left-2 top-1.5 text-[10px] font-semibold leading-none tabular-nums text-white/80">
                                 {ch.number}
                               </span>
                               <img
@@ -410,7 +410,7 @@ export const HomeView = () => {
                           <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em] text-white">
                             {ch.name}
                           </div>
-                          <div class="mt-1 truncate text-[12px] font-medium leading-[1.2] text-white/[0.60]">
+                          <div class="mt-1 truncate text-[12px] font-medium leading-[1.2] text-white/80">
                             {subtitle()}
                           </div>
                         </div>

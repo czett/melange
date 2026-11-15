@@ -3,6 +3,142 @@
 @tailwind utilities;
 
 @font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 100;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYULTRALIGHTITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYTHINITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYLIGHTITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYHEAVYITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Display';
+  font-style: italic;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYBLACKITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro Text';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYREGULAR.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYMEDIUM.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYSEMIBOLDITALIC.OTF') format('opentype');
+}
+
+@font-face {
+  font-family: 'SF Pro';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/companion/fonts/SFPRODISPLAYBOLD.OTF') format('opentype');
+}
+
+@font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 400;
@@ -39,32 +175,29 @@
   --melange-ink: #111318;
 
   --glass-surface: linear-gradient(
-    180deg,
-    rgba(38, 42, 52, 0.72) 0%,
-    rgba(20, 22, 28, 0.80) 100%
+    145deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(16, 18, 24, 0.38) 100%
   );
-  --glass-heavy: linear-gradient(
-    180deg,
-    rgba(28, 31, 39, 0.88) 0%,
-    rgba(16, 18, 24, 0.93) 100%
-  );
+  --glass-heavy: rgba(16, 18, 24, 0.78);
   --glass-focus: linear-gradient(
-    180deg,
-    rgba(64, 70, 86, 0.84) 0%,
-    rgba(34, 38, 48, 0.90) 100%
+    145deg,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(22, 25, 34, 0.44) 100%
   );
-  --glass-blur: blur(56px) saturate(200%) brightness(1.06);
+  --glass-blur: blur(42px) saturate(210%) brightness(1.08);
   --glass-blur-heavy: blur(64px) saturate(210%);
-  --hairline: rgba(255, 255, 255, 0.22);
-  --hairline-focus: rgba(255, 255, 255, 0.36);
+  --hairline: rgba(255, 255, 255, 0.26);
+  --hairline-focus: rgba(255, 255, 255, 0.55);
   --shadow-ambient:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 24px 56px rgba(0, 0, 0, 0.48);
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.38);
   --shadow-focus:
-    0 20px 44px rgba(0, 0, 0, 0.54),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.10);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.65),
+    0 24px 54px rgba(0, 0, 0, 0.48);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-geometry: 220ms;
 }
@@ -75,15 +208,16 @@ body {
   background-color: #0b0e14;
   color: #ffffff;
   font-family:
-    'Inter',
+    'SF Pro Text',
+    'SF Pro',
+    'SF Pro Display',
     -apple-system,
     BlinkMacSystemFont,
-    'SF Pro Display',
-    'SF Pro Text',
+    'Inter',
     system-ui,
     sans-serif;
   font-weight: 500;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-feature-settings: 'kern' 1, 'liga' 1;
   letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -95,7 +229,7 @@ input,
 select,
 textarea {
   font-family: inherit;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-feature-settings: inherit;
 }
 
 *:focus,
@@ -143,9 +277,10 @@ textarea {
 
 .glass-card {
   position: relative;
+  isolation: isolate;
   background: var(--glass-surface);
-  backdrop-filter: var(--glass-blur-heavy);
-  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
 }
@@ -156,38 +291,31 @@ textarea {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1px;
   background: linear-gradient(
-    155deg,
-    rgba(255, 255, 255, 0.36) 0%,
-    rgba(255, 255, 255, 0.08) 40%,
-    rgba(255, 255, 255, 0.03) 70%,
-    rgba(255, 255, 255, 0.18) 100%
+    125deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.02) 38%,
+    transparent 60%
   );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   pointer-events: none;
 }
 
 .glass-inner {
   position: relative;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
   transition:
     transform var(--dur-geometry) var(--ease-spring),
     border-color 150ms ease,
-    background-color 150ms ease,
+    background 150ms ease,
     box-shadow 200ms ease;
 }
 
 .glass-inner:focus-visible {
   outline: none;
   border-color: var(--hairline-focus);
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
   box-shadow: var(--shadow-focus);
 }
 
@@ -208,7 +336,7 @@ textarea {
   white-space: nowrap;
   transition:
     transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 150ms ease,
+    background 150ms ease,
     border-color 150ms ease,
     color 150ms ease,
     box-shadow 200ms ease;
@@ -261,18 +389,16 @@ textarea {
 
 .pill-primary:hover,
 .pill-primary:focus-visible {
-  transform: scale(1.045);
+  transform: scale(1.04);
   box-shadow: 0 14px 32px rgba(0, 0, 0, 0.48);
 }
 
 .pill-secondary {
   padding: 0 1rem;
   background: var(--glass-surface);
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 10px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-ambient);
   font-weight: 600;
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -280,7 +406,7 @@ textarea {
 
 .pill-secondary:hover,
 .pill-secondary:focus-visible {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -304,14 +430,12 @@ textarea {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 20px rgba(0, 0, 0, 0.32);
+  box-shadow: var(--shadow-ambient);
   color: #ffffff;
   font-weight: 600;
   transition:
     transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 150ms ease,
+    background 150ms ease,
     border-color 150ms ease,
     color 150ms ease,
     box-shadow 200ms ease;
@@ -319,7 +443,7 @@ textarea {
 
 .key:hover,
 .key:focus-visible {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -336,6 +460,7 @@ textarea {
 
 .nav-bar {
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
@@ -345,11 +470,9 @@ textarea {
   border-radius: 9999px;
   background: var(--glass-surface);
   border: 1px solid var(--hairline);
-  backdrop-filter: var(--glass-blur-heavy);
-  -webkit-backdrop-filter: var(--glass-blur-heavy);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 20px 48px rgba(0, 0, 0, 0.48);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-ambient);
 }
 
 .nav-link {
@@ -366,12 +489,12 @@ textarea {
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.86);
   transition:
     transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
     color 150ms ease,
     border-color 150ms ease,
-    background-color 150ms ease,
+    background 150ms ease,
     box-shadow 200ms ease;
 }
 
@@ -384,7 +507,7 @@ textarea {
 
 .nav-link:not([data-active='true']):hover,
 .nav-link:not([data-active='true']):focus-visible {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -396,7 +519,7 @@ textarea {
 }
 
 .nav-link[data-active='true']:focus-visible {
-  transform: scale(1.045);
+  transform: scale(1.04);
   box-shadow: var(--shadow-focus);
 }
 
@@ -424,7 +547,7 @@ textarea {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: -0.005em;
-  color: rgba(255, 255, 255, 0.66);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 @media (prefers-reduced-motion: reduce) {

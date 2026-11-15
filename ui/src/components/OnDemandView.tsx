@@ -186,7 +186,7 @@ export function OnDemandView(props: OnDemandViewProps) {
           <SegmentedPill items={providerTabs()} />
           <div class="flex items-baseline gap-3">
             <h1 class="view-title">{props.title}</h1>
-            <span class="text-[13px] font-medium text-white/[0.62]">{props.subtitle}</span>
+            <span class="text-[13px] font-medium text-white/80">{props.subtitle}</span>
           </div>
         </div>
 
@@ -212,7 +212,7 @@ export function OnDemandView(props: OnDemandViewProps) {
               </svg>
               <span class="truncate">{query() ? query() : "Search"}</span>
             </span>
-            <span class="text-[11px] font-medium text-white/[0.62]">OK</span>
+            <span class="text-[11px] font-medium text-white/80">OK</span>
           </HapticTile>
 
           <HapticTile
@@ -257,12 +257,12 @@ export function OnDemandView(props: OnDemandViewProps) {
             <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
               <div class="flex items-center gap-2">
                 <span class="live-dot" />
-                <span class="text-[12px] font-semibold text-white/[0.62]">Feed unavailable</span>
+                <span class="text-[12px] font-semibold text-white/80">Feed unavailable</span>
               </div>
               <div class="mt-2.5 text-[18px] font-semibold tracking-[-0.02em] text-white">
                 Failed to load {props.title}
               </div>
-              <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
+              <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/80">
                 {err()}
               </div>
             </GlassPanel>
@@ -274,7 +274,7 @@ export function OnDemandView(props: OnDemandViewProps) {
             <div class="text-[18px] font-semibold tracking-[-0.02em] text-white">
               No items available
             </div>
-            <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
+            <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/80">
               {props.provider === "local"
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : "No results returned. Check your network connection or try a different search."}
@@ -346,9 +346,9 @@ export function OnDemandView(props: OnDemandViewProps) {
                             </div>
                           </div>
 
-                          <div class="relative z-10 flex items-center justify-between text-[11px] font-semibold tracking-[-0.01em] text-white/75">
+                          <div class="relative z-10 flex items-center justify-between text-[11px] font-semibold tracking-[-0.01em] text-white/85">
                             <span>{props.title}</span>
-                            <span class="text-white/60">Play</span>
+                            <span class="text-white/80">Play</span>
                           </div>
                         </div>
 
@@ -357,7 +357,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                             {item.title}
                           </div>
                           <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-1 text-[12px] font-medium text-white/[0.64]">
+                            <div class="line-clamp-1 text-[12px] font-medium text-white/80">
                               {item.subtitle || item.description}
                             </div>
                           </Show>
@@ -392,7 +392,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                           <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
                             {item.title}
                           </div>
-                          <div class="truncate text-[12px] font-medium text-white/[0.62]">
+                          <div class="truncate text-[12px] font-medium text-white/80">
                             {item.channel_or_author || props.title}
                             <Show when={item.subtitle}>
                               <span> · {item.subtitle}</span>

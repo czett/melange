@@ -73,7 +73,7 @@ function SegmentButton(props: { item: SegmentedItem }) {
             class={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
               props.item.active
                 ? "bg-[#111318]/12 text-[#111318]"
-                : "bg-white/10 text-white/75"
+                : "bg-white/10 text-white/80"
             }`}
           >
             {badge()}
@@ -124,7 +124,7 @@ export function SegmentedPill(props: SegmentedPillProps) {
                 setFocus(action().focusId, false);
                 action().onSelect();
               }}
-              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[15px] font-semibold text-white/80"
+              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[15px] font-semibold text-white/90"
             >
               {action().label}
             </button>

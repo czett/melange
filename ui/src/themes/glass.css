@@ -2,11 +2,11 @@
  * melange — Apple tvOS / visionOS multi-layer Liquid Glass design system
  *
  * Principles:
- *  - Rich multi-layer frosted smoke-glass surfaces with top/bottom specular edge highlights,
- *    deep ambient grounding shadows, and saturated backdrop refraction.
- *  - Specular glass elevation on spatial focus and pointer hover (scale(1.045), deep ambient shadow,
- *    top specular highlight, subtle glass brightening — zero harsh outline boxes).
- *  - Bundled Inter UI typography paired with geometric Plus Jakarta Sans lockscreen numerals.
+ *  - Authentic translucent Liquid Glass surfaces with chromatic backdrop refraction,
+ *    dual specular glass rims, diagonal surface sheen, and deep ambient grounding shadows.
+ *  - Specular glass elevation on spatial focus and pointer hover (scale(1.04), brightened
+ *    specular rim, inner luminescence — zero harsh outline boxes).
+ *  - Bundled Apple SF Pro typography with crisp 500/600 weights for 10-foot TV readability.
  */
 :root {
   /* Semantic Accents & Ink */
@@ -15,60 +15,59 @@
 
   /* Typography Ink */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.68);
-  --text-muted: rgba(255, 255, 255, 0.5);
+  --text-secondary: rgba(255, 255, 255, 0.8);
+  --text-muted: rgba(255, 255, 255, 0.68);
 
   /* Multi-Layer Apple Liquid Glass */
   --glass-surface: linear-gradient(
-    180deg,
-    rgba(38, 42, 52, 0.72) 0%,
-    rgba(20, 22, 28, 0.80) 100%
+    145deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(16, 18, 24, 0.38) 100%
   );
-  --glass-heavy: linear-gradient(
-    180deg,
-    rgba(28, 31, 39, 0.88) 0%,
-    rgba(16, 18, 24, 0.93) 100%
-  );
+  --glass-heavy: rgba(16, 18, 24, 0.78);
   --glass-panel-elevated: linear-gradient(
-    180deg,
-    rgba(46, 51, 63, 0.82) 0%,
-    rgba(24, 27, 34, 0.88) 100%
+    145deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.09) 48%,
+    rgba(20, 23, 31, 0.42) 100%
   );
   --glass-dock: linear-gradient(
-    180deg,
-    rgba(38, 42, 52, 0.72) 0%,
-    rgba(20, 22, 28, 0.80) 100%
+    145deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.06) 45%,
+    rgba(16, 18, 24, 0.38) 100%
   );
   --glass-focus: linear-gradient(
-    180deg,
-    rgba(64, 70, 86, 0.84) 0%,
-    rgba(34, 38, 48, 0.90) 100%
+    145deg,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.11) 50%,
+    rgba(22, 25, 34, 0.44) 100%
   );
-  --modal-scrim: rgba(8, 10, 16, 0.62);
+  --modal-scrim: rgba(8, 10, 16, 0.56);
 
-  --glass-blur: blur(56px) saturate(200%) brightness(1.06);
+  --glass-blur: blur(42px) saturate(210%) brightness(1.08);
   --glass-blur-heavy: blur(64px) saturate(210%);
 
-  --hairline: rgba(255, 255, 255, 0.22);
-  --hairline-heavy: rgba(255, 255, 255, 0.22);
-  --hairline-focus: rgba(255, 255, 255, 0.36);
+  --hairline: rgba(255, 255, 255, 0.26);
+  --hairline-heavy: rgba(255, 255, 255, 0.26);
+  --hairline-focus: rgba(255, 255, 255, 0.55);
 
   --shadow-ambient:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 24px 56px rgba(0, 0, 0, 0.48);
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.38);
   --shadow-heavy:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 28px 68px rgba(0, 0, 0, 0.56);
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.1),
+    0 28px 68px rgba(0, 0, 0, 0.54);
   --shadow-dock:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 24px 56px rgba(0, 0, 0, 0.48);
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.38);
   --shadow-focus:
-    0 20px 44px rgba(0, 0, 0, 0.54),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.10);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.65),
+    0 24px 54px rgba(0, 0, 0, 0.48);
 
   /* Smooth Specular Elevation Motion */
   --ease-focus: cubic-bezier(0.22, 1, 0.36, 1);
@@ -132,28 +131,24 @@
   border-radius: 24px;
 }
 
-/* Subtle 1px specular rim gradient on Liquid Glass containers */
-.glass-panel--surface::before,
-.glass-panel--heavy::before,
-.glass-panel--dock::before {
+/* Diagonal specular glass sheen overlay across physical curved glass */
+.glass-panel::before,
+.haptic-tile::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1px;
   background: linear-gradient(
-    155deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0.06) 40%,
-    rgba(255, 255, 255, 0.02) 70%,
-    rgba(255, 255, 255, 0.14) 100%
+    125deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.02) 38%,
+    transparent 60%
   );
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   pointer-events: none;
+}
+
+.glass-panel--scrim::before {
+  content: none;
 }
 
 .glass-panel--scrim,
@@ -167,6 +162,7 @@
 
 .haptic-tile {
   position: relative;
+  isolation: isolate;
   background: var(--glass-surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -175,14 +171,14 @@
   transition:
     transform var(--dur-geometry) var(--ease-focus),
     border-color 140ms ease,
-    background-color 140ms ease,
+    background 140ms ease,
     box-shadow 180ms ease;
   will-change: transform;
 }
 
 .haptic-tile:hover,
 .haptic-tile[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -207,10 +203,8 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 12px 28px rgba(0, 0, 0, 0.34);
-  color: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-ambient);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
@@ -228,7 +222,7 @@
 
 .haptic-tile--pill:not([data-active="true"]):hover,
 .haptic-tile--pill:not([data-active="true"])[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -237,13 +231,13 @@
 
 .haptic-tile--pill[data-active="true"]:hover,
 .haptic-tile--pill[data-active="true"][data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: #ffffff;
   color: var(--melange-ink);
   border-color: rgba(255, 255, 255, 0.95);
   box-shadow:
-    0 20px 44px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    0 24px 54px rgba(0, 0, 0, 0.48),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
 }
 
 .haptic-tile--pill[data-pressed="true"],
@@ -251,7 +245,7 @@
   transform: scale(0.98);
 }
 
-/* Frosted smoke-glass top-bar circular utility buttons */
+/* Liquid Glass top-bar circular utility buttons */
 .haptic-tile--icon {
   display: inline-flex;
   align-items: center;
@@ -260,14 +254,12 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 10px 26px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--shadow-ambient);
 }
 
 .haptic-tile--icon:hover,
 .haptic-tile--icon[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -289,13 +281,14 @@
   -webkit-backdrop-filter: none;
   border: 1px solid var(--hairline);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
     0 8px 20px rgba(0, 0, 0, 0.36);
 }
 
 .haptic-tile--dock:hover,
 .haptic-tile--dock[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: transparent;
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -316,6 +309,12 @@
   box-shadow: none;
 }
 
+.haptic-tile--epg::before,
+.haptic-tile--grouped::before {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
 .haptic-tile--epg:hover,
 .haptic-tile--epg[data-focused="true"] {
   transform: scale(1.025);
@@ -323,6 +322,13 @@
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
   z-index: 4;
+}
+
+.haptic-tile--epg:hover::before,
+.haptic-tile--epg[data-focused="true"]::before,
+.haptic-tile--grouped:hover::before,
+.haptic-tile--grouped[data-focused="true"]::before {
+  opacity: 1;
 }
 
 .haptic-tile--epg[data-pressed="true"],
@@ -341,7 +347,7 @@
 
 .haptic-tile--grouped:hover,
 .haptic-tile--grouped[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -359,16 +365,14 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 18px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-ambient);
   color: #ffffff;
   font-weight: 600;
 }
 
 .haptic-tile--key:hover,
 .haptic-tile--key[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -384,6 +388,8 @@
 /* ───────────────────────── Segmented Capsule Switcher ───────────────────────── */
 
 .segmented-pill {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
@@ -393,9 +399,21 @@
   border: 1px solid var(--hairline);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 14px 34px rgba(0, 0, 0, 0.38);
+  box-shadow: var(--shadow-ambient);
+}
+
+.segmented-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    125deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.02) 38%,
+    transparent 60%
+  );
+  pointer-events: none;
 }
 
 .segmented-item {
@@ -413,12 +431,12 @@
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.86);
   background: transparent;
   transition:
     transform var(--dur-geometry) var(--ease-focus),
     border-color 140ms ease,
-    background-color 140ms ease,
+    background 140ms ease,
     color 140ms ease,
     box-shadow 180ms ease;
 }
@@ -433,7 +451,7 @@
 
 .segmented-item:not([data-active="true"]):hover,
 .segmented-item:not([data-active="true"])[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -443,10 +461,10 @@
 
 .segmented-item[data-active="true"]:hover,
 .segmented-item[data-active="true"][data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.04);
   box-shadow:
-    0 20px 44px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    0 24px 54px rgba(0, 0, 0, 0.48),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
   z-index: 3;
 }
 
@@ -467,8 +485,10 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.005em;
@@ -490,7 +510,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .progress-fill {
@@ -520,29 +540,48 @@
 }
 
 .section-header {
+  font-family:
+    "SF Pro Display",
+    "SF Pro",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Inter",
+    system-ui,
+    sans-serif;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.015em;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 /* Clean tvOS Lockscreen Clock */
 .lockscreen-clock {
   font-family:
-    "Plus Jakarta Sans",
+    "SF Pro Display",
+    "SF Pro",
     -apple-system,
     BlinkMacSystemFont,
-    "SF Pro Display",
+    "Inter",
     system-ui,
     sans-serif;
   font-weight: 600;
+  font-size: 168px;
   line-height: 0.9;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+  filter: drop-shadow(0 10px 32px rgba(0, 0, 0, 0.28));
 }
 
 .view-title {
+  font-family:
+    "SF Pro Display",
+    "SF Pro",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Inter",
+    system-ui,
+    sans-serif;
   font-weight: 600;
   font-size: clamp(1.65rem, 2.5vw, 2.15rem);
   line-height: 1.12;

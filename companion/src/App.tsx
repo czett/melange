@@ -365,7 +365,7 @@ export default function App() {
             <For
               each={channels()}
               fallback={
-                <div class="glass-card rounded-[18px] p-6 text-center text-[13px] font-medium text-white/[0.62]">
+                <div class="glass-card rounded-[18px] p-6 text-center text-[13px] font-medium text-white/80">
                   No channels synced yet.
                 </div>
               }
@@ -378,7 +378,7 @@ export default function App() {
                     </span>
                     <div class="min-w-0">
                       <div class="truncate text-[14px] font-semibold text-white">{ch.name}</div>
-                      <div class="truncate text-[12px] font-medium text-white/[0.62]">
+                      <div class="truncate text-[12px] font-medium text-white/80">
                         {ch.group_title || 'Live TV'}
                       </div>
                     </div>
@@ -427,7 +427,7 @@ export default function App() {
                 value={newProfileName()}
                 onInput={(e) => setNewProfileName(e.currentTarget.value)}
                 placeholder="New profile name..."
-                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] font-medium text-white placeholder:text-white/45"
+                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] font-medium text-white placeholder:text-white/60"
               />
               <button type="submit" class="pill pill-primary">
                 Add
@@ -448,7 +448,7 @@ export default function App() {
                             </span>
                             <div>
                               <div class="text-[14px] font-semibold text-white">{p.name}</div>
-                              <div class="text-[12px] font-medium text-white/[0.62]">
+                              <div class="text-[12px] font-medium text-white/80">
                                 Local profile
                               </div>
                             </div>
@@ -497,7 +497,7 @@ export default function App() {
 
                     <Show when={presets().length > 0}>
                       <div class="space-y-1.5">
-                        <div class="text-[11px] font-medium text-white/[0.62]">
+                        <div class="text-[11px] font-medium text-white/80">
                           Alpine presets
                         </div>
                         <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">

@@ -92,13 +92,13 @@ export const ZapBanner = () => {
                   </span>
                 </Show>
               </div>
-              <p class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+              <p class="mt-0.5 text-[12px] font-medium text-white/80">
                 {activeChannel()?.group_title || "Television"}
               </p>
             </div>
           </div>
 
-          <div class="text-right text-[12px] font-medium tabular-nums text-white/75">
+          <div class="text-right text-[12px] font-medium tabular-nums text-white/85">
             <Show when={nowNext()?.now}>
               {(now) => (
                 <span>
@@ -116,7 +116,7 @@ export const ZapBanner = () => {
             </p>
             <Show when={nowNext()?.next}>
               {(next) => (
-                <p class="shrink-0 text-[12px] font-medium text-white/[0.62]">
+                <p class="shrink-0 text-[12px] font-medium text-white/80">
                   Next: <span class="font-semibold text-white">{next().title}</span>{" "}
                   <span class="tabular-nums">({formatXmltvTime(next().start_time)})</span>
                 </p>

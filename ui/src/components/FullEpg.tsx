@@ -95,7 +95,7 @@ export const FullEpg = () => {
         <header class="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] px-7 py-5">
           <div class="flex items-baseline gap-3.5">
             <h1 class="view-title text-[24px]">Program Guide</h1>
-            <span class="text-[12px] font-medium tabular-nums text-white/[0.62]">
+            <span class="text-[12px] font-medium tabular-nums text-white/80">
               {visibleChannels().length} channels
             </span>
           </div>
@@ -118,13 +118,13 @@ export const FullEpg = () => {
 
         {/* Timeline ruler */}
         <div class="flex shrink-0 items-center border-b border-white/[0.08] bg-white/[0.04]">
-          <div class="w-60 shrink-0 border-r border-white/[0.08] px-5 py-2.5 text-[12px] font-semibold text-white/[0.62]">
+          <div class="w-60 shrink-0 border-r border-white/[0.08] px-5 py-2.5 text-[12px] font-semibold text-white/80">
             Channel
           </div>
           <div class="grid flex-1 grid-cols-4 divide-x divide-white/[0.08]">
             <For each={rulerSlots()}>
               {(slot) => (
-                <div class="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium tabular-nums text-white/75">
+                <div class="flex items-center gap-2 px-4 py-2.5 text-[12px] font-medium tabular-nums text-white/80">
                   <Show when={slot.isNow}>
                     <span class="live-dot" />
                   </Show>
@@ -175,7 +175,7 @@ export const FullEpg = () => {
                             <span class="live-dot" />
                           </Show>
                         </div>
-                        <span class="block truncate text-[12px] font-medium text-white/[0.62]">
+                        <span class="block truncate text-[12px] font-medium text-white/80">
                           {ch.group_title || "Live TV"}
                         </span>
                       </div>
@@ -196,7 +196,7 @@ export const FullEpg = () => {
                             class="flex h-full w-full flex-col justify-between rounded-[10px] px-4 py-3 text-left"
                           >
                             <div>
-                              <div class="flex items-center justify-between gap-2 text-[12px] font-medium tabular-nums text-white/[0.62]">
+                              <div class="flex items-center justify-between gap-2 text-[12px] font-medium tabular-nums text-white/80">
                                 <span>
                                   {formatXmltvTime(prog.start_time)} –{" "}
                                   {formatXmltvTime(prog.stop_time)}
@@ -212,7 +212,7 @@ export const FullEpg = () => {
                                 {prog.title}
                               </div>
                               <Show when={prog.description}>
-                                <div class="mt-0.5 line-clamp-1 text-[12px] font-medium text-white/[0.62]">
+                                <div class="mt-0.5 line-clamp-1 text-[12px] font-medium text-white/80">
                                   {prog.description}
                                 </div>
                               </Show>
@@ -234,7 +234,7 @@ export const FullEpg = () => {
                     </For>
 
                     <Show when={programs().length === 0}>
-                      <div class="flex flex-1 items-center px-5 text-[13px] font-medium text-white/[0.52]">
+                      <div class="flex flex-1 items-center px-5 text-[13px] font-medium text-white/80">
                         No schedule entries available
                       </div>
                     </Show>

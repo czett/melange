@@ -63,7 +63,7 @@ export function SettingsView(props: SettingsViewProps) {
     <div class="no-scrollbar relative z-20 flex h-full w-full flex-col overflow-y-auto px-10 py-8 text-white xl:px-14 xl:py-10">
       <div class="mx-auto mb-8 flex w-full max-w-5xl items-end justify-between">
         <div>
-          <div class="text-[13px] font-medium text-white/[0.62]">System</div>
+          <div class="text-[13px] font-medium text-white/80">System</div>
           <h1 class="view-title mt-1">Settings</h1>
         </div>
         <HapticTile
@@ -86,7 +86,7 @@ export function SettingsView(props: SettingsViewProps) {
             <h2 class="text-[18px] font-semibold tracking-[-0.02em] text-white">
               Smartphone Companion
             </h2>
-            <p class="mx-auto mt-1.5 max-w-[42ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
+            <p class="mx-auto mt-1.5 max-w-[42ch] text-[13px] font-medium leading-relaxed text-white/80">
               Scan with your phone camera to control melange, reorder channels, or upload a custom
               wallpaper.
             </p>
@@ -132,11 +132,11 @@ export function SettingsView(props: SettingsViewProps) {
                       <span class="live-dot" />
                       <span>Live TV</span>
                     </div>
-                    <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+                    <div class="mt-0.5 text-[12px] font-medium text-white/80">
                       M3U / Tvheadend · {props.channelCount} channels
                     </div>
                   </div>
-                  <span class="shrink-0 text-[12px] font-medium text-white/[0.62]">Guide ›</span>
+                  <span class="shrink-0 text-[12px] font-medium text-white/80">Guide ›</span>
                 </HapticTile>
               </div>
 
@@ -153,11 +153,11 @@ export function SettingsView(props: SettingsViewProps) {
                       <span class="h-1.5 w-1.5 rounded-full bg-white/85" />
                       <span>On Demand</span>
                     </div>
-                    <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+                    <div class="mt-0.5 text-[12px] font-medium text-white/80">
                       Mediathek · YouTube · Local Media
                     </div>
                   </div>
-                  <span class="shrink-0 text-[12px] font-medium text-white/[0.62]">Browse ›</span>
+                  <span class="shrink-0 text-[12px] font-medium text-white/80">Browse ›</span>
                 </HapticTile>
               </div>
             </div>
@@ -188,7 +188,7 @@ export function SettingsView(props: SettingsViewProps) {
 
             <Show when={presets().length > 0}>
               <div class="space-y-2.5 pt-1">
-                <div class="text-[12px] font-medium text-white/[0.62]">Alpine presets</div>
+                <div class="text-[12px] font-medium text-white/80">Alpine presets</div>
                 <div class="grid grid-cols-4 gap-2.5">
                   <For each={presets()}>
                     {(file) => {

@@ -32,9 +32,9 @@ export const ProfileSwitcher = () => {
       >
         <div class="flex items-start justify-between gap-4">
           <div>
-            <div class="text-[12px] font-medium text-white/[0.62]">Who&apos;s watching</div>
+            <div class="text-[12px] font-medium text-white/80">Who&apos;s watching</div>
             <h2 class="view-title mt-1 text-[26px]">Switch profile</h2>
-            <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
+            <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/80">
               Personal watch history, channel order, and custom wallpaper follow each profile.
             </p>
           </div>
@@ -77,7 +77,7 @@ export const ProfileSwitcher = () => {
                       <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                         {profile.name}
                       </div>
-                      <div class="text-[12px] font-medium text-white/[0.62]">Local profile</div>
+                      <div class="text-[12px] font-medium text-white/80">Local profile</div>
                     </div>
                   </div>
                   <Show when={isActive()}>

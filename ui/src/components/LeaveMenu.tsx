@@ -40,9 +40,9 @@ export const LeaveMenu = () => {
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <div>
-          <div class="text-[12px] font-medium text-white/[0.62]">Session</div>
+          <div class="text-[12px] font-medium text-white/80">Session</div>
           <h2 class="view-title mt-1 text-[26px]">Leave melange?</h2>
-          <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.62]">
+          <p class="mt-2 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/80">
             Stay to keep watching, switch window fullscreen, or quit the application cleanly.
           </p>
         </div>
@@ -59,7 +59,7 @@ export const LeaveMenu = () => {
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Stay in Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+              <div class="mt-0.5 text-[12px] font-medium text-white/80">
                 Return to the home screen
               </div>
             </div>
@@ -77,7 +77,7 @@ export const LeaveMenu = () => {
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Toggle Fullscreen
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+              <div class="mt-0.5 text-[12px] font-medium text-white/80">
                 {melangeState().is_fullscreen ? "Exit fullscreen window" : "Expand to fullscreen"}
               </div>
             </div>
@@ -95,7 +95,7 @@ export const LeaveMenu = () => {
               <div class="text-[14px] font-semibold tracking-[-0.01em] text-white">
                 Quit Melange
               </div>
-              <div class="mt-0.5 text-[12px] font-medium text-white/[0.62]">
+              <div class="mt-0.5 text-[12px] font-medium text-white/80">
                 Close the player and exit
               </div>
             </div>
