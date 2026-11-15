@@ -1,5 +1,5 @@
 import { For, Show, createEffect, onCleanup, onMount } from "solid-js";
-import { registerFocusable, setFocus } from "../../spatial/nav";
+import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
 
 export interface SegmentedItem {
   id: string;
@@ -45,6 +45,7 @@ function SegmentButton(props: { item: SegmentedItem }) {
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
+    setInputModality("pointer");
     btnRef.setAttribute("data-pressed", "true");
     if (pressTimer !== undefined) window.clearTimeout(pressTimer);
     pressTimer = window.setTimeout(() => {
@@ -114,6 +115,7 @@ export function SegmentedPill(props: SegmentedPillProps) {
               title={action().title ?? action().label}
               onClick={(e) => {
                 e.stopPropagation();
+                setInputModality("pointer");
                 actionRef.setAttribute("data-pressed", "true");
                 if (pressTimer !== undefined) window.clearTimeout(pressTimer);
                 pressTimer = window.setTimeout(() => {

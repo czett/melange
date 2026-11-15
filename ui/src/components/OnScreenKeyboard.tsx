@@ -66,7 +66,7 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
           <div class="chip font-medium">Type or D-pad + OK</div>
         </div>
 
-        <div class="flex min-h-[3.25rem] items-center justify-between rounded-[16px] border border-white/[0.12] bg-black/35 px-5 py-3 text-[17px] font-semibold tracking-[-0.02em] text-white">
+        <div class="flex min-h-[3.25rem] items-center justify-between rounded-[16px] border border-white/[0.14] bg-white/[0.06] px-5 py-3 text-[17px] font-semibold tracking-[-0.02em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>

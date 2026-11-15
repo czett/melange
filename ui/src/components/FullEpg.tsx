@@ -117,7 +117,7 @@ export const FullEpg = () => {
         </header>
 
         {/* Timeline ruler */}
-        <div class="flex shrink-0 items-center border-b border-white/[0.08] bg-black/25">
+        <div class="flex shrink-0 items-center border-b border-white/[0.08] bg-white/[0.04]">
           <div class="w-60 shrink-0 border-r border-white/[0.08] px-5 py-2.5 text-[12px] font-semibold text-white/[0.62]">
             Channel
           </div>
@@ -135,7 +135,7 @@ export const FullEpg = () => {
           </div>
         </div>
 
-        {/* Dark-glass timeline grid with crisp 1px cell dividers & 2px white focus rim */}
+        {/* Frosted glass timeline grid with 1px dividers & specular focus elevation */}
         <div class="no-scrollbar flex-1 divide-y divide-white/[0.08] overflow-y-auto">
           <For each={visibleChannels()}>
             {(ch) => {
@@ -146,7 +146,7 @@ export const FullEpg = () => {
                 <div class="flex items-stretch">
                   <div
                     class={`w-60 shrink-0 border-r border-white/[0.08] ${
-                      isPlaying() ? "bg-white/[0.06]" : "bg-black/15"
+                      isPlaying() ? "bg-white/[0.08]" : "bg-white/[0.02]"
                     }`}
                   >
                     <HapticTile

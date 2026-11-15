@@ -512,10 +512,10 @@ export default function App() {
                                   onClick={() => void selectPresetWallpaper(p.id, file)}
                                   aria-label={`Select preset ${file}`}
                                   aria-pressed={isActive()}
-                                  class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-transform duration-200 ease-spring hover:scale-[1.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white active:scale-[0.96] ${
+                                  class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-all duration-200 ease-spring hover:scale-[1.045] hover:border-white/30 hover:shadow-[0_20px_44px_rgba(0,0,0,0.52),inset_0_1px_0_rgba(255,255,255,0.36)] focus-visible:outline-none active:scale-[0.96] ${
                                     isActive()
-                                      ? 'border-white ring-2 ring-white ring-offset-2 ring-offset-black/40'
-                                      : 'border-white/20 hover:border-white/45'
+                                      ? 'border-white/80 shadow-[0_12px_28px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.36)]'
+                                      : 'border-white/[0.14]'
                                   }`}
                                 >
                                   <img

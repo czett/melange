@@ -1,6 +1,8 @@
 import { createSignal } from "solid-js";
 import type { NavEvent } from "../bridge/types";
 
+export type InputModality = "pointer" | "spatial";
+
 export interface FocusTarget {
   id: string;
   el: HTMLElement;
@@ -10,6 +12,7 @@ export interface FocusTarget {
 const targets = new Map<string, FocusTarget>();
 const historyStack: string[] = [];
 
+const [inputModality, setInputModalitySignal] = createSignal<InputModality>("pointer");
 const [focusedId, setFocusedId] = createSignal<string | null>(null);
 const [focusRect, setFocusRect] = createSignal<{
   x: number;
@@ -21,8 +24,9 @@ const [focusRect, setFocusRect] = createSignal<{
 }>({ x: 0, y: 0, width: 0, height: 0, radius: "16px", visible: false });
 
 function syncFocusedAttribute(activeId: string | null): void {
+  const effectiveId = inputModality() === "spatial" ? activeId : null;
   for (const [id, target] of targets.entries()) {
-    if (id === activeId) {
+    if (id === effectiveId) {
       target.el.setAttribute("data-focused", "true");
     } else {
       target.el.removeAttribute("data-focused");
@@ -30,8 +34,20 @@ function syncFocusedAttribute(activeId: string | null): void {
   }
 }
 
+export function setInputModality(mode: InputModality): void {
+  if (inputModality() === mode) return;
+  setInputModalitySignal(mode);
+  if (mode === "pointer") {
+    syncFocusedAttribute(null);
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
+  } else {
+    syncFocusedAttribute(focusedId());
+    requestAnimationFrame(measureFocused);
+  }
+}
+
 export function isFocused(id: string): boolean {
-  return focusedId() === id;
+  return inputModality() === "spatial" && focusedId() === id;
 }
 
 export function registerFocusable(
@@ -43,8 +59,12 @@ export function registerFocusable(
   if (!focusedId()) {
     setFocus(id, false);
   } else if (focusedId() === id) {
-    el.setAttribute("data-focused", "true");
-    measureFocused();
+    if (inputModality() === "spatial") {
+      el.setAttribute("data-focused", "true");
+      measureFocused();
+    } else {
+      el.removeAttribute("data-focused");
+    }
   }
   return () => {
     el.removeAttribute("data-focused");
@@ -71,8 +91,10 @@ export function setFocus(id: string, pushHistory = true): void {
   }
   setFocusedId(id);
   syncFocusedAttribute(id);
-  target.el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
-  requestAnimationFrame(measureFocused);
+  if (inputModality() === "spatial") {
+    target.el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    requestAnimationFrame(measureFocused);
+  }
 }
 
 export function ensureValidFocus(preferredId?: string): void {
@@ -120,6 +142,10 @@ function usesSelfFocus(el: HTMLElement): boolean {
 }
 
 export function measureFocused(): void {
+  if (inputModality() !== "spatial") {
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
+    return;
+  }
   const id = focusedId();
   if (!id) {
     setFocusRect((r) => ({ ...r, visible: false }));
@@ -153,6 +179,7 @@ export function measureFocused(): void {
 
 export function handleSpatialNav(ev: NavEvent): boolean {
   if (ev === "Select") {
+    setInputModality("spatial");
     const id = focusedId();
     if (id) {
       const target = targets.get(id);
@@ -175,6 +202,18 @@ export function handleSpatialNav(ev: NavEvent): boolean {
 
   if (ev !== "Up" && ev !== "Down" && ev !== "Left" && ev !== "Right") {
     return false;
+  }
+
+  const wasPointer = inputModality() === "pointer";
+  if (wasPointer) {
+    setInputModality("spatial");
+    ensureValidFocus();
+    const activatedId = focusedId();
+    const activated = activatedId ? targets.get(activatedId) : undefined;
+    if (activated && activated.el.isConnected) {
+      activated.el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+      return true;
+    }
   }
 
   const currentId = focusedId();
@@ -237,4 +276,4 @@ export function handleSpatialNav(ev: NavEvent): boolean {
   return false;
 }
 
-export { focusedId, focusRect };
+export { inputModality, focusedId, focusRect };

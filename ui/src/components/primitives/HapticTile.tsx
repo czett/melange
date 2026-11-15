@@ -1,5 +1,5 @@
 import { createEffect, onCleanup, onMount, type JSX } from "solid-js";
-import { registerFocusable, setFocus } from "../../spatial/nav";
+import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
 
 export type HapticTileVariant =
   | "card"
@@ -50,6 +50,7 @@ export function HapticTile(props: HapticTileProps) {
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
+    setInputModality("pointer");
     if (btnRef) {
       btnRef.setAttribute("data-pressed", "true");
       if (pressTimer !== undefined) window.clearTimeout(pressTimer);

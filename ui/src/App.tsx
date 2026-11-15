@@ -17,7 +17,7 @@ import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import { ScenicBackdrop } from "./components/ScenicBackdrop";
 import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
-import { handleSpatialNav, measureFocused } from "./spatial/nav";
+import { handleSpatialNav, measureFocused, setInputModality } from "./spatial/nav";
 
 function mapBrowserKey(key: string, searchKeyboardOpen: boolean): NavEvent | null {
   switch (key) {
@@ -86,6 +86,32 @@ export const App = () => {
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
 
+    let lastPointerX: number | null = null;
+    let lastPointerY: number | null = null;
+
+    const onPointerMove = (e: MouseEvent) => {
+      if (lastPointerX === null || lastPointerY === null) {
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+        return;
+      }
+      const dist = Math.hypot(e.clientX - lastPointerX, e.clientY - lastPointerY);
+      if (dist >= 2) {
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+        setInputModality("pointer");
+      }
+    };
+
+    const onPointerDown = (e: MouseEvent) => {
+      lastPointerX = e.clientX;
+      lastPointerY = e.clientY;
+      setInputModality("pointer");
+    };
+
+    window.addEventListener("mousemove", onPointerMove, { passive: true });
+    window.addEventListener("mousedown", onPointerDown, { passive: true });
+
     // Browser-only keyboard fallback when inspecting http://127.0.0.1:9000 outside melange-shell.
     const onKeyDown = (e: KeyboardEvent) => {
       const noAccel = !e.ctrlKey && !e.altKey && !e.metaKey;
@@ -110,6 +136,8 @@ export const App = () => {
       unsubNav();
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
+      window.removeEventListener("mousemove", onPointerMove);
+      window.removeEventListener("mousedown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     });
   });

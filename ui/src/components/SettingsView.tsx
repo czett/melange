@@ -118,7 +118,7 @@ export function SettingsView(props: SettingsViewProps) {
             <h3 class="mb-3.5 text-[15px] font-semibold tracking-[-0.015em] text-white/95">
               Active providers
             </h3>
-            <div class="divide-y divide-white/[0.10] rounded-[16px] border border-white/[0.16] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]">
+            <div class="divide-y divide-white/[0.10] rounded-[16px] border border-white/[0.14] bg-white/[0.04] shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
               <div>
                 <HapticTile
                   id="settings-epg"
@@ -203,7 +203,7 @@ export function SettingsView(props: SettingsViewProps) {
                           onSelect={() => selectPreset(file)}
                           class={`group relative aspect-video w-full overflow-hidden rounded-[12px] p-0 ${
                             isActive()
-                              ? "ring-2 ring-white ring-offset-2 ring-offset-black/40"
+                              ? "border-white/75 shadow-[0_12px_28px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.4)]"
                               : ""
                           }`}
                         >

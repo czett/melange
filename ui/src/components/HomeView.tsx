@@ -211,12 +211,12 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Center Stage: Date + Clean couch-tv Lockscreen Clock */}
+      {/* Center Stage: Date + Clean tvOS Lockscreen Clock */}
       <section class="my-auto flex flex-col items-center justify-center py-2 text-center">
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/45 bg-clip-text text-[152px] font-normal leading-none tracking-[-0.04em] text-transparent tabular-nums">
+        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/50 bg-clip-text text-[148px] font-medium leading-none tracking-[-0.04em] text-transparent tabular-nums">
           {formattedTime()}
         </div>
       </section>
@@ -427,13 +427,13 @@ export const HomeView = () => {
         </div>
       </section>
 
-      {/* Bottom centered couch-tv App Dock */}
+      {/* Bottom centered tvOS App Dock */}
       <footer class="flex justify-center pt-4">
         <GlassPanel as="nav" variant="dock" class="flex items-center gap-2.5 rounded-[24px] p-2">
           <HapticTile
             id="dock-livetv"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="Live TV"
             onSelect={handleWatchLive}
             class="relative"
@@ -449,7 +449,7 @@ export const HomeView = () => {
           <HapticTile
             id="dock-epg"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="Guide"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "FullEpg" })}
             class="relative"
@@ -465,7 +465,7 @@ export const HomeView = () => {
           <HapticTile
             id="dock-mediathek"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="Mediathek"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Mediathek" })}
             class="relative"
@@ -476,7 +476,7 @@ export const HomeView = () => {
           <HapticTile
             id="dock-youtube"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="YouTube"
             onSelect={() => sendCommand({ type: "SetMode", mode: "YouTube" })}
             class="relative"
@@ -487,7 +487,7 @@ export const HomeView = () => {
           <HapticTile
             id="dock-media"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="Media"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Media" })}
             class="relative"
@@ -498,7 +498,7 @@ export const HomeView = () => {
           <HapticTile
             id="dock-settings"
             variant="dock"
-            radius="13px"
+            radius="14px"
             ariaLabel="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
             class="relative"

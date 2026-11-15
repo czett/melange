@@ -1,5 +1,4 @@
 import { Show } from "solid-js";
-import { isFocused } from "../../spatial/nav";
 
 export type SquircleApp =
   | "LiveTv"
@@ -120,30 +119,16 @@ function AppGlyph(props: { app: SquircleApp }) {
 }
 
 export function SquircleIcon(props: SquircleIconProps) {
-  const focused = () => isFocused(props.focusId);
-
   return (
-    <div class="relative h-full w-full">
-      {/* Floating label pill above the focused tile */}
-      <span
-        class={`pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/[0.14] bg-[#12141A]/90 px-3 py-1 text-[12px] font-semibold tracking-[-0.01em] text-white shadow-[0_10px_24px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-150 ${
-          focused() ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
-        }`}
-      >
-        {props.label}
-      </span>
+    <div
+      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
+      style={{ background: APP_BACKGROUNDS[props.app] }}
+    >
+      <AppGlyph app={props.app} />
 
-      {/* Flat, bold couch-tv app tile */}
-      <div
-        class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[13px]"
-        style={{ background: APP_BACKGROUNDS[props.app] }}
-      >
-        <AppGlyph app={props.app} />
-
-        <Show when={props.active}>
-          <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/90" />
-        </Show>
-      </div>
+      <Show when={props.active}>
+        <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/90" />
+      </Show>
     </div>
   );
 }
