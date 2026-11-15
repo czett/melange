@@ -17,38 +17,37 @@
 
   /* Ink */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.82);
-  --text-muted: rgba(255, 255, 255, 0.65);
+  --text-secondary: rgba(255, 255, 255, 0.74);
+  --text-muted: rgba(255, 255, 255, 0.58);
 
   /* Optical smoky garnet frosted glass */
-  --glass-surface: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(14, 2, 2, 0.78) 100%
-  );
-  --glass-surface-home: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(14, 2, 2, 0.76) 100%
-  );
-  --glass-surface-focus: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.11) 0%,
-    rgba(24, 4, 4, 0.86) 100%
-  );
+  --glass-surface: rgba(12, 2, 2, 0.78);
+  --glass-heavy: rgba(10, 1, 2, 0.86);
+  --glass-dock: rgba(14, 2, 3, 0.82);
+  --glass-surface-home: rgba(12, 2, 2, 0.78);
+  --glass-surface-focus: rgba(26, 4, 5, 0.90);
   --glass-inner: rgba(10, 1, 1, 0.62);
   --glass-inner-focus: rgba(255, 255, 255, 0.1);
-  --modal-scrim: rgba(8, 1, 1, 0.84);
-  --glass-blur: blur(44px) saturate(165%);
-  --hairline: rgba(255, 255, 255, 0.14);
-  --hairline-focus: rgba(255, 255, 255, 0.88);
+  --modal-scrim: rgba(6, 1, 1, 0.88);
+  --glass-blur: blur(40px) saturate(155%);
+  --glass-blur-heavy: blur(48px) saturate(160%);
+  --glass-blur-dock: blur(44px) saturate(165%);
+  --hairline: rgba(255, 255, 255, 0.11);
+  --hairline-heavy: rgba(255, 255, 255, 0.13);
+  --hairline-focus: rgba(255, 255, 255, 0.92);
   --shadow-ambient:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 20px 50px rgba(0, 0, 0, 0.55);
+  --shadow-heavy:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 24px 64px rgba(0, 0, 0, 0.65);
+  --shadow-dock:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 64px rgba(0, 0, 0, 0.55);
+    0 24px 56px rgba(0, 0, 0, 0.62);
 
   /* Motion */
-  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-geometry: 180ms;
+  --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
+  --dur-geometry: 140ms;
 }
 
 /* ───────────────────────── Ambient backdrop ───────────────────────── */
@@ -58,7 +57,7 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  background: #120303;
+  background: #0a0102;
   contain: strict;
   isolation: isolate;
 }
@@ -83,7 +82,187 @@
 
 /* ───────────────────────── Surfaces ───────────────────────── */
 
-/* Primary optical smoky garnet frosted card */
+/* ───────────────────────── Unified Primitives ───────────────────────── */
+
+.glass-panel {
+  position: relative;
+}
+
+.glass-panel--surface {
+  background: var(--glass-surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-ambient);
+  border-radius: 24px;
+}
+
+.glass-panel--heavy {
+  background: var(--glass-heavy);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--hairline-heavy);
+  box-shadow: var(--shadow-heavy);
+  border-radius: 24px;
+}
+
+.glass-panel--dock {
+  background: var(--glass-dock);
+  backdrop-filter: var(--glass-blur-dock);
+  -webkit-backdrop-filter: var(--glass-blur-dock);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: var(--shadow-dock);
+  border-radius: 30px;
+}
+
+.glass-panel--scrim {
+  background: var(--modal-scrim);
+  backdrop-filter: blur(40px) saturate(145%);
+  -webkit-backdrop-filter: blur(40px) saturate(145%);
+}
+
+/* Snappy tvOS haptic tile (140ms tactile physics, single-layer 1.5px rim) */
+.haptic-tile {
+  position: relative;
+  background: rgba(12, 2, 2, 0.72);
+  border: 1.5px solid rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition:
+    transform var(--dur-geometry) var(--ease-spring),
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+  will-change: transform;
+}
+
+.haptic-tile[data-focused="true"] {
+  transform: scale(1.045);
+  border-color: var(--hairline-focus);
+  background: var(--glass-surface-focus);
+  z-index: 2;
+}
+
+.haptic-tile[data-pressed="true"],
+.haptic-tile:active {
+  transform: scale(0.965);
+}
+
+.haptic-tile--pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.haptic-tile--pill[data-active="true"] {
+  background: #ffffff;
+  color: #120202;
+  border-color: #ffffff;
+}
+
+.haptic-tile--pill[data-active="true"][data-focused="true"] {
+  background: #ffffff;
+  color: #120202;
+  border-color: #ffffff;
+  transform: scale(1.055);
+}
+
+.haptic-tile--icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.haptic-tile--dock {
+  background: transparent;
+  border: 1.5px solid transparent;
+  box-shadow: none;
+}
+
+.haptic-tile--dock[data-focused="true"] {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: var(--hairline-focus);
+  transform: scale(1.075);
+}
+
+.haptic-tile--key {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.haptic-tile--key[data-focused="true"] {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #120202;
+  transform: scale(1.055);
+}
+
+/* Segmented capsule switcher (couch-tv style) */
+.segmented-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background: rgba(12, 2, 2, 0.80);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.segmented-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  height: 1.875rem;
+  padding: 0 0.875rem;
+  border-radius: 9999px;
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.76);
+  background: transparent;
+  transition:
+    transform var(--dur-geometry) var(--ease-spring),
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.segmented-item[data-active="true"] {
+  background: #ffffff;
+  color: #120202;
+  font-weight: 600;
+}
+
+.segmented-item[data-focused="true"] {
+  border-color: var(--hairline-focus);
+  transform: scale(1.04);
+}
+
+.segmented-item:not([data-active="true"])[data-focused="true"] {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.segmented-item[data-pressed="true"],
+.segmented-item:active {
+  transform: scale(0.965);
+}
+
+/* Primary smoky garnet frosted card (kept for compatibility during migration) */
 .glass-card {
   position: relative;
   background: var(--glass-surface);
@@ -367,11 +546,11 @@
 
 .progress-track {
   position: relative;
-  height: 2px;
+  height: 3px;
   width: 100%;
   overflow: hidden;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .progress-fill {
@@ -401,15 +580,33 @@
 }
 
 .eyebrow {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.lockscreen-clock {
+  font-weight: 700;
+  font-size: clamp(4.75rem, 9.2vw, 7.75rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-shadow: 0 8px 32px rgba(8, 1, 1, 0.68);
+}
+
+.view-title {
+  font-weight: 600;
+  font-size: clamp(1.75rem, 2.8vw, 2.35rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #ffffff;
 }
 
 .hero-text-shadow {
-  text-shadow: 0 1px 14px rgba(14, 2, 2, 0.55);
+  text-shadow: 0 2px 16px rgba(8, 1, 1, 0.65);
 }
 
 /* ───────────────────────── Fallback spatial focus reticle ───────────────────────── */

@@ -20,7 +20,7 @@ export interface FlutedBackdropProps {
   still?: boolean;
   /** Pause the render loop when occluded/hidden (e.g. LiveTv video mode). */
   active?: boolean;
-  /** Warm #FEED65 / #FF9E6D focal core intensity (0..0.85, default 0.58). */
+  /** Warm #FEED65 / #FF6B42 focal crest intensity (0..0.45, default 0.26). */
   warmIntensity?: number;
 }
 
@@ -44,11 +44,11 @@ out vec4 fragColor;
 
 const float PI = 3.14159265359;
 
-const vec3 C_VOID  = vec3(0.055, 0.006, 0.008);
-const vec3 C_DEEP  = vec3(0.369, 0.043, 0.039); // #5E0B0A deep garnet edges
-const vec3 C_CRIM  = vec3(0.882, 0.227, 0.149); // #E13A26
-const vec3 C_CORAL = vec3(1.000, 0.420, 0.259); // #FF6B42
-const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65 (Baby Yellow highlight core)
+const vec3 C_VOID  = vec3(0.038, 0.004, 0.006); // #0A0102 deep obsidian garnet
+const vec3 C_DEEP  = vec3(0.360, 0.045, 0.042); // Moody #831613 Deep Red under glass
+const vec3 C_CRIM  = vec3(0.760, 0.165, 0.110); // Controlled #E13A26 Crimson Red
+const vec3 C_CORAL = vec3(0.920, 0.290, 0.200); // Restrained warm transition
+const vec3 C_GOLD  = vec3(0.996, 0.929, 0.396); // #FEED65 subtle specular rim
 
 float hash11(float p) {
   p = fract(p * 0.1031);
@@ -86,24 +86,24 @@ vec3 sampleLightField(vec2 p, float t, vec2 stretch) {
 
   float p1 = plume(wp, c1, vec2(0.35, 0.22), -0.42, stretch);
   float p2 = plume(wp, c2, vec2(0.52, 0.16), -0.58, stretch);
-  float p3 = plume(wp, c3, vec2(0.26, 0.15), -0.36, stretch);
+  float p3 = plume(wp, c3, vec2(0.14, 0.08), -0.42, stretch);
   float p4 = plume(wp, c4, vec2(0.32, 0.16), -0.22, stretch);
   float p5 = plume(wp, c5, vec2(0.36, 0.20), -0.28, stretch);
 
-  float E = p1 * 0.96 + p2 * 0.84 + p3 * 0.78 + p4 * 0.52 + p5 * 0.44;
-  float C = p3 * 1.15 + p1 * 0.36 + p2 * 0.30;
+  float E = p1 * 0.88 + p2 * 0.78 + p3 * 0.68 + p4 * 0.48 + p5 * 0.40;
+  float C = p3 * 1.15 + p1 * 0.22 + p2 * 0.18;
 
   float baseGrad = clamp(1.0 - length((p - vec2(0.42, 0.50)) * vec2(0.90, 1.18)) * 1.05, 0.0, 1.0);
-  vec3 col = mix(C_VOID, C_DEEP * 0.65, baseGrad);
-  col = mix(col, C_DEEP, smoothstep(0.06, 0.42, E));
-  col = mix(col, C_CRIM, smoothstep(0.32, 0.86, E));
-  col = mix(col, C_CORAL, smoothstep(0.76, 1.32, E));
+  vec3 col = mix(C_VOID, C_DEEP * 0.54, baseGrad);
+  col = mix(col, C_DEEP, smoothstep(0.08, 0.44, E));
+  col = mix(col, C_CRIM, smoothstep(0.38, 0.92, E));
+  col = mix(col, C_CORAL, smoothstep(0.84, 1.40, E));
 
-  float coreMask = smoothstep(0.46, 1.24, C);
-  float peakMask = smoothstep(0.84, 1.44, C);
-  float warmGain = clamp(u_warmIntensity / 0.58, 0.0, 1.25);
-  col = mix(col, mix(C_CORAL, C_GOLD, 0.58), clamp(coreMask * u_warmIntensity, 0.0, 1.0));
-  col = mix(col, C_GOLD, clamp(peakMask * 0.94 * warmGain, 0.0, 0.96));
+  float coreMask = smoothstep(0.68, 1.32, C);
+  float peakMask = smoothstep(0.86, 1.38, C);
+  float warmGain = clamp(u_warmIntensity / 0.26, 0.0, 1.15);
+  col = mix(col, mix(C_CORAL, C_GOLD, 0.38), clamp(coreMask * u_warmIntensity * 1.1, 0.0, 0.48));
+  col = mix(col, C_GOLD, clamp(peakMask * u_warmIntensity * 1.15 * warmGain, 0.0, 0.34));
   return col;
 }
 
@@ -158,14 +158,16 @@ void main() {
   float ridgeMask = smoothstep(0.16, 0.02, localU) * smoothstep(0.0, seamAA * 1.2 + 0.015, localU);
   float troughMask = smoothstep(0.72, 0.99, localU);
 
-  glassCol += vec3(1.0, 0.86, 0.82) * ridgeMask * (0.035 + 0.14 * luma);
-  glassCol *= 1.0 - troughMask * 0.22;
+  vec3 ridgeTint = mix(vec3(1.0, 0.86, 0.82), C_GOLD, smoothstep(0.28, 0.55, luma) * 0.42);
+  glassCol += ridgeTint * ridgeMask * (0.025 + 0.10 * luma);
+  glassCol *= 1.0 - troughMask * 0.24;
 
-  // Stronger outer-35% vignette darkening for moody, high-contrast depth
-  float distCenter = length((suv - vec2(0.45, 0.50)) * vec2(0.95, 1.12));
-  float vigRadial = smoothstep(0.30, 0.86, distCenter);
-  float vigVert = smoothstep(0.24, 0.0, suv.y) * 0.36 + smoothstep(0.66, 1.0, suv.y) * 0.48;
-  glassCol *= 1.0 - clamp(vigRadial * 0.58 + vigVert * 0.82, 0.0, 0.78);
+  // Stronger perimeter vignette + subtle center-clock readability wash
+  float distCenter = length((suv - vec2(0.46, 0.50)) * vec2(0.95, 1.12));
+  float vigRadial = smoothstep(0.28, 0.96, distCenter);
+  float vigVert = smoothstep(0.24, 0.0, suv.y) * 0.42 + smoothstep(0.64, 1.0, suv.y) * 0.54;
+  float clockWash = smoothstep(0.35, 0.05, length((suv - vec2(0.50, 0.38)) * vec2(1.0, 1.6))) * 0.14;
+  glassCol *= 1.0 - clamp(vigRadial * 0.64 + vigVert * 0.85 + clockWash, 0.0, 0.82);
 
   // Static micro-frosted glass grain + 8-bit dither (prevents HDMI banding without shimmer)
   float grain = (hash21(gl_FragCoord.xy) - 0.5) * 0.020;
@@ -339,10 +341,10 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): WebGlRenderer | null
     render(timeSec: number, warmIntensity: number) {
       // 1. Render smooth organic crimson/coral/gold plumes to offscreen light buffer
       const base = offCtx.createLinearGradient(0, 0, offW, offH);
-      base.addColorStop(0, "#100202");
-      base.addColorStop(0.42, "#3a0605");
-      base.addColorStop(0.72, "#5e0b0a");
-      base.addColorStop(1, "#100202");
+      base.addColorStop(0, "#0A0102");
+      base.addColorStop(0.42, "#2B0505");
+      base.addColorStop(0.72, "#520B09");
+      base.addColorStop(1, "#0A0102");
       offCtx.fillStyle = base;
       offCtx.fillRect(0, 0, offW, offH);
 
@@ -354,7 +356,7 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): WebGlRenderer | null
         const grad = offCtx.createRadialGradient(0, 0, 0, 0, 0, r);
         grad.addColorStop(0, c0);
         grad.addColorStop(0.48, c1);
-        grad.addColorStop(1, "rgba(94, 11, 10, 0)");
+        grad.addColorStop(1, "rgba(82, 11, 9, 0)");
         offCtx.fillStyle = grad;
         offCtx.beginPath();
         offCtx.arc(0, 0, r, 0, Math.PI * 2);
@@ -368,26 +370,26 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): WebGlRenderer | null
         0.55 + 0.03 * Math.cos(timeSec * 0.15),
         0.92,
         0.62,
-        "rgba(255, 107, 66, 0.72)",
-        "rgba(225, 58, 38, 0.38)"
+        "rgba(235, 74, 51, 0.56)",
+        "rgba(194, 42, 28, 0.30)"
       );
       drawPlume(
         0.46 + 0.035 * Math.cos(timeSec * 0.13),
         0.47 + 0.03 * Math.sin(timeSec * 0.17),
         1.1,
         0.46,
-        "rgba(225, 58, 38, 0.58)",
-        "rgba(94, 11, 10, 0.24)"
+        "rgba(194, 42, 28, 0.46)",
+        "rgba(82, 11, 9, 0.20)"
       );
       if (warmIntensity > 0.01) {
-        const a = Math.min(0.92, warmIntensity * 1.45).toFixed(2);
+        const a = Math.min(0.28, warmIntensity * 1.05).toFixed(2);
         drawPlume(
           0.36 + 0.025 * Math.sin(timeSec * 0.23),
           0.48 + 0.02 * Math.cos(timeSec * 0.21),
-          0.60,
-          0.36,
+          0.28,
+          0.14,
           `rgba(254, 237, 101, ${a})`,
-          "rgba(255, 107, 66, 0.42)"
+          "rgba(235, 74, 51, 0.20)"
         );
       }
       drawPlume(
@@ -395,13 +397,13 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): WebGlRenderer | null
         0.14 + 0.02 * sinSafe(timeSec * 0.14),
         0.7,
         0.4,
-        "rgba(225, 58, 38, 0.36)",
-        "rgba(94, 11, 10, 0.14)"
+        "rgba(194, 42, 28, 0.32)",
+        "rgba(82, 11, 9, 0.12)"
       );
       offCtx.globalCompositeOperation = "source-over";
 
       // 2. Refract offscreen light buffer through variable-width cylindrical reeds
-      ctx.fillStyle = "#100202";
+      ctx.fillStyle = "#0A0102";
       ctx.fillRect(0, 0, width, height);
 
       for (const reed of reeds) {
@@ -412,25 +414,25 @@ function createCanvas2dRenderer(canvas: HTMLCanvasElement): WebGlRenderer | null
         ctx.drawImage(offscreen, sx, sy, sw, Math.max(16, sh), reed.x, 0, reed.w, height);
 
         const lensGrad = ctx.createLinearGradient(reed.x, 0, reed.x + reed.w, 0);
-        lensGrad.addColorStop(0, "rgba(255, 225, 215, 0.11)");
-        lensGrad.addColorStop(0.18, "rgba(255, 255, 255, 0.025)");
+        lensGrad.addColorStop(0, "rgba(255, 225, 215, 0.09)");
+        lensGrad.addColorStop(0.18, "rgba(255, 255, 255, 0.02)");
         lensGrad.addColorStop(0.65, "rgba(0, 0, 0, 0)");
-        lensGrad.addColorStop(1, "rgba(12, 1, 1, 0.32)");
+        lensGrad.addColorStop(1, "rgba(10, 1, 1, 0.36)");
         ctx.fillStyle = lensGrad;
         ctx.fillRect(reed.x, 0, reed.w, height);
       }
 
-      // 3. Outer-35% vignette
+      // 3. Outer perimeter vignette
       const vig = ctx.createRadialGradient(
         width * 0.45,
         height * 0.5,
-        width * 0.14,
+        width * 0.12,
         width * 0.5,
         height * 0.5,
         width * 0.68
       );
-      vig.addColorStop(0, "rgba(14, 2, 2, 0)");
-      vig.addColorStop(1, "rgba(10, 1, 1, 0.78)");
+      vig.addColorStop(0, "rgba(10, 1, 2, 0.12)");
+      vig.addColorStop(1, "rgba(8, 1, 1, 0.84)");
       ctx.fillStyle = vig;
       ctx.fillRect(0, 0, width, height);
     },
@@ -453,7 +455,7 @@ export function FlutedBackdrop(props: FlutedBackdropProps) {
   let lastFrameMs = 0;
   let elapsedSec = 0;
 
-  const warmValue = () => Math.max(0, Math.min(0.85, props.warmIntensity ?? 0.58));
+  const warmValue = () => Math.max(0, Math.min(0.45, props.warmIntensity ?? 0.26));
 
   const drawFrame = () => {
     renderer?.render(elapsedSec, warmValue());

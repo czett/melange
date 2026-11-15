@@ -108,7 +108,7 @@ export function ensureValidFocus(preferredId?: string): void {
 }
 
 const SELF_FOCUS_SELECTOR =
-  ".pill, .nav-link, .text-link, .glass-card-interactive, .glass-inner, .strip-item, .key";
+  ".haptic-tile, .segmented-item, .pill, .nav-link, .text-link, .glass-card-interactive, .glass-inner, .strip-item, .key";
 
 function usesSelfFocus(el: HTMLElement): boolean {
   if (el.dataset.focusSelf === "false" || el.dataset.focusRing === "reticle") {
