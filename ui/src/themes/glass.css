@@ -1,12 +1,12 @@
 /*
- * melange — Apple tvOS / visionOS multi-layer Liquid Glass design system
+ * melange — Couch TV matte translucent minimalism design system
  *
  * Principles:
- *  - Authentic translucent Liquid Glass surfaces with chromatic backdrop refraction,
- *    dual specular glass rims, diagonal surface sheen, and deep ambient grounding shadows.
- *  - Specular glass elevation on spatial focus and pointer hover (scale(1.04), brightened
- *    specular rim, inner luminescence — zero harsh outline boxes).
- *  - Bundled Apple SF Pro typography with crisp 500/600 weights for 10-foot TV readability.
+ *  - Calm, flat, matte translucent surfaces with restrained backdrop blur and subtle
+ *    hairline borders (zero glossy gradients, diagonal sheens, or heavy white rim highlights).
+ *  - Clean elevation on spatial focus and pointer hover (scale(1.03), soft translucent
+ *    highlight; solid #FFFFFF with #111318 ink for active list/settings rows).
+ *  - Bundled Apple SF Pro typography with crisp 400/500/600 weights for 10-foot TV readability.
  */
 :root {
   /* Semantic Accents & Ink */
@@ -16,60 +16,30 @@
   /* Typography Ink */
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.8);
-  --text-muted: rgba(255, 255, 255, 0.68);
+  --text-muted: rgba(255, 255, 255, 0.62);
 
-  /* Multi-Layer Apple Liquid Glass */
-  --glass-surface: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.06) 45%,
-    rgba(16, 18, 24, 0.38) 100%
-  );
-  --glass-heavy: rgba(16, 18, 24, 0.78);
-  --glass-panel-elevated: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.09) 48%,
-    rgba(20, 23, 31, 0.42) 100%
-  );
-  --glass-dock: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.16) 0%,
-    rgba(255, 255, 255, 0.06) 45%,
-    rgba(16, 18, 24, 0.38) 100%
-  );
-  --glass-focus: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.26) 0%,
-    rgba(255, 255, 255, 0.11) 50%,
-    rgba(22, 25, 34, 0.44) 100%
-  );
-  --modal-scrim: rgba(8, 10, 16, 0.56);
+  /* Matte Translucent Surfaces */
+  --glass-surface: rgba(16, 18, 22, 0.44);
+  --glass-heavy: rgba(14, 16, 20, 0.78);
+  --glass-dock: rgba(14, 16, 20, 0.56);
+  --glass-focus: rgba(255, 255, 255, 0.14);
+  --modal-scrim: rgba(8, 10, 14, 0.68);
 
-  --glass-blur: blur(42px) saturate(210%) brightness(1.08);
-  --glass-blur-heavy: blur(64px) saturate(210%);
+  --glass-blur: blur(22px) saturate(135%);
+  --glass-blur-heavy: blur(28px) saturate(135%);
+  --glass-blur-dock: blur(24px);
 
-  --hairline: rgba(255, 255, 255, 0.26);
-  --hairline-heavy: rgba(255, 255, 255, 0.26);
-  --hairline-focus: rgba(255, 255, 255, 0.55);
+  --hairline: rgba(255, 255, 255, 0.11);
+  --hairline-heavy: rgba(255, 255, 255, 0.12);
+  --hairline-dock: rgba(255, 255, 255, 0.12);
+  --hairline-focus: rgba(255, 255, 255, 0.28);
 
-  --shadow-ambient:
-    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
-    0 18px 44px rgba(0, 0, 0, 0.38);
-  --shadow-heavy:
-    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.32),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.1),
-    0 28px 68px rgba(0, 0, 0, 0.54);
-  --shadow-dock:
-    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.44),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.12),
-    0 18px 44px rgba(0, 0, 0, 0.38);
-  --shadow-focus:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.65),
-    0 24px 54px rgba(0, 0, 0, 0.48);
+  --shadow-ambient: 0 8px 24px rgba(0, 0, 0, 0.24);
+  --shadow-heavy: 0 18px 44px rgba(0, 0, 0, 0.42);
+  --shadow-dock: 0 10px 28px rgba(0, 0, 0, 0.32);
+  --shadow-focus: 0 12px 32px rgba(0, 0, 0, 0.34);
 
-  /* Smooth Specular Elevation Motion */
+  /* Smooth Elevation Motion */
   --ease-focus: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-geometry: 160ms;
 }
@@ -97,7 +67,7 @@
   );
 }
 
-/* ───────────────────────── True Apple visionOS / tvOS Glass Panels ───────────────────────── */
+/* ───────────────────────── Matte Translucent Panels ───────────────────────── */
 
 .glass-panel {
   position: relative;
@@ -124,41 +94,21 @@
 
 .glass-panel--dock {
   background: var(--glass-dock);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--hairline);
+  backdrop-filter: var(--glass-blur-dock);
+  -webkit-backdrop-filter: var(--glass-blur-dock);
+  border: 1px solid var(--hairline-dock);
   box-shadow: var(--shadow-dock);
-  border-radius: 24px;
-}
-
-/* Diagonal specular glass sheen overlay across physical curved glass */
-.glass-panel::before,
-.haptic-tile::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    125deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0.02) 38%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
-.glass-panel--scrim::before {
-  content: none;
+  border-radius: 22px;
 }
 
 .glass-panel--scrim,
 .modal-scrim {
   background: var(--modal-scrim);
-  backdrop-filter: blur(56px) saturate(175%);
-  -webkit-backdrop-filter: blur(56px) saturate(175%);
+  backdrop-filter: blur(32px) saturate(135%);
+  -webkit-backdrop-filter: blur(32px) saturate(135%);
 }
 
-/* ───────────────────────── Specular Glass Haptic Tiles ───────────────────────── */
+/* ───────────────────────── Matte Haptic Tiles ───────────────────────── */
 
 .haptic-tile {
   position: relative;
@@ -171,14 +121,15 @@
   transition:
     transform var(--dur-geometry) var(--ease-focus),
     border-color 140ms ease,
-    background 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
     box-shadow 180ms ease;
   will-change: transform;
 }
 
 .haptic-tile:hover,
 .haptic-tile[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -204,7 +155,7 @@
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
@@ -215,14 +166,12 @@
   background: #ffffff;
   color: var(--melange-ink);
   border-color: rgba(255, 255, 255, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 12px 30px rgba(0, 0, 0, 0.36);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .haptic-tile--pill:not([data-active="true"]):hover,
 .haptic-tile--pill:not([data-active="true"])[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -231,13 +180,11 @@
 
 .haptic-tile--pill[data-active="true"]:hover,
 .haptic-tile--pill[data-active="true"][data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: #ffffff;
   color: var(--melange-ink);
-  border-color: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 24px 54px rgba(0, 0, 0, 0.48),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  border-color: #ffffff;
+  box-shadow: var(--shadow-focus);
 }
 
 .haptic-tile--pill[data-pressed="true"],
@@ -245,7 +192,7 @@
   transform: scale(0.98);
 }
 
-/* Liquid Glass top-bar circular utility buttons */
+/* Top-bar circular utility buttons */
 .haptic-tile--icon {
   display: inline-flex;
   align-items: center;
@@ -259,7 +206,7 @@
 
 .haptic-tile--icon:hover,
 .haptic-tile--icon[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
@@ -270,28 +217,25 @@
   transform: scale(0.98);
 }
 
-/* Clean 88x54 rounded-[14px] tvOS app dock tiles */
+/* Clean 84x52 rounded-[14px] Couch TV app dock tiles */
 .haptic-tile--dock {
-  width: 88px;
-  height: 54px;
+  width: 84px;
+  height: 52px;
   padding: 0;
   border-radius: 14px;
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.44),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 20px rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
 }
 
 .haptic-tile--dock:hover,
 .haptic-tile--dock[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: transparent;
   border-color: var(--hairline-focus);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.36);
   z-index: 6;
 }
 
@@ -309,26 +253,13 @@
   box-shadow: none;
 }
 
-.haptic-tile--epg::before,
-.haptic-tile--grouped::before {
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-
 .haptic-tile--epg:hover,
 .haptic-tile--epg[data-focused="true"] {
-  transform: scale(1.025);
+  transform: scale(1.02);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   box-shadow: var(--shadow-focus);
   z-index: 4;
-}
-
-.haptic-tile--epg:hover::before,
-.haptic-tile--epg[data-focused="true"]::before,
-.haptic-tile--grouped:hover::before,
-.haptic-tile--grouped[data-focused="true"]::before {
-  opacity: 1;
 }
 
 .haptic-tile--epg[data-pressed="true"],
@@ -336,26 +267,68 @@
   transform: scale(0.98);
 }
 
-/* Grouped list rows (Settings) */
+/* List & Settings rows: matte translucent by default, solid #FFFFFF + #111318 text when focused */
 .haptic-tile--grouped {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.haptic-tile--grouped .row-muted {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.haptic-tile--grouped:hover,
+.haptic-tile--grouped[data-focused="true"] {
+  transform: scale(1.015);
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--melange-ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  z-index: 4;
+}
+
+.haptic-tile--grouped:hover .row-muted,
+.haptic-tile--grouped[data-focused="true"] .row-muted {
+  color: rgba(17, 19, 24, 0.65);
+}
+
+.haptic-tile--grouped[data-pressed="true"],
+.haptic-tile--grouped:active {
+  transform: scale(0.99);
+}
+
+/* Settings sidebar category pills */
+.haptic-tile--sidebar {
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: 1px solid transparent;
   box-shadow: none;
+  color: rgba(255, 255, 255, 0.68);
 }
 
-.haptic-tile--grouped:hover,
-.haptic-tile--grouped[data-focused="true"] {
-  transform: scale(1.04);
-  background: var(--glass-focus);
-  border-color: var(--hairline-focus);
-  box-shadow: var(--shadow-focus);
+.haptic-tile--sidebar[data-active="true"] {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.haptic-tile--sidebar:hover,
+.haptic-tile--sidebar[data-focused="true"] {
+  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  box-shadow: none;
   z-index: 4;
 }
 
-.haptic-tile--grouped[data-pressed="true"],
-.haptic-tile--grouped:active {
+.haptic-tile--sidebar[data-pressed="true"],
+.haptic-tile--sidebar:active {
   transform: scale(0.98);
 }
 
@@ -372,7 +345,7 @@
 
 .haptic-tile--key:hover,
 .haptic-tile--key[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -402,20 +375,6 @@
   box-shadow: var(--shadow-ambient);
 }
 
-.segmented-pill::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    125deg,
-    rgba(255, 255, 255, 0.14) 0%,
-    rgba(255, 255, 255, 0.02) 38%,
-    transparent 60%
-  );
-  pointer-events: none;
-}
-
 .segmented-item {
   position: relative;
   overflow: hidden;
@@ -436,7 +395,7 @@
   transition:
     transform var(--dur-geometry) var(--ease-focus),
     border-color 140ms ease,
-    background 140ms ease,
+    background-color 140ms ease,
     color 140ms ease,
     box-shadow 180ms ease;
 }
@@ -451,7 +410,7 @@
 
 .segmented-item:not([data-active="true"]):hover,
 .segmented-item:not([data-active="true"])[data-focused="true"] {
-  transform: scale(1.04);
+  transform: scale(1.03);
   background: var(--glass-focus);
   border-color: var(--hairline-focus);
   color: #ffffff;
@@ -461,10 +420,8 @@
 
 .segmented-item[data-active="true"]:hover,
 .segmented-item[data-active="true"][data-focused="true"] {
-  transform: scale(1.04);
-  box-shadow:
-    0 24px 54px rgba(0, 0, 0, 0.48),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.85);
+  transform: scale(1.03);
+  box-shadow: var(--shadow-focus);
   z-index: 3;
 }
 
@@ -485,9 +442,6 @@
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.44),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.94);
   font-size: 11px;
   font-weight: 600;
@@ -554,7 +508,7 @@
   color: rgba(255, 255, 255, 0.96);
 }
 
-/* Clean tvOS Lockscreen Clock */
+/* Tall, slender, fading Couch TV Lockscreen Clock */
 .lockscreen-clock {
   font-family:
     "SF Pro Display",
@@ -564,13 +518,22 @@
     "Inter",
     system-ui,
     sans-serif;
-  font-weight: 600;
-  font-size: 168px;
-  line-height: 0.9;
+  font-weight: 400;
+  line-height: 0.88;
   letter-spacing: -0.04em;
+  transform: scaleY(1.18);
+  transform-origin: center;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-  filter: drop-shadow(0 10px 32px rgba(0, 0, 0, 0.28));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(255, 255, 255, 0.82) 52%,
+    rgba(255, 255, 255, 0.16) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .view-title {

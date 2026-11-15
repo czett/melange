@@ -320,7 +320,7 @@ export function OnDemandView(props: OnDemandViewProps) {
 
                           {/* Top metadata chips */}
                           <div class="relative z-10 flex items-center justify-between gap-2">
-                            <span class="max-w-[70%] truncate rounded-full border border-white/20 bg-white/[0.12] px-2.5 py-0.5 text-[10.5px] font-semibold text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md">
+                            <span class="max-w-[70%] truncate rounded-full border border-white/[0.12] bg-white/[0.10] px-2.5 py-0.5 text-[10.5px] font-semibold text-white/95 backdrop-blur-md">
                               {categoryBadge(item, props.provider, props.subtitle)}
                             </span>
                             <Show when={item.duration_sec > 0}>
@@ -330,10 +330,10 @@ export function OnDemandView(props: OnDemandViewProps) {
                             </Show>
                           </div>
 
-                          {/* Crisp glossy center broadcast / media badge */}
+                          {/* Clean matte center broadcast / media badge */}
                           <div class="relative z-10 my-auto flex items-center justify-center">
                             <div
-                              class="flex h-12 w-12 items-center justify-center rounded-[15px] border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.52),0_12px_26px_rgba(0,0,0,0.42)] backdrop-blur-xl"
+                              class="flex h-12 w-12 items-center justify-center rounded-[15px] border border-white/[0.14] shadow-md backdrop-blur-xl"
                               style={{ background: fallbackBadgeAccent(props.provider) }}
                             >
                               <svg
@@ -382,7 +382,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                             }}
                           />
                           <Show when={item.duration_sec > 0}>
-                            <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/20 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl">
+                            <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/[0.12] bg-black/50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
                               {formatDuration(item.duration_sec)}
                             </span>
                           </Show>

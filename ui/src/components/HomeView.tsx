@@ -211,16 +211,16 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Center Stage: Date + Clean tvOS Lockscreen Clock */}
+      {/* Center Stage: Date + Tall Slender Fading Couch TV Lockscreen Clock */}
       <section
-        class={`my-auto flex flex-col items-center justify-center py-2 text-center transition-opacity duration-150 ${
+        class={`my-auto flex flex-col items-center justify-center py-3 text-center transition-opacity duration-150 ${
           melangeState().overlay !== "None" ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/60 bg-clip-text text-[168px] font-semibold leading-[0.9] tracking-[-0.04em] text-transparent tabular-nums">
+        <div class="lockscreen-clock mt-3 select-none text-[168px] font-normal leading-[0.88] tracking-[-0.04em] tabular-nums xl:text-[188px]">
           {formattedTime()}
         </div>
       </section>
@@ -264,11 +264,11 @@ export const HomeView = () => {
                     <HapticTile
                       id={`home-cw-${cw.item_id}`}
                       variant="row"
-                      radius="18px"
+                      radius="16px"
                       onSelect={resumeItem}
-                      class="flex h-[82px] w-[295px] shrink-0 items-center gap-3.5 rounded-[18px] p-2.5 text-left"
+                      class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
-                      <div class="relative h-[60px] w-[96px] shrink-0 overflow-hidden rounded-[11px] bg-white/[0.07] ring-1 ring-inset ring-white/[0.08]">
+                      <div class="relative h-[58px] w-[92px] shrink-0 overflow-hidden rounded-[10px] bg-white/[0.07] ring-1 ring-inset ring-white/[0.08]">
                         <Show
                           when={cw.thumbnail_url}
                           fallback={
@@ -290,7 +290,7 @@ export const HomeView = () => {
                         </Show>
                       </div>
 
-                      <div class="flex h-[60px] min-w-0 flex-1 flex-col justify-between py-[2px]">
+                      <div class="flex h-[58px] min-w-0 flex-1 flex-col justify-between py-[2px]">
                         <div class="min-w-0">
                           <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em] text-white">
                             {cw.title}
@@ -364,13 +364,13 @@ export const HomeView = () => {
                     <HapticTile
                       id={`home-ch-${ch.id}`}
                       variant="row"
-                      radius="18px"
+                      radius="16px"
                       active={isActive()}
                       onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}
-                      class="flex h-[82px] w-[295px] shrink-0 items-center gap-3.5 rounded-[18px] p-2.5 text-left"
+                      class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
                     >
                       <div
-                        class={`relative flex h-[60px] w-[96px] shrink-0 items-center justify-center overflow-hidden rounded-[11px] ring-1 ring-inset ${
+                        class={`relative flex h-[58px] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] ring-1 ring-inset ${
                           isActive()
                             ? "bg-white/[0.12] ring-white/25"
                             : "bg-white/[0.07] ring-white/[0.08]"
@@ -405,7 +405,7 @@ export const HomeView = () => {
                         />
                       </div>
 
-                      <div class="flex h-[60px] min-w-0 flex-1 flex-col justify-between py-[2px]">
+                      <div class="flex h-[58px] min-w-0 flex-1 flex-col justify-between py-[2px]">
                         <div class="min-w-0">
                           <div class="truncate text-[14px] font-semibold leading-[1.2] tracking-[-0.015em] text-white">
                             {ch.name}
@@ -431,9 +431,9 @@ export const HomeView = () => {
         </div>
       </section>
 
-      {/* Bottom centered tvOS App Dock */}
+      {/* Bottom centered Couch TV App Dock */}
       <footer class="flex justify-center pt-4">
-        <GlassPanel as="nav" variant="dock" class="flex items-center gap-2.5 rounded-[24px] p-2">
+        <GlassPanel as="nav" variant="dock" class="flex items-center gap-2.5 rounded-[22px] p-2">
           <HapticTile
             id="dock-livetv"
             variant="dock"

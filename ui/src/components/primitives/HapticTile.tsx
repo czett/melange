@@ -9,7 +9,8 @@ export type HapticTileVariant =
   | "dock"
   | "key"
   | "epg"
-  | "grouped";
+  | "grouped"
+  | "sidebar";
 
 export interface HapticTileProps {
   id: string;

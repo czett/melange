@@ -16,12 +16,12 @@ export interface SquircleIconProps {
 }
 
 const APP_BACKGROUNDS: Record<SquircleApp, string> = {
-  LiveTv: "linear-gradient(135deg, #FF5E62 0%, #E11D48 100%)",
-  FullEpg: "linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)",
-  Mediathek: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-  YouTube: "linear-gradient(135deg, #FA586A 0%, #FA233B 100%)",
-  Media: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)",
-  Settings: "linear-gradient(135deg, #52525B 0%, #27272A 100%)"
+  LiveTv: "#181B22",
+  FullEpg: "#1E2430",
+  Mediathek: "#0284C7",
+  YouTube: "#DC2626",
+  Media: "#4F46E5",
+  Settings: "#262932"
 };
 
 function AppGlyph(props: { app: SquircleApp }) {
@@ -112,20 +112,13 @@ function AppGlyph(props: { app: SquircleApp }) {
 export function SquircleIcon(props: SquircleIconProps) {
   return (
     <div
-      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.34),inset_0_-1px_0_rgba(0,0,0,0.18)]"
+      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[14px]"
       style={{ background: APP_BACKGROUNDS[props.app] }}
     >
-      <div
-        class="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.10) 100%)"
-        }}
-      />
       <AppGlyph app={props.app} />
 
       <Show when={props.active}>
-        <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/95 shadow-[0_0_4px_rgba(0,0,0,0.4)]" />
+        <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/95" />
       </Show>
     </div>
   );
