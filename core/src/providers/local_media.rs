@@ -88,6 +88,7 @@ fn scan_dir_recursive(dir: &Path, out: &mut Vec<MediaItem>) {
             subtitle: parent_name,
             description: Some(stream_url.clone()),
             channel_or_author: "Local Media".to_string(),
+            channel_id: None,
             duration_sec: 0,
             thumbnail_url: None,
             stream_url,

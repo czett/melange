@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering as AtomicOrdering};
 use std::sync::{Arc, RwLock};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Multipart, Path as AxumPath, Query, State};
@@ -24,11 +24,14 @@ use tracing::{debug, info, warn};
 
 use crate::assets::{EmbeddedCompanion, EmbeddedUi, serve_embedded_or_disk};
 use crate::audio::{AudioEngine, SoundKind};
-use crate::db::{Channel, EpgEntry, Profile, WatchHistoryEntry};
+use crate::db::{
+    Channel, EpgEntry, Profile, WatchHistoryEntry, YouTubeAccount, YouTubeAccountSummary,
+};
 use crate::error::MelangeError;
 use crate::input::NavEvent;
 use crate::keymap::{KeyAction, KeymapConfig};
 use crate::player::PlaybackState;
+use crate::providers::youtube::{TokenPollOutcome, YouTubeFeedTab, now_unix_secs};
 use crate::providers::{
     LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, YouTubeProvider,
 };
@@ -108,6 +111,8 @@ pub struct MelangeState {
     pub playback: PlaybackSnapshot,
     pub digit_buffer: String,
     pub continue_watching: Vec<WatchHistoryEntry>,
+    #[serde(default)]
+    pub youtube_account: Option<YouTubeAccountSummary>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -171,6 +176,19 @@ pub enum ShellCommand {
     QuitApp,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YouTubeAuthSessionState {
+    pub session_id: u64,
+    pub profile_id: i64,
+    pub status: String,
+    pub user_code: String,
+    pub verification_url: String,
+    pub qr_svg: String,
+    pub expires_at: i64,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
 pub struct StateManager {
     state: RwLock<MelangeState>,
     epg_entries: RwLock<Vec<EpgEntry>>,
@@ -185,6 +203,8 @@ pub struct StateManager {
     audio: Arc<AudioEngine>,
     mediathek: Arc<MediathekProvider>,
     youtube: RwLock<Arc<YouTubeProvider>>,
+    youtube_auth: RwLock<Option<YouTubeAuthSessionState>>,
+    youtube_auth_seq: AtomicU64,
     local_media: RwLock<Arc<LocalMediaProvider>>,
 }
 
@@ -252,6 +272,7 @@ impl StateManager {
             playback: PlaybackSnapshot::default(),
             digit_buffer: String::new(),
             continue_watching: Vec::new(),
+            youtube_account: None,
         };
 
         Arc::new(Self {
@@ -268,20 +289,108 @@ impl StateManager {
             audio,
             mediathek: Arc::new(MediathekProvider::new()),
             youtube: RwLock::new(Arc::new(YouTubeProvider::new("https://pipedapi.kavin.rocks"))),
+            youtube_auth: RwLock::new(None),
+            youtube_auth_seq: AtomicU64::new(1),
             local_media: RwLock::new(Arc::new(LocalMediaProvider::new(Vec::new()))),
         })
     }
 
     pub fn attach_db_path(&self, path: PathBuf) {
-        if let Ok(db) = crate::db::Database::open(&path)
-            && let Ok(Some(raw)) = db.get_setting("keymap")
-            && let Ok(parsed) = serde_json::from_str::<KeymapConfig>(&raw)
-            && let Ok(mut guard) = self.keymap.write()
-        {
-            *guard = parsed.normalized();
+        if let Ok(db) = crate::db::Database::open(&path) {
+            if let Ok(Some(raw)) = db.get_setting("keymap")
+                && let Ok(parsed) = serde_json::from_str::<KeymapConfig>(&raw)
+                && let Ok(mut guard) = self.keymap.write()
+            {
+                *guard = parsed.normalized();
+            }
+            let active_id = self
+                .state
+                .read()
+                .ok()
+                .and_then(|s| s.active_profile.as_ref().map(|p| p.id));
+            if let Some(pid) = active_id {
+                let summary = db
+                    .get_youtube_account(pid)
+                    .ok()
+                    .flatten()
+                    .map(|a| YouTubeAccountSummary::from(&a));
+                let cw = db.list_continue_watching(pid, 20).ok();
+                if let Ok(mut st) = self.state.write() {
+                    st.youtube_account = summary;
+                    if let Some(entries) = cw {
+                        st.continue_watching = entries;
+                    }
+                }
+            }
         }
         if let Ok(mut guard) = self.db_path.write() {
             *guard = Some(path);
+        }
+    }
+
+    pub fn set_youtube_provider(&self, provider: Arc<YouTubeProvider>) {
+        if let Ok(mut guard) = self.youtube.write() {
+            *guard = provider;
+        }
+    }
+
+    pub fn sync_active_profile_from_db(&self) {
+        let db_path = self.db_path.read().ok().and_then(|g| g.clone());
+        let Some(path) = db_path else {
+            return;
+        };
+        let active_id = self
+            .state
+            .read()
+            .ok()
+            .and_then(|s| s.active_profile.as_ref().map(|p| p.id));
+        let Some(pid) = active_id else {
+            return;
+        };
+        if let Ok(db) = crate::db::Database::open(&path) {
+            let summary = db
+                .get_youtube_account(pid)
+                .ok()
+                .flatten()
+                .map(|a| YouTubeAccountSummary::from(&a));
+            let cw = db.list_continue_watching(pid, 20).ok();
+            if let Ok(mut st) = self.state.write() {
+                st.youtube_account = summary;
+                if let Some(entries) = cw {
+                    st.continue_watching = entries;
+                }
+            }
+        }
+    }
+
+    pub async fn active_youtube_account(&self) -> Option<YouTubeAccount> {
+        let db_path = self.db_path.read().ok().and_then(|g| g.clone())?;
+        let profile_id = self
+            .state
+            .read()
+            .ok()
+            .and_then(|s| s.active_profile.as_ref().map(|p| p.id))?;
+        let account = crate::db::Database::open(&db_path)
+            .ok()
+            .and_then(|db| db.get_youtube_account(profile_id).ok().flatten())?;
+        let yt = self.youtube.read().ok().map(|g| g.clone())?;
+        match yt
+            .ensure_valid_token(Some(db_path.as_path()), profile_id, account.clone())
+            .await
+        {
+            Ok(fresh) => {
+                if fresh.expires_at != account.expires_at
+                    && let Ok(mut st) = self.state.write()
+                    && st.active_profile.as_ref().map(|p| p.id) == Some(profile_id)
+                {
+                    st.youtube_account = Some(YouTubeAccountSummary::from(&fresh));
+                }
+                Some(fresh)
+            }
+            Err(err) => {
+                warn!(profile_id, error = %err, "youtube token refresh failed; using stored token");
+                Some(account)
+            }
         }
     }
 
@@ -684,6 +793,7 @@ impl StateManager {
                     }
                 }
                 if changed {
+                    self.sync_active_profile_from_db();
                     self.audio.play(SoundKind::Select);
                     self.broadcast_state();
                 }
@@ -903,6 +1013,10 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .route("/api/remote/nav", post(remote_nav_handler))
         .route("/api/ondemand/feed", get(ondemand_feed_handler))
         .route("/api/ondemand/search", get(ondemand_search_handler))
+        .route("/api/youtube/feed", get(youtube_feed_handler))
+        .route("/api/youtube/auth/start", post(youtube_auth_start_handler))
+        .route("/api/youtube/auth/status", get(youtube_auth_status_handler))
+        .route("/api/youtube/auth/logout", post(youtube_auth_logout_handler))
         .route("/api/continue-watching", get(continue_watching_handler))
         .route("/ws", get(ws_handler))
         .with_state(state);
@@ -1146,6 +1260,300 @@ struct OnDemandSearchQuery {
     q: String,
 }
 
+#[derive(Deserialize)]
+struct YouTubeFeedQuery {
+    #[serde(default = "default_yt_tab")]
+    tab: String,
+    #[serde(default)]
+    channel_id: String,
+}
+
+fn default_yt_tab() -> String {
+    "foryou".to_string()
+}
+
+#[derive(Deserialize, Default)]
+struct YouTubeAuthStartRequest {
+    #[serde(default)]
+    profile_id: Option<i64>,
+}
+
+fn render_qr_svg(url: &str) -> String {
+    QrCode::new(url.as_bytes())
+        .map(|code| {
+            code.render::<svg::Color>()
+                .min_dimensions(200, 200)
+                .dark_color(svg::Color("#000000"))
+                .light_color(svg::Color("#ffffff"))
+                .build()
+        })
+        .unwrap_or_default()
+}
+
+async fn youtube_auth_start_handler(
+    State(state): State<Arc<StateManager>>,
+    payload: Option<Json<YouTubeAuthStartRequest>>,
+) -> impl IntoResponse {
+    let profile_id = payload
+        .and_then(|p| p.profile_id)
+        .or_else(|| {
+            state
+                .snapshot()
+                .active_profile
+                .map(|p| p.id)
+        })
+        .unwrap_or(1);
+
+    let yt = state.youtube.read().expect("youtube lock").clone();
+    let dev = match yt.start_device_auth().await {
+        Ok(d) => d,
+        Err(err) => {
+            warn!(error = %err, "youtube device auth start failed");
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let qr_svg = render_qr_svg(&dev.verification_url);
+    let session_id = state
+        .youtube_auth_seq
+        .fetch_add(1, AtomicOrdering::Relaxed);
+    let expires_at = now_unix_secs() + dev.expires_in;
+
+    let session = YouTubeAuthSessionState {
+        session_id,
+        profile_id,
+        status: "Pending".to_string(),
+        user_code: dev.user_code.clone(),
+        verification_url: dev.verification_url.clone(),
+        qr_svg: qr_svg.clone(),
+        expires_at,
+        error: None,
+    };
+
+    if let Ok(mut guard) = state.youtube_auth.write() {
+        *guard = Some(session);
+    }
+
+    // Spawn background polling task for this device_code session
+    let state_bg = Arc::clone(&state);
+    let yt_bg = Arc::clone(&yt);
+    let device_code = dev.device_code.clone();
+    let mut poll_interval = dev.interval.max(1) as u64;
+
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(Duration::from_secs(poll_interval)).await;
+
+            // Abort if superseded or cancelled
+            let still_active = state_bg
+                .youtube_auth
+                .read()
+                .ok()
+                .and_then(|g| g.as_ref().map(|s| s.session_id == session_id && s.status == "Pending"))
+                .unwrap_or(false);
+            if !still_active {
+                break;
+            }
+
+            if now_unix_secs() >= expires_at {
+                if let Ok(mut guard) = state_bg.youtube_auth.write()
+                    && let Some(ref mut s) = *guard
+                    && s.session_id == session_id
+                {
+                    s.status = "Expired".to_string();
+                }
+                break;
+            }
+
+            match yt_bg.poll_device_token(&device_code).await {
+                Ok(TokenPollOutcome::Pending) => continue,
+                Ok(TokenPollOutcome::SlowDown) => {
+                    poll_interval = poll_interval.saturating_add(5);
+                    continue;
+                }
+                Ok(TokenPollOutcome::Expired) => {
+                    if let Ok(mut guard) = state_bg.youtube_auth.write()
+                        && let Some(ref mut s) = *guard
+                        && s.session_id == session_id
+                    {
+                        s.status = "Expired".to_string();
+                    }
+                    break;
+                }
+                Ok(TokenPollOutcome::Denied) => {
+                    if let Ok(mut guard) = state_bg.youtube_auth.write()
+                        && let Some(ref mut s) = *guard
+                        && s.session_id == session_id
+                    {
+                        s.status = "Denied".to_string();
+                        s.error = Some("Authorization denied".to_string());
+                    }
+                    break;
+                }
+                Ok(TokenPollOutcome::Failed(msg)) => {
+                    if let Ok(mut guard) = state_bg.youtube_auth.write()
+                        && let Some(ref mut s) = *guard
+                        && s.session_id == session_id
+                    {
+                        s.status = "Error".to_string();
+                        s.error = Some(msg);
+                    }
+                    break;
+                }
+                Ok(TokenPollOutcome::Authorized(tok)) => {
+                    let (account_name, account_avatar_url) = yt_bg
+                        .fetch_account_info(&tok.access_token)
+                        .await
+                        .unwrap_or_else(|_| ("YouTube Account".to_string(), None));
+
+                    let account = YouTubeAccount {
+                        profile_id,
+                        access_token: tok.access_token,
+                        refresh_token: tok.refresh_token.unwrap_or_default(),
+                        expires_at: now_unix_secs() + tok.expires_in.max(60),
+                        account_name,
+                        account_avatar_url,
+                        updated_at: String::new(),
+                    };
+
+                    let db_path = state_bg.db_path.read().ok().and_then(|g| g.clone());
+                    if let Some(path) = db_path
+                        && let Ok(db) = crate::db::Database::open(&path)
+                        && let Err(err) = db.upsert_youtube_account(&account)
+                    {
+                        warn!(error = %err, "failed to persist youtube account");
+                    }
+
+                    let summary = YouTubeAccountSummary::from(&account);
+                    if let Ok(mut guard) = state_bg.youtube_auth.write()
+                        && let Some(ref mut s) = *guard
+                        && s.session_id == session_id
+                    {
+                        s.status = "Authorized".to_string();
+                    }
+
+                    let mut broadcast_needed = false;
+                    if let Ok(mut st) = state_bg.state.write()
+                        && st.active_profile.as_ref().map(|p| p.id) == Some(profile_id)
+                    {
+                        st.youtube_account = Some(summary);
+                        broadcast_needed = true;
+                    }
+                    if broadcast_needed {
+                        state_bg.broadcast_state();
+                    }
+                    break;
+                }
+                Err(err) => {
+                    warn!(error = %err, "youtube token poll transport error");
+                }
+            }
+        }
+    });
+
+    Json(serde_json::json!({
+        "session_id": session_id,
+        "profile_id": profile_id,
+        "user_code": dev.user_code,
+        "verification_url": dev.verification_url,
+        "qr_svg": qr_svg,
+        "expires_in": dev.expires_in,
+        "interval": dev.interval,
+    }))
+    .into_response()
+}
+
+async fn youtube_auth_status_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
+    let snap = state.snapshot();
+    let session = state.youtube_auth.read().ok().and_then(|g| g.clone());
+    let status = session
+        .as_ref()
+        .map(|s| s.status.clone())
+        .unwrap_or_else(|| {
+            if snap.youtube_account.as_ref().is_some_and(|a| a.signed_in) {
+                "Authorized".to_string()
+            } else {
+                "Idle".to_string()
+            }
+        });
+
+    Json(serde_json::json!({
+        "status": status,
+        "account": snap.youtube_account,
+        "user_code": session.as_ref().map(|s| s.user_code.clone()),
+        "verification_url": session.as_ref().map(|s| s.verification_url.clone()),
+        "error": session.and_then(|s| s.error),
+    }))
+}
+
+async fn youtube_auth_logout_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
+    let profile_id = state
+        .snapshot()
+        .active_profile
+        .map(|p| p.id)
+        .unwrap_or(1);
+
+    if let Ok(mut guard) = state.youtube_auth.write() {
+        *guard = None;
+    }
+
+    let db_path = state.db_path.read().ok().and_then(|g| g.clone());
+    if let Some(path) = db_path
+        && let Ok(db) = crate::db::Database::open(&path)
+        && let Err(err) = db.delete_youtube_account(profile_id)
+    {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": err.to_string() })),
+        )
+            .into_response();
+    }
+
+    if let Ok(mut st) = state.state.write()
+        && st.active_profile.as_ref().map(|p| p.id) == Some(profile_id)
+    {
+        st.youtube_account = None;
+    }
+    state.broadcast_state();
+
+    Json(serde_json::json!({ "ok": true })).into_response()
+}
+
+async fn youtube_feed_handler(
+    State(state): State<Arc<StateManager>>,
+    Query(params): Query<YouTubeFeedQuery>,
+) -> impl IntoResponse {
+    let tab = match params.tab.trim().to_ascii_lowercase().as_str() {
+        "subscriptions" | "subs" => YouTubeFeedTab::Subscriptions,
+        "history" => YouTubeFeedTab::History,
+        "channel" => YouTubeFeedTab::Channel(params.channel_id.clone()),
+        _ => YouTubeFeedTab::ForYou,
+    };
+
+    let account = state.active_youtube_account().await;
+    let local_history = state.snapshot().continue_watching;
+    let yt = state.youtube.read().expect("youtube lock").clone();
+
+    match yt
+        .fetch_feed_with_account(tab, account.as_ref(), &local_history)
+        .await
+    {
+        Ok(resp) => Json(resp).into_response(),
+        Err(err) => {
+            warn!(tab = %params.tab, error = %err, "youtube feed failed");
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({ "error": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
 async fn ondemand_feed_handler(
     State(state): State<Arc<StateManager>>,
     Query(params): Query<OnDemandFeedQuery>,
@@ -1153,8 +1561,12 @@ async fn ondemand_feed_handler(
     let result = match params.provider.as_str() {
         "mediathek" => state.mediathek.feed().await,
         "youtube" => {
+            let account = state.active_youtube_account().await;
+            let local_history = state.snapshot().continue_watching;
             let yt = state.youtube.read().expect("youtube lock").clone();
-            yt.feed().await
+            yt.fetch_feed_with_account(YouTubeFeedTab::ForYou, account.as_ref(), &local_history)
+                .await
+                .map(|r| r.items)
         }
         "local" => {
             let local = state.local_media.read().expect("local lock").clone();
@@ -1182,8 +1594,9 @@ async fn ondemand_search_handler(
     let result = match params.provider.as_str() {
         "mediathek" => state.mediathek.search(&params.q).await,
         "youtube" => {
+            let account = state.active_youtube_account().await;
             let yt = state.youtube.read().expect("youtube lock").clone();
-            yt.search(&params.q).await
+            yt.search_with_account(&params.q, account.as_ref()).await
         }
         "local" => {
             let local = state.local_media.read().expect("local lock").clone();

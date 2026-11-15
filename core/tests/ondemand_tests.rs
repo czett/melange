@@ -120,6 +120,7 @@ async fn test_watch_history_and_rest_routes() {
         subtitle: Some("Terra X".to_string()),
         description: None,
         channel_or_author: "ZDF".to_string(),
+        channel_id: None,
         duration_sec: 1000,
         thumbnail_url: None,
         stream_url: "https://cdn.example.org/doc.mp4".to_string(),
@@ -250,7 +251,11 @@ async fn test_youtube_provider_fallback_chain() {
         let _ = axum::serve(good_listener, good_app).await;
     });
 
-    let provider = YouTubeProvider::with_piped_urls(
+    let provider = YouTubeProvider::with_endpoints(
+        melange_core::providers::youtube::YouTubeEndpoints {
+            innertube_base_url: format!("http://{bad_addr}"),
+            ..Default::default()
+        },
         vec![
             format!("http://{bad_addr}"),
             format!("http://{good_addr}"),
@@ -429,4 +434,457 @@ async fn test_youtube_oauth_device_code_and_token_refresh() {
 
     let persisted = db.get_youtube_account(profile_id).unwrap().unwrap();
     assert_eq!(persisted.access_token, "fresh-access-token");
+}
+
+#[test]
+fn test_innertube_tv_tile_and_web_parsing_filters_shorts_and_extracts_channels() {
+    use melange_core::WatchHistoryEntry;
+    use melange_core::providers::youtube::{
+        merge_youtube_history, parse_duration_str, parse_innertube_browse_response,
+        parse_innertube_search_response,
+    };
+
+    assert_eq!(parse_duration_str("12:34"), 754);
+    assert_eq!(parse_duration_str("1:02:03"), 3723);
+    assert_eq!(parse_duration_str("LIVE"), 0);
+
+    let browse_fixture = r#"{
+        "header": {
+            "c4TabbedHeaderRenderer": {
+                "title": "ARTEde"
+            }
+        },
+        "contents": {
+            "tvSurfaceContentRenderer": {
+                "content": {
+                    "sectionListRenderer": {
+                        "contents": [
+                            {
+                                "shelfRenderer": {
+                                    "content": {
+                                        "horizontalListRenderer": {
+                                            "items": [
+                                                {
+                                                    "tileRenderer": {
+                                                        "contentId": "UCarte12345",
+                                                        "contentType": "TILE_CONTENT_TYPE_CHANNEL",
+                                                        "header": {
+                                                            "tileHeaderRenderer": {
+                                                                "thumbnail": {
+                                                                    "thumbnails": [
+                                                                        { "url": "https://yt3.ggpht.com/arte.jpg", "width": 176 }
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "metadata": {
+                                                            "tileMetadataRenderer": {
+                                                                "title": { "simpleText": "ARTEde" }
+                                                            }
+                                                        },
+                                                        "onSelectCommand": {
+                                                            "browseEndpoint": { "browseId": "UCarte12345" }
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    "tileRenderer": {
+                                                        "contentId": "vidNormal01",
+                                                        "contentType": "TILE_CONTENT_TYPE_VIDEO",
+                                                        "header": {
+                                                            "tileHeaderRenderer": {
+                                                                "thumbnail": {
+                                                                    "thumbnails": [
+                                                                        { "url": "https://i.ytimg.com/vi/vidNormal01/hqdefault.jpg", "width": 480 },
+                                                                        { "url": "https://i.ytimg.com/vi/vidNormal01/maxresdefault.jpg", "width": 1280 }
+                                                                    ]
+                                                                },
+                                                                "thumbnailOverlays": [
+                                                                    { "thumbnailOverlayTimeStatusRenderer": { "text": { "simpleText": "43:15" } } }
+                                                                ]
+                                                            }
+                                                        },
+                                                        "metadata": {
+                                                            "tileMetadataRenderer": {
+                                                                "title": { "runs": [{ "text": "Alpen aus dem All" }] },
+                                                                "lines": [
+                                                                    {
+                                                                        "lineRenderer": {
+                                                                            "items": [
+                                                                                {
+                                                                                    "lineItemRenderer": {
+                                                                                        "text": { "simpleText": "ARTEde" },
+                                                                                        "navigationEndpoint": {
+                                                                                            "browseEndpoint": { "browseId": "UCarte12345" }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    },
+                                                                    {
+                                                                        "lineRenderer": {
+                                                                            "items": [
+                                                                                { "lineItemRenderer": { "text": { "simpleText": "120K views" } } },
+                                                                                { "lineItemRenderer": { "text": { "simpleText": "2 days ago" } } }
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                ]
+                                                            }
+                                                        },
+                                                        "onSelectCommand": {
+                                                            "watchEndpoint": { "videoId": "vidNormal01" }
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    "tileRenderer": {
+                                                        "contentId": "shortVid99",
+                                                        "contentType": "TILE_CONTENT_TYPE_SHORTS",
+                                                        "metadata": {
+                                                            "tileMetadataRenderer": {
+                                                                "title": { "simpleText": "Vertical Short" }
+                                                            }
+                                                        },
+                                                        "onSelectCommand": {
+                                                            "reelWatchEndpoint": { "videoId": "shortVid99" }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }"#;
+
+    let (items, channels, header_title) =
+        parse_innertube_browse_response(browse_fixture, true).expect("parse browse");
+    assert_eq!(header_title.as_deref(), Some("ARTEde"));
+    assert_eq!(channels.len(), 1);
+    assert_eq!(channels[0].channel_id, "UCarte12345");
+    assert_eq!(channels[0].title, "ARTEde");
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0].id, "yt:vidNormal01");
+    assert_eq!(items[0].title, "Alpen aus dem All");
+    assert_eq!(items[0].channel_or_author, "ARTEde");
+    assert_eq!(items[0].channel_id.as_deref(), Some("UCarte12345"));
+    assert_eq!(items[0].duration_sec, 2595);
+    assert_eq!(
+        items[0].subtitle.as_deref(),
+        Some("120K views · 2 days ago")
+    );
+    assert_eq!(
+        items[0].thumbnail_url.as_deref(),
+        Some("https://i.ytimg.com/vi/vidNormal01/maxresdefault.jpg")
+    );
+
+    // Search response (including videoRenderer) keeps results
+    let search_fixture = r#"{
+        "contents": {
+            "twoColumnSearchResultsRenderer": {
+                "primaryContents": {
+                    "sectionListRenderer": {
+                        "contents": [{
+                            "itemSectionRenderer": {
+                                "contents": [{
+                                    "videoRenderer": {
+                                        "videoId": "searchVid42",
+                                        "title": { "runs": [{ "text": "Rust Async Deep Dive" }] },
+                                        "ownerText": {
+                                            "runs": [{
+                                                "text": "Jon Gjengset",
+                                                "navigationEndpoint": { "browseEndpoint": { "browseId": "UCjon123" } }
+                                            }]
+                                        },
+                                        "lengthText": { "simpleText": "1:10:05" },
+                                        "shortViewCountText": { "simpleText": "85K views" },
+                                        "publishedTimeText": { "simpleText": "1 month ago" },
+                                        "thumbnail": {
+                                            "thumbnails": [{ "url": "https://i.ytimg.com/vi/searchVid42/hq720.jpg", "width": 1280 }]
+                                        }
+                                    }
+                                }]
+                            }
+                        }]
+                    }
+                }
+            }
+        }
+    }"#;
+
+    let search_items = parse_innertube_search_response(search_fixture).expect("parse search");
+    assert_eq!(search_items.len(), 1);
+    assert_eq!(search_items[0].id, "yt:searchVid42");
+    assert_eq!(search_items[0].duration_sec, 4205);
+    assert_eq!(search_items[0].channel_id.as_deref(), Some("UCjon123"));
+
+    // History merge deduplicates and enriches local resume entries
+    let local = vec![WatchHistoryEntry {
+        id: 1,
+        profile_id: 1,
+        item_id: "yt:vidNormal01".to_string(),
+        provider: "youtube".to_string(),
+        title: "Alpen aus dem All".to_string(),
+        stream_url: "https://www.youtube.com/watch?v=vidNormal01".to_string(),
+        thumbnail_url: None,
+        position_sec: 320.0,
+        duration_sec: 2595.0,
+        updated_at: "2026-11-15 12:00:00".to_string(),
+    }];
+    let merged = merge_youtube_history(items, &local);
+    assert_eq!(merged.len(), 1);
+    assert_eq!(merged[0].channel_or_author, "ARTEde");
+    assert_eq!(merged[0].channel_id.as_deref(), Some("UCarte12345"));
+    assert_eq!(merged[0].subtitle.as_deref(), Some("Resumed at 5m"));
+}
+
+#[tokio::test]
+async fn test_youtube_http_routes_auth_feeds_channel_and_logout() {
+    use axum::{Router, routing::post};
+    use melange_core::providers::youtube::{YouTubeEndpoints, YouTubeFeedResponse};
+
+    let mock_yt = Router::new()
+        .route(
+            "/device/code",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "device_code": "dc-route-1",
+                    "user_code": "WXYZ-1234",
+                    "verification_url": "https://www.youtube.com/activate",
+                    "expires_in": 600,
+                    "interval": 1
+                }))
+            }),
+        )
+        .route(
+            "/token",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "access_token": "tok-route-1",
+                    "refresh_token": "ref-route-1",
+                    "expires_in": 3600
+                }))
+            }),
+        )
+        .route(
+            "/youtubei/v1/account/account_menu",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "activeAccountHeaderRenderer": {
+                        "accountName": { "simpleText": "Living Room" }
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/youtubei/v1/browse",
+            post(|axum::Json(body): axum::Json<serde_json::Value>| async move {
+                let browse_id = body["browseId"].as_str().unwrap_or("");
+                let (vid, title, chan, cid) = match browse_id {
+                    "FEsubscriptions" => ("subVid1", "Sub Video", "Veritasium", "UChnyf"),
+                    "FEhistory" => ("histVid1", "History Video", "Kurzgesagt", "UCsXVk"),
+                    "UChnyf" => ("chanVid1", "Channel Upload", "Veritasium", "UChnyf"),
+                    _ => ("homeVid1", "For You Pick", "3Blue1Brown", "UCYO_j"),
+                };
+                axum::Json(serde_json::json!({
+                    "contents": {
+                        "tvSurfaceContentRenderer": {
+                            "content": {
+                                "tileRenderer": {
+                                    "contentId": vid,
+                                    "metadata": {
+                                        "tileMetadataRenderer": {
+                                            "title": { "simpleText": title },
+                                            "lines": [{
+                                                "lineRenderer": {
+                                                    "items": [{
+                                                        "lineItemRenderer": {
+                                                            "text": { "simpleText": chan },
+                                                            "navigationEndpoint": {
+                                                                "browseEndpoint": { "browseId": cid }
+                                                            }
+                                                        }
+                                                    }]
+                                                }
+                                            }]
+                                        }
+                                    },
+                                    "onSelectCommand": {
+                                        "watchEndpoint": { "videoId": vid }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }))
+            }),
+        )
+        .route(
+            "/youtubei/v1/search",
+            post(|| async {
+                axum::Json(serde_json::json!({
+                    "contents": {
+                        "tileRenderer": {
+                            "contentId": "srchVid1",
+                            "metadata": {
+                                "tileMetadataRenderer": {
+                                    "title": { "simpleText": "Innertube Search Hit" }
+                                }
+                            },
+                            "onSelectCommand": {
+                                "watchEndpoint": { "videoId": "srchVid1" }
+                            }
+                        }
+                    }
+                }))
+            }),
+        );
+
+    let mock_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let mock_addr = mock_listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let _ = axum::serve(mock_listener, mock_yt).await;
+    });
+
+    let tmp = TempDir::new().unwrap();
+    let db_path = tmp.path().join("melange.db");
+    let db = Database::open(&db_path).unwrap();
+    let profiles = db.list_profiles().unwrap();
+    let state = StateManager::new(profiles, vec![], vec![], Arc::new(AudioEngine::noop()));
+    state.attach_db_path(db_path);
+    state.set_youtube_provider(Arc::new(YouTubeProvider::with_endpoints(
+        YouTubeEndpoints {
+            oauth_device_code_url: format!("http://{mock_addr}/device/code"),
+            oauth_token_url: format!("http://{mock_addr}/token"),
+            innertube_base_url: format!("http://{mock_addr}"),
+            client_id: "cid".to_string(),
+            client_secret: "csec".to_string(),
+        },
+        vec![],
+        false,
+    )));
+
+    let app_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let app_addr = app_listener.local_addr().unwrap();
+    let ui_dir = tmp.path().to_path_buf();
+    tokio::spawn(async move {
+        let _ = serve_on_listener(app_listener, state, &ui_dir).await;
+    });
+
+    let client = reqwest::Client::new();
+
+    // Signed-out Subscriptions requires auth
+    let subs_unauth: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=subscriptions"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(subs_unauth.requires_auth);
+    assert!(subs_unauth.items.is_empty());
+
+    // Start device auth & wait for background poll completion
+    let start_json: serde_json::Value = client
+        .post(format!("http://{app_addr}/api/youtube/auth/start"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(start_json["user_code"], "WXYZ-1234");
+    assert!(start_json["qr_svg"].as_str().unwrap_or("").contains("<svg"));
+
+    let mut authorized = false;
+    for _ in 0..20 {
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+        let st: serde_json::Value = client
+            .get(format!("http://{app_addr}/api/youtube/auth/status"))
+            .send()
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        if st["status"] == "Authorized" {
+            assert_eq!(st["account"]["account_name"], "Living Room");
+            authorized = true;
+            break;
+        }
+    }
+    assert!(authorized, "expected background auth polling to authorize");
+
+    // Signed-in For You, Subscriptions, History, Channel, and Search
+    let foryou: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=foryou"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(foryou.source, "innertube-auth");
+    assert_eq!(foryou.items[0].id, "yt:homeVid1");
+
+    let subs: YouTubeFeedResponse = client
+        .get(format!("http://{app_addr}/api/youtube/feed?tab=subscriptions"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(!subs.requires_auth);
+    assert_eq!(subs.items[0].id, "yt:subVid1");
+    assert_eq!(subs.channels[0].channel_id, "UChnyf");
+
+    let chan: YouTubeFeedResponse = client
+        .get(format!(
+            "http://{app_addr}/api/youtube/feed?tab=channel&channel_id=UChnyf"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(chan.items[0].id, "yt:chanVid1");
+
+    let searched: Vec<MediaItem> = client
+        .get(format!(
+            "http://{app_addr}/api/ondemand/search?provider=youtube&q=rust"
+        ))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(searched[0].id, "yt:srchVid1");
+
+    // Logout clears account cleanly
+    let logout_res = client
+        .post(format!("http://{app_addr}/api/youtube/auth/logout"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(logout_res.status(), 200);
+    let st_after: serde_json::Value = client
+        .get(format!("http://{app_addr}/api/youtube/auth/status"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert!(st_after["account"].is_null());
 }

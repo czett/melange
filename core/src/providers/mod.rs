@@ -15,7 +15,7 @@ pub use local_media::LocalMediaProvider;
 pub use m3u_xmltv::{M3uXmltvProvider, SyncReport};
 pub use mediathek::MediathekProvider;
 pub use tvheadend::TvheadendProvider;
-pub use youtube::YouTubeProvider;
+pub use youtube::{YouTubeChannelChip, YouTubeFeedResponse, YouTubeFeedTab, YouTubeProvider};
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
@@ -27,6 +27,8 @@ pub struct MediaItem {
     pub subtitle: Option<String>,
     pub description: Option<String>,
     pub channel_or_author: String,
+    #[serde(default)]
+    pub channel_id: Option<String>,
     pub duration_sec: u64,
     pub thumbnail_url: Option<String>,
     pub stream_url: String,

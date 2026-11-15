@@ -195,6 +195,7 @@ pub fn parse_mediathek_response(body: &str) -> Result<Vec<MediaItem>, MelangeErr
             subtitle,
             description: raw.description.filter(|s| !s.is_empty()),
             channel_or_author: raw.channel,
+            channel_id: None,
             duration_sec: raw.duration.unwrap_or(0),
             thumbnail_url: None,
             stream_url,
