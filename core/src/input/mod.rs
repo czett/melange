@@ -25,6 +25,8 @@ pub enum NavEvent {
     ChannelUp,
     ChannelDown,
     ToggleEpg,
+    ToggleOsd,
+    ToggleMute,
     PlayPause,
     Digit(u8),
 }
@@ -33,7 +35,12 @@ impl NavEvent {
     pub fn sound_kind(self) -> SoundKind {
         match self {
             Self::Up | Self::Down | Self::Left | Self::Right | Self::Digit(_) => SoundKind::Focus,
-            Self::Select | Self::Home | Self::ToggleEpg | Self::PlayPause => SoundKind::Select,
+            Self::Select
+            | Self::Home
+            | Self::ToggleEpg
+            | Self::ToggleOsd
+            | Self::ToggleMute
+            | Self::PlayPause => SoundKind::Select,
             Self::Back => SoundKind::Back,
             Self::ChannelUp | Self::ChannelDown => SoundKind::Zap,
         }

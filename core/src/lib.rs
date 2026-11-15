@@ -4,6 +4,7 @@ pub mod config;
 pub mod db;
 pub mod error;
 pub mod input;
+pub mod keymap;
 pub mod player;
 pub mod providers;
 pub mod server;
@@ -13,6 +14,7 @@ pub use config::{AppConfig, RunMode};
 pub use db::{Channel, ChannelInput, Database, EpgEntry, EpgEntryInput, Profile, WatchHistoryEntry};
 pub use error::MelangeError;
 pub use input::{CecHandle, EvdevHandle, GamepadHandle, InputRouter, NavEvent};
+pub use keymap::{KeyAction, KeymapConfig, normalize_key_name};
 pub use player::{PlaybackState, PlayerBackend, PlayerController};
 pub use providers::{
     LocalMediaProvider, M3uXmltvProvider, MediaItem, MediathekProvider, OnDemandProvider,

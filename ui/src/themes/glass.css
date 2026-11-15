@@ -494,6 +494,23 @@
   color: #ffffff;
 }
 
+.haptic-tile--grouped .keycap-badge {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transition:
+    background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms ease;
+}
+
+.haptic-tile--grouped:hover .keycap-badge,
+.haptic-tile--grouped[data-focused="true"] .keycap-badge {
+  background-color: rgba(17, 19, 24, 0.09);
+  border-color: rgba(17, 19, 24, 0.16);
+  color: var(--melange-ink);
+}
+
 /* Settings sidebar category pills */
 .haptic-tile--sidebar {
   background-color: transparent;
@@ -711,7 +728,7 @@
   color: rgba(255, 255, 255, 0.96);
 }
 
-/* Crisp, high-legibility Couch TV Lockscreen Clock */
+/* Slightly translucent, bold iOS-style Lockscreen Clock */
 .lockscreen-clock {
   font-family:
     "SF Pro Display",
@@ -719,14 +736,15 @@
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
-  font-size: 152px;
-  font-weight: 500;
-  line-height: 0.94;
-  letter-spacing: -0.04em;
+  font-size: 184px;
+  font-weight: 600;
+  line-height: 0.88;
+  letter-spacing: -0.045em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-  color: #ffffff;
-  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.32);
+  color: rgba(255, 255, 255, 0.86);
+  text-shadow: 0 8px 36px rgba(0, 0, 0, 0.24);
+  mix-blend-mode: screen;
 }
 
 .view-title {

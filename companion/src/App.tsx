@@ -56,6 +56,34 @@ type Tab = 'remote' | 'watch';
 
 const DEFAULT_PRESETS = ['1.jpg', '2.jpg', '3.jpg', '4.jpg', '5.jpg', '6.jpg', '7.jpg'];
 
+const PRESET_TITLES: Record<string, string> = {
+  '1.jpg': 'Nocturnal Horizon',
+  '2.jpg': 'Alpine Dusk',
+  '3.jpg': 'Midnight Ridge',
+  '4.jpg': 'Glacier Twilight',
+  '5.jpg': 'Timberline Mist',
+  '6.jpg': 'Summit Ember',
+  '7.jpg': 'Starlight Valley',
+};
+
+function presetLabel(filename: string): string {
+  const known = PRESET_TITLES[filename];
+  if (known) return known;
+  const stem = filename.replace(/\.[^.]+$/, '').trim();
+  if (/^\d+$/.test(stem)) {
+    return `Scene ${Number(stem)}`;
+  }
+  const cleaned = stem
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return filename;
+  return cleaned
+    .split(' ')
+    .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(' ');
+}
+
 const APPS: {
   id: string;
   label: string;
@@ -170,24 +198,26 @@ export default function App() {
     }
   };
 
+  const refreshWallpapers = async () => {
+    try {
+      const res = await fetch('/api/wallpapers');
+      if (res.ok) {
+        const list = (await res.json()) as unknown;
+        if (Array.isArray(list)) {
+          const valid = list.filter((item): item is string => typeof item === 'string');
+          if (valid.length > 0) setPresets(valid);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   onMount(() => {
     let reconnectTimer: number | undefined;
     let disposed = false;
 
-    void (async () => {
-      try {
-        const res = await fetch('/api/wallpapers');
-        if (res.ok) {
-          const list = (await res.json()) as unknown;
-          if (Array.isArray(list)) {
-            const valid = list.filter((item): item is string => typeof item === 'string');
-            if (valid.length > 0) setPresets(valid);
-          }
-        }
-      } catch {
-        // ignore
-      }
-    })();
+    void refreshWallpapers();
 
     const connect = () => {
       if (disposed) return;
@@ -835,11 +865,13 @@ export default function App() {
                   <For each={presets()}>
                     {(file) => {
                       const isActive = () => currentWallpaper() === `/wallpapers/${file}`;
+                      const label = () => presetLabel(file);
                       return (
                         <button
                           type="button"
                           onClick={() => void selectPresetWallpaper(file)}
-                          aria-label={`Select wallpaper ${file}`}
+                          title={label()}
+                          aria-label={`Select wallpaper ${label()}`}
                           aria-pressed={isActive()}
                           class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-transform active:scale-[0.96] ${
                             isActive() ? 'border-white ring-1 ring-white' : 'border-white/[0.12]'
@@ -847,7 +879,7 @@ export default function App() {
                         >
                           <img
                             src={`/wallpapers/${file}`}
-                            alt={`Scene ${file}`}
+                            alt={label()}
                             class="h-full w-full object-cover"
                             loading="lazy"
                           />
@@ -881,7 +913,10 @@ export default function App() {
           <button
             type="button"
             data-active={tab() === 'watch' ? 'true' : undefined}
-            onClick={() => setTab('watch')}
+            onClick={() => {
+              setTab('watch');
+              void refreshWallpapers();
+            }}
             class="segmented-item"
           >
             Watch

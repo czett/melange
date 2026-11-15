@@ -290,4 +290,20 @@ impl PlayerBackend for MpvPlayer {
             .map_err(|e| MelangeError::Player(format!("set pause failed: {e}")))?;
         Ok(next)
     }
+
+    fn stop(&mut self) -> Result<(), MelangeError> {
+        debug!("libmpv stop");
+        self.mpv
+            .command("stop", &[])
+            .map_err(|e| MelangeError::Player(format!("stop failed: {e}")))
+    }
+
+    fn toggle_mute(&mut self) -> Result<bool, MelangeError> {
+        let muted: bool = self.mpv.get_property("mute").unwrap_or(false);
+        let next = !muted;
+        self.mpv
+            .set_property("mute", next)
+            .map_err(|e| MelangeError::Player(format!("set mute failed: {e}")))?;
+        Ok(next)
+    }
 }

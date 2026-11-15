@@ -14,8 +14,8 @@ use gtk4::{
 };
 use melange_core::{
     AppConfig, AppMode, AudioEngine, CecHandle, Database, EvdevHandle, GamepadHandle, InputRouter,
-    M3uXmltvProvider, NavEvent, OverlayKind, PlayerBackend, PlayerController, RunMode, ShellCommand,
-    StateManager, TvheadendProvider, spawn_server_thread,
+    KeyAction, M3uXmltvProvider, NavEvent, OverlayKind, PlayerBackend, PlayerController, RunMode,
+    ShellCommand, StateManager, TvheadendProvider, spawn_server_thread,
 };
 use tracing::{error, info, warn};
 use webkit6::WebView;
@@ -247,17 +247,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let webview_keys = webview.clone();
     let state_keys = Arc::clone(&state_manager);
     key_controller.connect_key_pressed(move |_, key, _, mods| {
+        if state_keys.is_key_capture() {
+            let _ = webview_keys.grab_focus();
+            return glib::Propagation::Proceed;
+        }
+
         let no_accel = !mods.intersects(
             ModifierType::CONTROL_MASK | ModifierType::ALT_MASK | ModifierType::SUPER_MASK,
         );
         let overlay = state_keys.snapshot().overlay;
-        let is_f11 = key == Key::F11;
-        let is_f_shortcut =
-            matches!(key, Key::f | Key::F) && no_accel && overlay != OverlayKind::SearchKeyboard;
-        if is_f11 || is_f_shortcut {
-            toggle_window_fullscreen(&window_keys, &state_keys);
-            return glib::Propagation::Stop;
-        }
         if overlay == OverlayKind::SearchKeyboard {
             if let Some(ev) = map_gtk_key_for_search(key) {
                 router_keys.dispatch(ev);
@@ -266,7 +264,24 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
             let _ = webview_keys.grab_focus();
             return glib::Propagation::Proceed;
         }
-        if let Some(ev) = map_gtk_key(key) {
+
+        if no_accel
+            && let Some(key_name) = key.name()
+            && let Some(action) = state_keys.keymap().resolve_action(key_name.as_str())
+        {
+            match action {
+                KeyAction::ToggleFullscreen => {
+                    toggle_window_fullscreen(&window_keys, &state_keys);
+                    return glib::Propagation::Stop;
+                }
+                other => {
+                    router_keys.dispatch(action_to_nav_event(other));
+                    return glib::Propagation::Stop;
+                }
+            }
+        }
+
+        if no_accel && let Some(ev) = map_gtk_fallback_key(key) {
             router_keys.dispatch(ev);
             return glib::Propagation::Stop;
         }
@@ -284,6 +299,7 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
     let app_cmd = app.clone();
     let window_cmd = window.clone();
     let webview_cmd = webview.clone();
+    let gl_area_cmd = gl_area.clone();
     let db_path_loop = config.db_path.clone();
     let mut tick_count: u64 = 0;
     glib::timeout_add_local(Duration::from_millis(16), move || {
@@ -292,7 +308,15 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
             handle_nav_event(&ctrl_nav, &state_nav, ev);
         }
         while let Ok(cmd) = shell_cmd_rx.try_recv() {
-            handle_shell_command(&app_cmd, &window_cmd, &webview_cmd, &ctrl_nav, &state_nav, cmd);
+            handle_shell_command(
+                &app_cmd,
+                &window_cmd,
+                &webview_cmd,
+                &gl_area_cmd,
+                &ctrl_nav,
+                &state_nav,
+                cmd,
+            );
         }
 
         let mpv_err = {
@@ -326,23 +350,6 @@ fn build_ui(app: &Application, config: &AppConfig) -> Result<(), melange_core::M
         }
         glib::ControlFlow::Continue
     });
-
-    // In --dev mode, automatically load channel 1 so live video starts immediately.
-    if config.mode == RunMode::Dev {
-        let tune_result = {
-            let mut ctrl = controller.borrow_mut();
-            let loaded = ctrl.load_channel(1).map(|opt| opt.map(|ch| (ch.number, ch.name.clone())));
-            loaded.map(|opt| opt.map(|(number, name)| (number, name, ControllerSnapshot::from_controller(&ctrl))))
-        };
-        match tune_result {
-            Ok(Some((number, name, snap))) => {
-                info!(number = number, name = %name, "auto-tuned channel 1");
-                snap.apply(&state_manager);
-            }
-            Ok(None) => warn!("channel 1 not found in sqlite"),
-            Err(err) => error!(error = %err, "failed to auto-tune channel 1"),
-        }
-    }
 
     Ok(())
 }
@@ -390,6 +397,7 @@ fn handle_shell_command(
     app: &Application,
     window: &ApplicationWindow,
     webview: &WebView,
+    gl_area: &GLArea,
     controller: &Rc<RefCell<PlayerController<MpvPlayer>>>,
     state_manager: &StateManager,
     cmd: ShellCommand,
@@ -469,6 +477,13 @@ fn handle_shell_command(
         }
         ShellCommand::ToggleFullscreen => {
             toggle_window_fullscreen(window, state_manager);
+        }
+        ShellCommand::StopPlayback => {
+            let mut ctrl = controller.borrow_mut();
+            if let Err(err) = ctrl.stop() {
+                error!(error = %err, "failed to stop playback");
+            }
+            gl_area.queue_render();
         }
         ShellCommand::QuitApp => {
             info!("quitting melange-shell");
@@ -574,13 +589,41 @@ fn handle_nav_event(
                 updated.apply(state_manager);
             }
         }
+        NavEvent::ToggleMute => {
+            let res = {
+                let mut ctrl = controller.borrow_mut();
+                ctrl.backend_mut().toggle_mute()
+            };
+            match res {
+                Ok(muted) => state_manager.set_muted(muted),
+                Err(err) => error!(error = %err, "toggle mute failed"),
+            }
+        }
         NavEvent::Back
         | NavEvent::Home
         | NavEvent::ToggleEpg
+        | NavEvent::ToggleOsd
         | NavEvent::Up
         | NavEvent::Down
         | NavEvent::Left
         | NavEvent::Right => {}
+    }
+}
+
+fn action_to_nav_event(action: KeyAction) -> NavEvent {
+    match action {
+        KeyAction::Up => NavEvent::Up,
+        KeyAction::Down => NavEvent::Down,
+        KeyAction::Left => NavEvent::Left,
+        KeyAction::Right => NavEvent::Right,
+        KeyAction::Select => NavEvent::Select,
+        KeyAction::Back => NavEvent::Back,
+        KeyAction::ToggleEpg => NavEvent::ToggleEpg,
+        KeyAction::ToggleOsd => NavEvent::ToggleOsd,
+        KeyAction::ToggleMute => NavEvent::ToggleMute,
+        KeyAction::ChannelUp => NavEvent::ChannelUp,
+        KeyAction::ChannelDown => NavEvent::ChannelDown,
+        KeyAction::ToggleFullscreen => NavEvent::Select,
     }
 }
 
@@ -596,18 +639,9 @@ fn map_gtk_key_for_search(key: Key) -> Option<NavEvent> {
     }
 }
 
-fn map_gtk_key(key: Key) -> Option<NavEvent> {
+fn map_gtk_fallback_key(key: Key) -> Option<NavEvent> {
     match key {
-        Key::Up => Some(NavEvent::Up),
-        Key::Down => Some(NavEvent::Down),
-        Key::Left => Some(NavEvent::Left),
-        Key::Right => Some(NavEvent::Right),
-        Key::Return | Key::KP_Enter => Some(NavEvent::Select),
-        Key::Escape => Some(NavEvent::Back),
-        Key::Page_Up => Some(NavEvent::ChannelUp),
-        Key::Page_Down => Some(NavEvent::ChannelDown),
         Key::h | Key::H => Some(NavEvent::Home),
-        Key::e | Key::E => Some(NavEvent::ToggleEpg),
         Key::_0 | Key::KP_0 => Some(NavEvent::Digit(0)),
         Key::_1 | Key::KP_1 => Some(NavEvent::Digit(1)),
         Key::_2 | Key::KP_2 => Some(NavEvent::Digit(2)),

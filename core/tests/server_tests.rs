@@ -353,3 +353,143 @@ async fn wallpapers_list_and_companion_routes_return_expected_responses() {
         Some("/wallpapers/3.jpg")
     );
 }
+
+#[tokio::test]
+async fn leaving_live_tv_stops_playback_and_clears_active_stream() {
+    let (_host, state) = spawn_test_server().await;
+    let (tx, rx) = std::sync::mpsc::channel();
+    state.attach_shell_sender(tx);
+
+    // 1. Tuning a channel and leaving via NavEvent::Back clears playback + emits StopPlayback
+    state.apply_client_command(ClientCommand::SelectChannel { channel_id: 1 });
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::SelectChannel { channel_id: 1 })
+    ));
+    state.set_overlay(OverlayKind::None);
+    state.handle_nav_event(NavEvent::Back);
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::Home);
+    assert_eq!(snap.playback.state, PlaybackState::Idle);
+    assert!(snap.playback.channel_id.is_none());
+    assert!(snap.playback.current_media.is_none());
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::StopPlayback)
+    ));
+
+    // 2. Playing on-demand media and clicking PlayerOsd Back (SetMode -> Home) stops playback
+    let item = melange_core::MediaItem {
+        id: "yt:stop-test".to_string(),
+        provider: "youtube".to_string(),
+        title: "Stop Test".to_string(),
+        subtitle: None,
+        description: None,
+        channel_or_author: "Channel".to_string(),
+        duration_sec: 90,
+        thumbnail_url: None,
+        stream_url: "https://example.com/vod.mp4".to_string(),
+        published_at: None,
+    };
+    state.apply_client_command(ClientCommand::PlayMedia { item, resume: false });
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::PlayMedia { .. })
+    ));
+
+    state.apply_client_command(ClientCommand::SetMode { mode: AppMode::Settings });
+    let snap = state.snapshot();
+    assert_eq!(snap.mode, AppMode::Settings);
+    assert_eq!(snap.playback.state, PlaybackState::Idle);
+    assert!(snap.playback.channel_id.is_none());
+    assert!(snap.playback.current_media.is_none());
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::StopPlayback)
+    ));
+    assert!(matches!(
+        rx.try_recv(),
+        Ok(melange_core::ShellCommand::SetMode {
+            mode: AppMode::Settings
+        })
+    ));
+}
+
+#[tokio::test]
+async fn wallpapers_natural_sort_and_keymap_persistence_work() {
+    let dir = tempfile::TempDir::new().expect("tempdir");
+    let wallpapers_dir = dir.path().join("wallpapers");
+    std::fs::create_dir_all(&wallpapers_dir).expect("mkdir wallpapers");
+    for name in [
+        "10.jpg",
+        "2.jpg",
+        "1.jpg",
+        "alpine_peak.webp",
+        "sunset.png",
+        "profile_1_999.png",
+        "readme.txt",
+    ] {
+        std::fs::write(wallpapers_dir.join(name), b"img").expect("write file");
+    }
+
+    let db_path = dir.path().join("melange.db");
+    let db = melange_core::Database::open(&db_path).expect("open db");
+    let state = StateManager::new(
+        db.list_profiles().unwrap(),
+        vec![],
+        vec![],
+        Arc::new(AudioEngine::noop()),
+    );
+    state.attach_db_path(db_path.clone());
+    state.set_wallpapers_dir(wallpapers_dir);
+
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        let _ = serve_on_listener(listener, state, dir.path()).await;
+    });
+
+    let client = reqwest::Client::new();
+    let wallpapers: Vec<String> = client
+        .get(format!("http://127.0.0.1:{port}/api/wallpapers"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(
+        wallpapers,
+        vec![
+            "1.jpg",
+            "2.jpg",
+            "10.jpg",
+            "alpine_peak.webp",
+            "sunset.png",
+        ]
+    );
+
+    let custom = melange_core::KeymapConfig {
+        toggle_epg: vec!["g".to_string()],
+        wasd_navigation: true,
+        ..Default::default()
+    };
+
+    let saved: melange_core::KeymapConfig = client
+        .post(format!("http://127.0.0.1:{port}/api/keymap"))
+        .json(&custom)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(saved.toggle_epg, vec!["g".to_string()]);
+    assert!(saved.wasd_navigation);
+
+    // Reloading DB in a new StateManager restores the persisted keymap
+    let reloaded_state = StateManager::new(vec![], vec![], vec![], Arc::new(AudioEngine::noop()));
+    reloaded_state.attach_db_path(db_path);
+    assert_eq!(reloaded_state.keymap().toggle_epg, vec!["g".to_string()]);
+    assert!(reloaded_state.keymap().wasd_navigation);
+}

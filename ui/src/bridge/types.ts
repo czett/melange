@@ -83,6 +83,7 @@ export interface PlaybackSnapshot {
   position_sec: number;
   duration_sec: number;
   paused: boolean;
+  muted?: boolean;
   is_zapping: boolean;
 }
 
@@ -110,7 +111,39 @@ export type NavEvent =
   | "ChannelUp"
   | "ChannelDown"
   | "ToggleEpg"
+  | "ToggleOsd"
+  | "ToggleMute"
   | { Digit: number };
+
+export type KeyAction =
+  | "Up"
+  | "Down"
+  | "Left"
+  | "Right"
+  | "Select"
+  | "Back"
+  | "ToggleEpg"
+  | "ToggleOsd"
+  | "ToggleMute"
+  | "ToggleFullscreen"
+  | "ChannelUp"
+  | "ChannelDown";
+
+export interface KeymapConfig {
+  up: string[];
+  down: string[];
+  left: string[];
+  right: string[];
+  select: string[];
+  back: string[];
+  toggle_epg: string[];
+  toggle_osd: string[];
+  toggle_mute: string[];
+  toggle_fullscreen: string[];
+  channel_up: string[];
+  channel_down: string[];
+  wasd_navigation: boolean;
+}
 
 export type ServerMessage =
   | { type: "StateSnapshot"; state: MelangeState }
@@ -128,4 +161,5 @@ export type ClientCommand =
   | { type: "SeekRelative"; offset_sec: number }
   | { type: "TogglePause" }
   | { type: "ToggleFullscreen" }
+  | { type: "SetKeyCapture"; active: boolean }
   | { type: "QuitApp" };

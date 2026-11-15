@@ -141,6 +141,11 @@ impl Database {
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(profile_id, item_id)
             );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             ",
         )?;
 
@@ -484,6 +489,26 @@ impl Database {
         self.conn.execute(
             "DELETE FROM media_watch_history WHERE profile_id = ?1 AND item_id = ?2",
             params![profile_id, item_id],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_setting(&self, key: &str) -> Result<Option<String>, MelangeError> {
+        self.conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = ?1",
+                params![key],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), MelangeError> {
+        self.conn.execute(
+            "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![key, value],
         )?;
         Ok(())
     }

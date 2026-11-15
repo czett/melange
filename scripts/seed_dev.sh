@@ -225,18 +225,11 @@ def damped_pop(dur_s, f0, f1, tau_s, cutoff_hz, harmonic_mix=0.22):
     return lowpass(raw, cutoff_hz)
 
 
-def double_tap(dur_s, f_first, f_second, tap2_delay_s, cutoff_hz):
-    n_samples = int(sample_rate * dur_s)
-    tap1 = damped_pop(dur_s, f_first, f_first * 1.08, 0.0015, cutoff_hz, 0.20)
-    tap2_offset = int(sample_rate * tap2_delay_s)
-    tap2_dur = max(0.004, dur_s - tap2_delay_s)
-    tap2 = damped_pop(tap2_dur, f_second, f_second * 1.04, 0.0018, cutoff_hz, 0.18)
-    out = list(tap1)
-    for idx, val in enumerate(tap2):
-        pos = tap2_offset + idx
-        if pos < n_samples:
-            out[pos] += 0.88 * val
-    return out
+def tactile_confirm():
+    # Single 18 ms warm low-mid resonant membrane pop (340 Hz) + crisp 1800 Hz transient attack
+    body = damped_pop(0.018, 340.0, 275.0, 0.0042, 1600.0, 0.16)
+    attack = damped_pop(0.018, 1800.0, 1350.0, 0.0009, 3600.0, 0.10)
+    return [b + 0.55 * a for b, a in zip(body, attack)]
 
 
 def write_wav(name, samples):
@@ -257,7 +250,7 @@ def write_wav(name, samples):
 
 # Crisp, dry Apple-style tactile micro-clicks
 nav_click = damped_pop(0.009, 1100.0, 960.0, 0.0018, 2400.0, 0.22)
-select_click = double_tap(0.014, 820.0, 1250.0, 0.0055, 2600.0)
+select_click = tactile_confirm()
 back_click = damped_pop(0.012, 640.0, 420.0, 0.0028, 1700.0, 0.16)
 zap_click = damped_pop(0.014, 740.0, 1120.0, 0.0024, 2400.0, 0.20)
 error_click = damped_pop(0.024, 260.0, 235.0, 0.0055, 1050.0, 0.18)
@@ -274,7 +267,7 @@ PYEOF
 if command -v python3 >/dev/null 2>&1; then
   generate_sounds_python
 elif command -v ffmpeg >/dev/null 2>&1; then
-  for pair in "nav.wav:1100:0.009" "focus.wav:1100:0.009" "select.wav:1040:0.014" "back.wav:520:0.012" "zap.wav:880:0.014" "error.wav:260:0.024"; do
+  for pair in "nav.wav:1100:0.009" "focus.wav:1100:0.009" "select.wav:340:0.018" "back.wav:520:0.012" "zap.wav:880:0.014" "error.wav:260:0.024"; do
     IFS=: read -r fname freq dur <<< "${pair}"
     echo "[seed] generating ${SOUNDS_DIR}/${fname} via ffmpeg"
     ffmpeg -y -loglevel error -f lavfi -i "sine=frequency=${freq}:duration=${dur}" \

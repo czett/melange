@@ -17,9 +17,10 @@ import { ProfileSwitcher } from "./components/ProfileSwitcher";
 import { ScenicBackdrop } from "./components/ScenicBackdrop";
 import { SettingsView } from "./components/SettingsView";
 import { ZapBanner } from "./components/ZapBanner";
+import { loadKeymap, resolveBrowserKeyAction } from "./spatial/keymap";
 import { handleSpatialNav, measureFocused, setInputModality } from "./spatial/nav";
 
-function mapBrowserKey(key: string, searchKeyboardOpen: boolean): NavEvent | null {
+function mapSearchFallbackKey(key: string): NavEvent | null {
   switch (key) {
     case "ArrowUp":
       return "Up";
@@ -33,16 +34,6 @@ function mapBrowserKey(key: string, searchKeyboardOpen: boolean): NavEvent | nul
       return "Select";
     case "Escape":
       return "Back";
-    case "h":
-    case "H":
-      return searchKeyboardOpen ? null : "Home";
-    case "e":
-    case "E":
-      return searchKeyboardOpen ? null : "ToggleEpg";
-    case "PageUp":
-      return searchKeyboardOpen ? null : "ChannelUp";
-    case "PageDown":
-      return searchKeyboardOpen ? null : "ChannelDown";
     default:
       return null;
   }
@@ -51,6 +42,7 @@ function mapBrowserKey(key: string, searchKeyboardOpen: boolean): NavEvent | nul
 export const App = () => {
   onMount(() => {
     connectBridge();
+    void loadKeymap();
 
     const unsubNav = onNavEvent((ev) => {
       const state = melangeState();
@@ -115,19 +107,46 @@ export const App = () => {
     // Browser-only keyboard fallback when inspecting http://127.0.0.1:9000 outside melange-shell.
     const onKeyDown = (e: KeyboardEvent) => {
       const noAccel = !e.ctrlKey && !e.altKey && !e.metaKey;
-      const searchOpen = melangeState().overlay === "SearchKeyboard";
-      if (
-        e.key === "F11" ||
-        ((e.key === "f" || e.key === "F") && noAccel && !searchOpen)
-      ) {
-        e.preventDefault();
-        sendCommand({ type: "ToggleFullscreen" });
+      if (!noAccel) return;
+
+      const state = melangeState();
+      const searchOpen = state.overlay === "SearchKeyboard";
+      if (searchOpen) {
+        const searchEv = mapSearchFallbackKey(e.key);
+        if (searchEv) {
+          e.preventDefault();
+          emitLocalNavEvent(searchEv);
+        }
         return;
       }
-      const ev = mapBrowserKey(e.key, searchOpen);
-      if (ev) {
+
+      const action = resolveBrowserKeyAction(e.key);
+      if (action) {
         e.preventDefault();
-        emitLocalNavEvent(ev);
+        if (action === "ToggleFullscreen") {
+          sendCommand({ type: "ToggleFullscreen" });
+        } else if (action === "ToggleEpg") {
+          sendCommand({
+            type: "SetOverlay",
+            overlay: state.overlay === "FullEpg" ? "None" : "FullEpg"
+          });
+        } else if (action === "ToggleOsd") {
+          if (state.mode === "LiveTv") {
+            const isOsd = state.overlay === "PlayerOsd" || state.overlay === "ZapBanner";
+            const target = state.playback.current_media ? "PlayerOsd" : "ZapBanner";
+            sendCommand({ type: "SetOverlay", overlay: isOsd ? "None" : target });
+          }
+        } else if (action === "ToggleMute") {
+          sendCommand({ type: "PlaySound", sound: "select" });
+        } else {
+          emitLocalNavEvent(action);
+        }
+        return;
+      }
+
+      if (e.key === "h" || e.key === "H") {
+        e.preventDefault();
+        emitLocalNavEvent("Home");
       }
     };
     window.addEventListener("keydown", onKeyDown);

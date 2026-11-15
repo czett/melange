@@ -220,7 +220,7 @@ export const HomeView = () => {
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-3 select-none text-[152px] font-medium leading-[0.94] tracking-[-0.04em] tabular-nums">
+        <div class="lockscreen-clock mt-2 select-none text-[184px] font-semibold leading-[0.88] tracking-[-0.045em] tabular-nums xl:text-[216px]">
           {formattedTime()}
         </div>
       </section>

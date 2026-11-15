@@ -13,6 +13,7 @@ use tempfile::TempDir;
 struct MockBackend {
     loaded_urls: Rc<RefCell<Vec<String>>>,
     paused: bool,
+    stopped_count: Rc<RefCell<usize>>,
 }
 
 impl MockBackend {
@@ -20,11 +21,16 @@ impl MockBackend {
         Self {
             loaded_urls: Rc::new(RefCell::new(Vec::new())),
             paused: false,
+            stopped_count: Rc::new(RefCell::new(0)),
         }
     }
 
     fn urls(&self) -> Vec<String> {
         self.loaded_urls.borrow().clone()
+    }
+
+    fn stops(&self) -> usize {
+        *self.stopped_count.borrow()
     }
 }
 
@@ -38,6 +44,12 @@ impl PlayerBackend for MockBackend {
     fn toggle_pause(&mut self) -> Result<bool, MelangeError> {
         self.paused = !self.paused;
         Ok(self.paused)
+    }
+
+    fn stop(&mut self) -> Result<(), MelangeError> {
+        *self.stopped_count.borrow_mut() += 1;
+        self.paused = false;
+        Ok(())
     }
 }
 
@@ -188,6 +200,13 @@ fn player_zapping_wrap_around_and_digits() {
             "https://example.com/stream/3.m3u8",
         ]
     );
+
+    // Stopping playback returns controller to Idle and calls backend.stop()
+    player.stop().expect("stop");
+    assert_eq!(player.state(), PlaybackState::Idle);
+    assert!(player.current_channel().is_none());
+    assert!(!player.is_zapping());
+    assert_eq!(player.backend().stops(), 1);
 }
 
 #[test]

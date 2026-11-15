@@ -14,6 +14,12 @@ pub enum PlaybackState {
 pub trait PlayerBackend {
     fn load_replace(&mut self, url: &str) -> Result<(), MelangeError>;
     fn toggle_pause(&mut self) -> Result<bool, MelangeError>;
+    fn stop(&mut self) -> Result<(), MelangeError> {
+        Ok(())
+    }
+    fn toggle_mute(&mut self) -> Result<bool, MelangeError> {
+        Ok(false)
+    }
 }
 
 pub struct PlayerController<B: PlayerBackend> {
@@ -148,6 +154,14 @@ impl<B: PlayerBackend> PlayerController<B> {
             PlaybackState::Playing
         };
         Ok(self.state)
+    }
+
+    pub fn stop(&mut self) -> Result<(), MelangeError> {
+        self.current_index = None;
+        self.state = PlaybackState::Idle;
+        self.is_zapping = false;
+        self.digit_buffer.clear();
+        self.backend.stop()
     }
 
     pub fn mark_frame_rendered(&mut self) {

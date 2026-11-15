@@ -1,5 +1,15 @@
-import { For, Show, createMemo, createSignal, onMount } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { sendCommand } from "../bridge/ws";
+import {
+  KEYMAP_FIELDS,
+  type KeymapFieldKey,
+  formatKeyCap,
+  keymap,
+  loadKeymap,
+  normalizeKeyName,
+  resetKeymap,
+  saveKeymap
+} from "../spatial/keymap";
 import { ensureValidFocus, setFocus } from "../spatial/nav";
 import { HapticTile } from "./primitives";
 
@@ -19,7 +29,7 @@ interface SettingsViewProps {
   channelCount: number;
 }
 
-type SettingsCategory = "look" | "companion" | "providers" | "about";
+type SettingsCategory = "look" | "controls" | "companion" | "providers" | "about";
 
 const DEFAULT_PRESETS = ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg", "6.jpg", "7.jpg"];
 
@@ -34,7 +44,21 @@ const PRESET_TITLES: Record<string, string> = {
 };
 
 function presetLabel(filename: string): string {
-  return PRESET_TITLES[filename] ?? filename.replace(/\.[^.]+$/, "");
+  const known = PRESET_TITLES[filename];
+  if (known) return known;
+  const stem = filename.replace(/\.[^.]+$/, "").trim();
+  if (/^\d+$/.test(stem)) {
+    return `Scene ${Number(stem)}`;
+  }
+  const cleaned = stem
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return filename;
+  return cleaned
+    .split(" ")
+    .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : word))
+    .join(" ");
 }
 
 function ActiveCheckmark() {
@@ -55,6 +79,17 @@ function CategoryIcon(props: { id: SettingsCategory }) {
           <rect x="3" y="4" width="18" height="16" rx="3" />
           <circle cx="8.5" cy="9.5" r="1.5" />
           <path d="m21 15-4.5-4.5L8 19" />
+        </svg>
+      );
+    case "controls":
+      return (
+        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2.5" y="5.5" width="19" height="13" rx="2.5" />
+          <path d="M6.5 9.5h.01" />
+          <path d="M10 9.5h.01" />
+          <path d="M13.5 9.5h.01" />
+          <path d="M17.5 9.5h.01" />
+          <path d="M7.5 14.5h9" />
         </svg>
       );
     case "companion":
@@ -83,12 +118,50 @@ function CategoryIcon(props: { id: SettingsCategory }) {
   }
 }
 
+const MODIFIER_KEYS = new Set([
+  "Shift",
+  "Control",
+  "Alt",
+  "Meta",
+  "AltGraph",
+  "CapsLock",
+  "NumLock",
+  "ScrollLock",
+  "Super",
+  "Hyper"
+]);
+
 export function SettingsView(props: SettingsViewProps) {
   const [category, setCategory] = createSignal<SettingsCategory>("look");
   const [info, setInfo] = createSignal<CompanionInfo | null>(null);
   const [presets, setPresets] = createSignal<string[]>(DEFAULT_PRESETS);
+  const [capturingField, setCapturingField] = createSignal<KeymapFieldKey | null>(null);
 
-  const goBack = () => sendCommand({ type: "SetMode", mode: "Home" });
+  const stopCapture = () => {
+    if (capturingField() !== null) {
+      setCapturingField(null);
+      sendCommand({ type: "SetKeyCapture", active: false });
+    }
+  };
+
+  const toggleCapture = (field: KeymapFieldKey) => {
+    if (capturingField() === field) {
+      stopCapture();
+      return;
+    }
+    setCapturingField(field);
+    sendCommand({ type: "SetKeyCapture", active: true });
+  };
+
+  const selectCategory = (cat: SettingsCategory) => {
+    stopCapture();
+    setCategory(cat);
+  };
+
+  const goBack = () => {
+    stopCapture();
+    sendCommand({ type: "SetMode", mode: "Home" });
+  };
   const activeWallpaper = () => props.activeProfile?.wallpaper_path ?? "/wallpapers/1.jpg";
 
   const selectPreset = (filename: string) => {
@@ -98,6 +171,7 @@ export function SettingsView(props: SettingsViewProps) {
 
   const categories: { id: SettingsCategory; label: string }[] = [
     { id: "look", label: "Look & scenes" },
+    { id: "controls", label: "Controls & Keymap" },
     { id: "companion", label: "Companion" },
     { id: "providers", label: "Providers" },
     { id: "about", label: "About" }
@@ -107,6 +181,8 @@ export function SettingsView(props: SettingsViewProps) {
     switch (category()) {
       case "look":
         return "Look & scenes";
+      case "controls":
+        return "Controls & Keymap";
       case "companion":
         return "Companion";
       case "providers":
@@ -121,6 +197,33 @@ export function SettingsView(props: SettingsViewProps) {
       setFocus("settings-cat-look", false);
       ensureValidFocus("settings-cat-look");
     });
+
+    const onCaptureKeyDown = (e: KeyboardEvent) => {
+      const targetField = capturingField();
+      if (!targetField) return;
+      if (MODIFIER_KEYS.has(e.key)) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const canon = normalizeKeyName(e.key);
+      if (canon) {
+        const current = keymap();
+        void saveKeymap({
+          ...current,
+          [targetField]: [canon]
+        });
+        sendCommand({ type: "PlaySound", sound: "select" });
+      }
+      stopCapture();
+    };
+
+    window.addEventListener("keydown", onCaptureKeyDown, true);
+    onCleanup(() => {
+      window.removeEventListener("keydown", onCaptureKeyDown, true);
+      stopCapture();
+    });
+
+    void loadKeymap();
 
     const [infoRes, wallpapersRes] = await Promise.allSettled([
       fetch("/api/companion/info"),
@@ -179,7 +282,7 @@ export function SettingsView(props: SettingsViewProps) {
                       variant="sidebar"
                       radius="12px"
                       active={isActive()}
-                      onSelect={() => setCategory(cat.id)}
+                      onSelect={() => selectCategory(cat.id)}
                       class="flex h-11 w-full items-center gap-3 rounded-xl px-4 text-left text-[15px] font-medium"
                     >
                       <CategoryIcon id={cat.id} />
@@ -282,7 +385,7 @@ export function SettingsView(props: SettingsViewProps) {
                                 {presetLabel(file)}
                               </div>
                               <div class="row-muted truncate text-[12px] font-medium">
-                                Alpine preset · {file}
+                                {PRESET_TITLES[file] ? "Alpine preset" : "Wallpaper"} · {file}
                               </div>
                             </div>
                           </div>
@@ -295,6 +398,122 @@ export function SettingsView(props: SettingsViewProps) {
                     }}
                   </For>
                 </div>
+              </div>
+            </div>
+          </Show>
+
+          {/* Controls & Keymap */}
+          <Show when={category() === "controls"}>
+            <div class="space-y-6 pb-4">
+              <div class="space-y-2">
+                <div class="px-1 text-[13px] font-medium text-white/60">Navigation options</div>
+                <HapticTile
+                  id="settings-keymap-wasd"
+                  variant="grouped"
+                  radius="16px"
+                  active={keymap().wasd_navigation}
+                  onSelect={() => {
+                    const current = keymap();
+                    void saveKeymap({
+                      ...current,
+                      wasd_navigation: !current.wasd_navigation
+                    });
+                    sendCommand({ type: "PlaySound", sound: "select" });
+                  }}
+                  class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
+                >
+                  <div>
+                    <div class="text-[15px] font-semibold">WASD Navigation</div>
+                    <div class="row-muted text-[12px] font-medium">
+                      Use W / A / S / D keys alongside arrow keys
+                    </div>
+                  </div>
+                  <span
+                    class={`rounded-full px-3 py-1 text-[12px] font-semibold ${
+                      keymap().wasd_navigation
+                        ? "bg-[#22C55E] text-white"
+                        : "keycap-badge"
+                    }`}
+                  >
+                    {keymap().wasd_navigation ? "Enabled" : "Off"}
+                  </span>
+                </HapticTile>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex items-center justify-between px-1">
+                  <span class="text-[13px] font-medium text-white/60">Keyboard bindings</span>
+                  <span class="text-[12px] font-medium text-white/50">
+                    Click any row to rebind
+                  </span>
+                </div>
+                <div class="flex flex-col gap-2">
+                  <For each={KEYMAP_FIELDS}>
+                    {(field) => {
+                      const isCapturing = () => capturingField() === field.key;
+                      const keys = () => keymap()[field.key];
+                      return (
+                        <HapticTile
+                          id={`settings-key-${field.key}`}
+                          variant="grouped"
+                          radius="16px"
+                          active={isCapturing()}
+                          ariaLabel={`Rebind ${field.label}`}
+                          onSelect={() => toggleCapture(field.key)}
+                          class="flex h-14 w-full items-center justify-between gap-4 rounded-[16px] px-4 text-left"
+                        >
+                          <div class="min-w-0">
+                            <div class="truncate text-[15px] font-semibold">{field.label}</div>
+                            <div class="row-muted truncate text-[12px] font-medium">
+                              {field.description}
+                            </div>
+                          </div>
+
+                          <div class="flex shrink-0 items-center gap-1.5">
+                            <Show
+                              when={isCapturing()}
+                              fallback={
+                                <For each={keys()}>
+                                  {(k) => (
+                                    <span class="keycap-badge rounded-[8px] px-2.5 py-1 font-mono text-[12px] font-semibold">
+                                      {formatKeyCap(k)}
+                                    </span>
+                                  )}
+                                </For>
+                              }
+                            >
+                              <span class="animate-pulse rounded-full bg-[#22C55E] px-3 py-1 text-[12px] font-semibold text-white shadow-sm">
+                                Press any key…
+                              </span>
+                            </Show>
+                          </div>
+                        </HapticTile>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+
+              <div class="pt-1">
+                <HapticTile
+                  id="settings-keymap-reset"
+                  variant="grouped"
+                  radius="16px"
+                  onSelect={() => {
+                    stopCapture();
+                    void resetKeymap();
+                    sendCommand({ type: "PlaySound", sound: "select" });
+                  }}
+                  class="flex h-14 w-full items-center justify-between rounded-[16px] px-4 text-left"
+                >
+                  <div>
+                    <div class="text-[15px] font-semibold">Reset to defaults</div>
+                    <div class="row-muted text-[12px] font-medium">
+                      Restore standard Couch TV keyboard shortcuts
+                    </div>
+                  </div>
+                  <span class="row-muted text-[13px] font-semibold">Restore ›</span>
+                </HapticTile>
               </div>
             </div>
           </Show>

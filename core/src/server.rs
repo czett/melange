@@ -1,6 +1,8 @@
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::net::{SocketAddr, UdpSocket};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -25,6 +27,7 @@ use crate::audio::{AudioEngine, SoundKind};
 use crate::db::{Channel, EpgEntry, Profile, WatchHistoryEntry};
 use crate::error::MelangeError;
 use crate::input::NavEvent;
+use crate::keymap::KeymapConfig;
 use crate::player::PlaybackState;
 use crate::providers::{
     LocalMediaProvider, MediaItem, MediathekProvider, OnDemandProvider, YouTubeProvider,
@@ -63,6 +66,8 @@ pub struct PlaybackSnapshot {
     pub position_sec: f64,
     pub duration_sec: f64,
     pub paused: bool,
+    #[serde(default)]
+    pub muted: bool,
     pub is_zapping: bool,
 }
 
@@ -78,6 +83,7 @@ impl Default for PlaybackSnapshot {
             position_sec: 0.0,
             duration_sec: 0.0,
             paused: false,
+            muted: false,
             is_zapping: false,
         }
     }
@@ -130,6 +136,7 @@ pub enum ClientCommand {
     SeekRelative { offset_sec: f64 },
     TogglePause,
     ToggleFullscreen,
+    SetKeyCapture { active: bool },
     QuitApp,
 }
 
@@ -159,6 +166,7 @@ pub enum ShellCommand {
     PlayMedia { item: MediaItem, start_position_sec: f64 },
     SeekRelative { offset_sec: f64 },
     TogglePause,
+    StopPlayback,
     ToggleFullscreen,
     QuitApp,
 }
@@ -166,6 +174,8 @@ pub enum ShellCommand {
 pub struct StateManager {
     state: RwLock<MelangeState>,
     epg_entries: RwLock<Vec<EpgEntry>>,
+    keymap: RwLock<KeymapConfig>,
+    key_capture: AtomicBool,
     ws_tx: broadcast::Sender<ServerMessage>,
     shell_cmd_tx: RwLock<Option<std::sync::mpsc::Sender<ShellCommand>>>,
     nav_tx: RwLock<Option<std::sync::mpsc::Sender<NavEvent>>>,
@@ -176,6 +186,48 @@ pub struct StateManager {
     mediathek: Arc<MediathekProvider>,
     youtube: RwLock<Arc<YouTubeProvider>>,
     local_media: RwLock<Arc<LocalMediaProvider>>,
+}
+
+struct LeaveLiveTvResult {
+    stopped: bool,
+    pending_progress: Option<(i64, MediaItem, f64, f64)>,
+}
+
+fn clear_playback_on_exit(st: &mut MelangeState, next_mode: AppMode) -> LeaveLiveTvResult {
+    let has_active_playback = st.mode == AppMode::LiveTv
+        || st.playback.state != PlaybackState::Idle
+        || st.playback.channel_id.is_some()
+        || st.playback.current_media.is_some();
+
+    if next_mode != AppMode::LiveTv && has_active_playback {
+        let pending_progress = match (
+            st.active_profile.as_ref().map(|p| p.id),
+            st.playback.current_media.clone(),
+        ) {
+            (Some(profile_id), Some(item)) if st.playback.position_sec > 1.0 => Some((
+                profile_id,
+                item,
+                st.playback.position_sec,
+                st.playback.duration_sec,
+            )),
+            _ => None,
+        };
+        let preserved_mute = st.playback.muted;
+        st.playback = PlaybackSnapshot {
+            muted: preserved_mute,
+            ..PlaybackSnapshot::default()
+        };
+        st.digit_buffer.clear();
+        LeaveLiveTvResult {
+            stopped: true,
+            pending_progress,
+        }
+    } else {
+        LeaveLiveTvResult {
+            stopped: false,
+            pending_progress: None,
+        }
+    }
 }
 
 impl StateManager {
@@ -205,6 +257,8 @@ impl StateManager {
         Arc::new(Self {
             state: RwLock::new(initial),
             epg_entries: RwLock::new(epg_entries),
+            keymap: RwLock::new(KeymapConfig::default()),
+            key_capture: AtomicBool::new(false),
             ws_tx,
             shell_cmd_tx: RwLock::new(None),
             nav_tx: RwLock::new(None),
@@ -219,8 +273,58 @@ impl StateManager {
     }
 
     pub fn attach_db_path(&self, path: PathBuf) {
+        if let Ok(db) = crate::db::Database::open(&path)
+            && let Ok(Some(raw)) = db.get_setting("keymap")
+            && let Ok(parsed) = serde_json::from_str::<KeymapConfig>(&raw)
+            && let Ok(mut guard) = self.keymap.write()
+        {
+            *guard = parsed.normalized();
+        }
         if let Ok(mut guard) = self.db_path.write() {
             *guard = Some(path);
+        }
+    }
+
+    pub fn keymap(&self) -> KeymapConfig {
+        self.keymap
+            .read()
+            .map(|g| g.clone())
+            .unwrap_or_default()
+    }
+
+    pub fn set_keymap(&self, keymap: KeymapConfig) -> KeymapConfig {
+        let normalized = keymap.normalized();
+        if let Ok(mut guard) = self.keymap.write() {
+            *guard = normalized.clone();
+        }
+        let db_path = self.db_path.read().ok().and_then(|g| g.clone());
+        if let Some(path) = db_path
+            && let Ok(db) = crate::db::Database::open(&path)
+            && let Ok(json) = serde_json::to_string(&normalized)
+        {
+            let _ = db.set_setting("keymap", &json);
+        }
+        normalized
+    }
+
+    pub fn is_key_capture(&self) -> bool {
+        self.key_capture.load(AtomicOrdering::Relaxed)
+    }
+
+    pub fn set_key_capture(&self, active: bool) {
+        self.key_capture.store(active, AtomicOrdering::Relaxed);
+    }
+
+    pub fn set_muted(&self, muted: bool) {
+        let mut changed = false;
+        if let Ok(mut guard) = self.state.write()
+            && guard.playback.muted != muted
+        {
+            guard.playback.muted = muted;
+            changed = true;
+        }
+        if changed {
+            self.broadcast_state();
         }
     }
 
@@ -330,12 +434,33 @@ impl StateManager {
     }
 
     pub fn set_mode(&self, mode: AppMode) {
-        {
+        let leave_res = {
             let mut st = self.state.write().expect("state lock");
+            let res = clear_playback_on_exit(&mut st, mode);
             st.mode = mode;
             st.overlay = OverlayKind::None;
-        }
+            res
+        };
+        self.persist_pending_progress(leave_res.pending_progress);
         self.broadcast_state();
+        if leave_res.stopped {
+            self.send_shell_command(ShellCommand::StopPlayback);
+        }
+    }
+
+    fn persist_pending_progress(&self, pending: Option<(i64, MediaItem, f64, f64)>) {
+        let Some((profile_id, item, pos, dur)) = pending else {
+            return;
+        };
+        let db_path = self.db_path.read().ok().and_then(|g| g.clone());
+        if let Some(path) = db_path
+            && let Ok(db) = crate::db::Database::open(&path)
+            && db.upsert_watch_progress(profile_id, &item, pos, dur).is_ok()
+            && let Ok(entries) = db.list_continue_watching(profile_id, 20)
+            && let Ok(mut st) = self.state.write()
+        {
+            st.continue_watching = entries;
+        }
     }
 
     pub fn set_overlay(&self, overlay: OverlayKind) {
@@ -364,6 +489,10 @@ impl StateManager {
         let _ = self.ws_tx.send(ServerMessage::NavEvent { event });
 
         let mut changed = false;
+        let mut leave_res = LeaveLiveTvResult {
+            stopped: false,
+            pending_progress: None,
+        };
         {
             let mut st = self.state.write().expect("state lock");
             match event {
@@ -375,12 +504,28 @@ impl StateManager {
                     };
                     changed = true;
                 }
+                NavEvent::ToggleOsd if st.mode == AppMode::LiveTv => {
+                    st.overlay = match st.overlay {
+                        OverlayKind::PlayerOsd | OverlayKind::ZapBanner => OverlayKind::None,
+                        OverlayKind::None => {
+                            if st.playback.current_media.is_some() {
+                                OverlayKind::PlayerOsd
+                            } else {
+                                OverlayKind::ZapBanner
+                            }
+                        }
+                        other => other,
+                    };
+                    changed = true;
+                }
                 NavEvent::Home => {
-                    st.mode = if st.mode == AppMode::Home {
+                    let next_mode = if st.mode == AppMode::Home {
                         AppMode::LiveTv
                     } else {
                         AppMode::Home
                     };
+                    leave_res = clear_playback_on_exit(&mut st, next_mode);
+                    st.mode = next_mode;
                     st.overlay = OverlayKind::None;
                     changed = true;
                 }
@@ -394,6 +539,7 @@ impl StateManager {
                     changed = true;
                 }
                 NavEvent::Back if st.mode != AppMode::Home => {
+                    leave_res = clear_playback_on_exit(&mut st, AppMode::Home);
                     st.mode = AppMode::Home;
                     changed = true;
                 }
@@ -405,8 +551,12 @@ impl StateManager {
             }
         }
 
+        self.persist_pending_progress(leave_res.pending_progress);
         if changed {
             self.broadcast_state();
+        }
+        if leave_res.stopped {
+            self.send_shell_command(ShellCommand::StopPlayback);
         }
     }
 
@@ -442,12 +592,18 @@ impl StateManager {
                 }
             }
             ClientCommand::SetMode { mode } => {
-                {
+                let leave_res = {
                     let mut st = self.state.write().expect("state lock");
+                    let res = clear_playback_on_exit(&mut st, mode);
                     st.mode = mode;
                     st.overlay = OverlayKind::None;
-                }
+                    res
+                };
+                self.persist_pending_progress(leave_res.pending_progress);
                 self.broadcast_state();
+                if leave_res.stopped {
+                    self.send_shell_command(ShellCommand::StopPlayback);
+                }
                 self.send_shell_command(ShellCommand::SetMode { mode });
             }
             ClientCommand::SetOverlay { overlay } => {
@@ -589,6 +745,9 @@ impl StateManager {
                     self.broadcast_state();
                 }
             }
+            ClientCommand::SetKeyCapture { active } => {
+                self.set_key_capture(active);
+            }
             ClientCommand::QuitApp => {
                 self.send_shell_command(ShellCommand::QuitApp);
             }
@@ -627,6 +786,7 @@ impl StateManager {
                 position_sec,
                 duration_sec,
                 paused: false,
+                muted: st.playback.muted,
                 is_zapping,
             };
 
@@ -669,6 +829,12 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .route("/api/health", get(health_handler))
         .route("/api/companion/info", get(companion_info_handler))
         .route("/api/wallpapers", get(wallpapers_list_handler))
+        .route(
+            "/api/keymap",
+            get(get_keymap_handler)
+                .post(update_keymap_handler)
+                .put(update_keymap_handler),
+        )
         .route("/api/channels", get(channels_handler))
         .route("/api/channels/reorder", post(reorder_channels_handler))
         .route("/api/channels/{id}/favorite", post(toggle_favorite_handler))
@@ -795,6 +961,61 @@ async fn health_handler() -> impl IntoResponse {
     Json(serde_json::json!({ "status": "ok", "service": "melange-core" }))
 }
 
+fn natural_cmp(a: &str, b: &str) -> Ordering {
+    let mut ai = a.char_indices().peekable();
+    let mut bi = b.char_indices().peekable();
+
+    while let (Some(&(a_idx, ac)), Some(&(b_idx, bc))) = (ai.peek(), bi.peek()) {
+        if ac.is_ascii_digit() && bc.is_ascii_digit() {
+            let mut a_end = a_idx;
+            while let Some(&(idx, ch)) = ai.peek() {
+                if ch.is_ascii_digit() {
+                    a_end = idx + ch.len_utf8();
+                    ai.next();
+                } else {
+                    break;
+                }
+            }
+            let mut b_end = b_idx;
+            while let Some(&(idx, ch)) = bi.peek() {
+                if ch.is_ascii_digit() {
+                    b_end = idx + ch.len_utf8();
+                    bi.next();
+                } else {
+                    break;
+                }
+            }
+            let a_num = a[a_idx..a_end].parse::<u64>().unwrap_or(0);
+            let b_num = b[b_idx..b_end].parse::<u64>().unwrap_or(0);
+            match a_num.cmp(&b_num) {
+                Ordering::Equal => {
+                    // Tie-break shorter zero-padded run first (e.g. "2" before "02")
+                    match (a_end - a_idx).cmp(&(b_end - b_idx)) {
+                        Ordering::Equal => continue,
+                        non_eq => return non_eq,
+                    }
+                }
+                non_eq => return non_eq,
+            }
+        } else {
+            let al = ac.to_ascii_lowercase();
+            let bl = bc.to_ascii_lowercase();
+            match al.cmp(&bl) {
+                Ordering::Equal => {
+                    ai.next();
+                    bi.next();
+                }
+                non_eq => return non_eq,
+            }
+        }
+    }
+
+    ai.peek()
+        .is_some()
+        .cmp(&bi.peek().is_some())
+        .then_with(|| a.cmp(b))
+}
+
 async fn wallpapers_list_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
     let wallpapers_dir = state
         .wallpapers_dir
@@ -826,24 +1047,21 @@ async fn wallpapers_list_handler(State(state): State<Arc<StateManager>>) -> impl
         }
     }
 
-    files.sort_by(|a, b| {
-        let num_a = Path::new(a)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .and_then(|s| s.parse::<u64>().ok());
-        let num_b = Path::new(b)
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .and_then(|s| s.parse::<u64>().ok());
-        match (num_a, num_b) {
-            (Some(na), Some(nb)) => na.cmp(&nb).then_with(|| a.cmp(b)),
-            (Some(_), None) => std::cmp::Ordering::Less,
-            (None, Some(_)) => std::cmp::Ordering::Greater,
-            (None, None) => a.cmp(b),
-        }
-    });
+    files.sort_by(|a, b| natural_cmp(a, b));
 
     Json(files)
+}
+
+async fn get_keymap_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
+    Json(state.keymap())
+}
+
+async fn update_keymap_handler(
+    State(state): State<Arc<StateManager>>,
+    Json(payload): Json<KeymapConfig>,
+) -> impl IntoResponse {
+    let saved = state.set_keymap(payload);
+    Json(saved)
 }
 
 async fn channels_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
