@@ -57,7 +57,7 @@ export const ZapBanner = () => {
 
   return (
     <div
-      class="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-10 transition-all duration-300 ease-spring"
+      class="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-10 transition-all duration-200 ease-out"
       style={{
         opacity: isVisible() ? "1" : "0",
         transform: isVisible() ? "translate3d(0, 0, 0)" : "translate3d(0, 36px, 0)"

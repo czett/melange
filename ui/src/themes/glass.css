@@ -1,13 +1,11 @@
 /*
- * melange — iOS 26 Liquid Glass × couch-tv × WhiteSur/tvOS design system
+ * melange — clean couch-tv dark smoke-glass design system
  *
  * Principles:
- *  - True translucent dark-tinted Liquid Glass (rgba(16, 19, 26, 0.48)) with heavy
- *    optical blur (48px saturate(185%)) and 1px specular rim gradients.
- *  - Snappy Apple spring physics (220ms cubic-bezier(0.34, 1.56, 0.64, 1)),
- *    scale(1.045) + specular sheen sweep on hover/focus, scale(0.96) press detent.
- *  - Inter grotesk typography with SF-Pro-style open numerals + condensed architectural
- *    Liquid-Glass lockscreen timepiece.
+ *  - Translucent dark smoke-glass surfaces over an atmospheric alpine backdrop.
+ *  - Calm, crisp ease-out focus transitions (140ms ease-out, scale(1.025),
+ *    2px solid #FFFFFF focus border, scale(0.98) press feedback).
+ *  - Inter typography with tabular numerals and a clean vertical-fade lockscreen clock.
  */
 :root {
   /* Semantic Accents & Ink */
@@ -47,9 +45,9 @@
     inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
     0 24px 56px rgba(0, 0, 0, 0.52);
 
-  /* Snappy Apple Spring Motion */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --dur-geometry: 220ms;
+  /* Calm Ease-Out Focus Motion */
+  --ease-focus: ease-out;
+  --dur-geometry: 140ms;
 }
 
 /* ───────────────────────── Atmospheric Scenic Backdrop ───────────────────────── */
@@ -139,23 +137,7 @@
   -webkit-backdrop-filter: blur(56px) saturate(175%);
 }
 
-/* ───────────────────────── Specular Sheen Sweep ───────────────────────── */
-
-@keyframes specularSheen {
-  0% {
-    opacity: 0;
-    transform: translate3d(-135%, 0, 0) skewX(-20deg);
-  }
-  20% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: translate3d(155%, 0, 0) skewX(-20deg);
-  }
-}
-
-/* ───────────────────────── Snappy Apple Spring Haptic Tiles ───────────────────────── */
+/* ───────────────────────── Calm Ease-Out Haptic Tiles ───────────────────────── */
 
 .haptic-tile {
   position: relative;
@@ -165,41 +147,14 @@
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
   transition:
-    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 200ms ease,
-    color 150ms ease;
+    transform 140ms ease-out,
+    border-color 120ms ease,
+    background-color 120ms ease;
   will-change: transform;
 }
 
-.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg) {
-  overflow: hidden;
-}
-
-.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg)::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 55%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.22) 50%,
-    transparent 100%
-  );
-  opacity: 0;
-  transform: translate3d(-135%, 0, 0) skewX(-20deg);
-  pointer-events: none;
-}
-
-.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg):hover::after,
-.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg)[data-focused="true"]::after {
-  animation: specularSheen 560ms cubic-bezier(0.22, 1, 0.36, 1) 1;
-}
-
 .haptic-tile:not([data-focused="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(24, 29, 40, 0.6);
   border-color: rgba(255, 255, 255, 0.32);
   box-shadow:
@@ -209,7 +164,7 @@
 }
 
 .haptic-tile[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: var(--glass-focus);
   border: 2px solid #ffffff;
   box-shadow: var(--shadow-focus);
@@ -218,7 +173,7 @@
 
 .haptic-tile[data-pressed="true"],
 .haptic-tile:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* Pill buttons */
@@ -254,14 +209,14 @@
 }
 
 .haptic-tile--pill:not([data-active="true"]):not([data-focused="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(28, 34, 46, 0.64);
   border-color: rgba(255, 255, 255, 0.32);
   color: #ffffff;
 }
 
 .haptic-tile--pill[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(30, 36, 48, 0.72);
   border: 2px solid #ffffff;
   color: #ffffff;
@@ -271,7 +226,7 @@
 }
 
 .haptic-tile--pill[data-active="true"][data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: #ffffff;
   color: var(--melange-ink);
   border: 2px solid #ffffff;
@@ -280,54 +235,47 @@
 
 .haptic-tile--pill[data-pressed="true"],
 .haptic-tile--pill:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
-/* WhiteSur frosted glass top-bar circular utility buttons */
+/* Frosted smoke-glass top-bar circular utility buttons */
 .haptic-tile--icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 100%),
-    rgba(16, 19, 26, 0.44);
+  background: rgba(16, 19, 26, 0.48);
   backdrop-filter: blur(32px) saturate(185%);
   -webkit-backdrop-filter: blur(32px) saturate(185%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.38),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
     0 10px 26px rgba(0, 0, 0, 0.34);
 }
 
 .haptic-tile--icon:not([data-focused="true"]):hover {
-  transform: scale(1.045);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%),
-    rgba(26, 31, 42, 0.58);
+  transform: scale(1.025);
+  background: rgba(26, 31, 42, 0.62);
   border-color: rgba(255, 255, 255, 0.38);
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.32),
     0 14px 32px rgba(0, 0, 0, 0.42);
 }
 
 .haptic-tile--icon[data-focused="true"] {
-  transform: scale(1.045);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 100%),
-    rgba(28, 34, 46, 0.68);
+  transform: scale(1.025);
+  background: rgba(28, 34, 46, 0.72);
   border: 2px solid #ffffff;
   box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.52),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.36),
     0 18px 38px rgba(0, 0, 0, 0.52);
 }
 
 .haptic-tile--icon[data-pressed="true"],
 .haptic-tile--icon:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
-/* Full-bleed 82x50 rounded-[13px] WhiteSur × couch-tv dock tiles */
+/* Full-bleed 82x50 rounded-[13px] flat couch-tv dock tiles */
 .haptic-tile--dock {
   width: 82px;
   height: 50px;
@@ -336,49 +284,29 @@
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.36);
 }
 
 .haptic-tile--dock:not([data-focused="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.52);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48);
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.44);
   z-index: 4;
 }
 
 .haptic-tile--dock[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: transparent;
   border: 2px solid #ffffff;
-  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.56);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.52);
   z-index: 6;
 }
 
 .haptic-tile--dock[data-pressed="true"],
 .haptic-tile--dock:active {
-  transform: scale(0.96);
-}
-
-.squircle-sheen {
-  position: absolute;
-  inset: 0;
-  width: 60%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.34) 50%,
-    transparent 100%
-  );
-  opacity: 0;
-  transform: translate3d(-140%, 0, 0) skewX(-20deg);
-  pointer-events: none;
-}
-
-.haptic-tile--dock:hover .squircle-sheen,
-.haptic-tile--dock[data-focused="true"] .squircle-sheen {
-  animation: specularSheen 560ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+  transform: scale(0.98);
 }
 
 /* EPG cells (zero layout-shift 2px solid #FFFFFF focus border) */
@@ -407,7 +335,7 @@
 
 .haptic-tile--epg[data-pressed="true"],
 .haptic-tile--epg:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* Grouped list rows (Settings) */
@@ -420,14 +348,14 @@
 }
 
 .haptic-tile--grouped:not([data-focused="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(255, 255, 255, 0.09);
   border-color: rgba(255, 255, 255, 0.24);
   box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2), 0 14px 32px rgba(0, 0, 0, 0.38);
 }
 
 .haptic-tile--grouped[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(28, 34, 46, 0.72);
   border: 2px solid #ffffff;
   box-shadow:
@@ -438,7 +366,7 @@
 
 .haptic-tile--grouped[data-pressed="true"],
 .haptic-tile--grouped:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* On-screen keyboard keys */
@@ -453,13 +381,13 @@
 }
 
 .haptic-tile--key:not([data-focused="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(30, 36, 48, 0.72);
   border-color: rgba(255, 255, 255, 0.32);
 }
 
 .haptic-tile--key[data-focused="true"] {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(34, 40, 54, 0.84);
   border: 2px solid #ffffff;
   color: #ffffff;
@@ -471,7 +399,7 @@
 
 .haptic-tile--key[data-pressed="true"],
 .haptic-tile--key:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* ───────────────────────── couch-tv Segmented Capsule Switcher ───────────────────────── */
@@ -509,11 +437,10 @@
   color: rgba(255, 255, 255, 0.78);
   background: transparent;
   transition:
-    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease,
-    box-shadow 200ms ease;
+    transform 140ms ease-out,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .segmented-item[data-active="true"] {
@@ -524,14 +451,14 @@
 }
 
 .segmented-item:not([data-active="true"]):hover {
-  transform: scale(1.045);
+  transform: scale(1.025);
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
 .segmented-item[data-focused="true"] {
-  border-color: #ffffff;
-  transform: scale(1.045);
+  border: 2px solid #ffffff;
+  transform: scale(1.025);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   z-index: 3;
 }
@@ -543,7 +470,7 @@
 
 .segmented-item[data-pressed="true"],
 .segmented-item:active {
-  transform: scale(0.96);
+  transform: scale(0.98);
 }
 
 /* Static metadata chip */
@@ -617,27 +544,14 @@
   color: rgba(255, 255, 255, 0.95);
 }
 
-/* Monumental iOS 26 / couch-tv Liquid-Glass Timepiece */
+/* Clean couch-tv Lockscreen Clock */
 .lockscreen-clock {
-  font-family: "Barlow Condensed", "Antonio", "Inter", system-ui, sans-serif;
-  font-weight: 700;
-  line-height: 0.88;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  font-weight: 400;
+  line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "cv02", "cv03", "cv04", "cv11";
-}
-
-.lockscreen-clock-glass {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.34) 0%,
-    rgba(255, 255, 255, 0.24) 48%,
-    rgba(255, 255, 255, 0.14) 100%
-  );
-  backdrop-filter: blur(20px) saturate(180%) brightness(1.12);
-  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.12);
-  clip-path: url(#lockscreen-clock-clip);
-  -webkit-clip-path: url(#lockscreen-clock-clip);
 }
 
 .view-title {
@@ -655,9 +569,5 @@
 @media (prefers-reduced-motion: reduce) {
   .live-dot {
     animation: none;
-  }
-  .haptic-tile::after,
-  .squircle-sheen {
-    animation: none !important;
   }
 }

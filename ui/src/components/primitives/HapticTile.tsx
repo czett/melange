@@ -55,7 +55,7 @@ export function HapticTile(props: HapticTileProps) {
       if (pressTimer !== undefined) window.clearTimeout(pressTimer);
       pressTimer = window.setTimeout(() => {
         btnRef?.removeAttribute("data-pressed");
-      }, 130);
+      }, 140);
     }
     setFocus(props.id, false);
     props.onSelect();

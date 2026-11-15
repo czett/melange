@@ -24,13 +24,6 @@ export default {
           "SF Pro Text",
           "system-ui",
           "sans-serif"
-        ],
-        display: [
-          '"Barlow Condensed"',
-          '"Antonio"',
-          '"Inter"',
-          "system-ui",
-          "sans-serif"
         ]
       },
       letterSpacing: {
@@ -44,7 +37,7 @@ export default {
         92: "0.92"
       },
       transitionTimingFunction: {
-        spring: "cubic-bezier(0.34, 1.56, 0.64, 1)"
+        spring: "ease-out"
       }
     }
   },
