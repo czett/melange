@@ -291,3 +291,65 @@ async fn nav_back_on_home_opens_leave_menu_and_quit_app_signals_shell() {
         Ok(melange_core::ShellCommand::QuitApp)
     ));
 }
+
+#[tokio::test]
+async fn wallpapers_list_and_companion_routes_return_expected_responses() {
+    let (host, state) = spawn_test_server().await;
+    let client = reqwest::Client::new();
+
+    // 1. GET /api/wallpapers lists preset images sorted numerically/lexicographically
+    let wallpapers: Vec<String> = client
+        .get(format!("http://{host}/api/wallpapers"))
+        .send()
+        .await
+        .expect("wallpapers req")
+        .json()
+        .await
+        .expect("wallpapers json");
+    assert!(!wallpapers.is_empty());
+    assert_eq!(wallpapers[0], "1.jpg");
+    assert!(wallpapers.contains(&"7.jpg".to_string()));
+
+    // 2. GET /wallpapers/1.jpg serves image bytes cleanly
+    let img_res = client
+        .get(format!("http://{host}/wallpapers/1.jpg"))
+        .send()
+        .await
+        .expect("wallpaper file req");
+    assert_eq!(img_res.status(), reqwest::StatusCode::OK);
+
+    // 3. GET /companion and GET /companion/ both return 200 OK HTML
+    for path in ["/companion", "/companion/"] {
+        let res = client
+            .get(format!("http://{host}{path}"))
+            .send()
+            .await
+            .expect("companion req");
+        assert_eq!(res.status(), reqwest::StatusCode::OK, "path {path}");
+        let content_type = res
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert!(
+            content_type.contains("text/html"),
+            "expected text/html for {path}, got {content_type}"
+        );
+        let body = res.text().await.expect("companion html");
+        assert!(body.contains("Companion"), "expected Companion HTML for {path}");
+    }
+
+    // 4. ClientCommand::SetPresetWallpaper updates active profile wallpaper_path
+    state.apply_client_command(ClientCommand::SetPresetWallpaper {
+        profile_id: 1,
+        filename: "3.jpg".to_string(),
+    });
+    assert_eq!(
+        state
+            .snapshot()
+            .active_profile
+            .and_then(|p| p.wallpaper_path)
+            .as_deref(),
+        Some("/wallpapers/3.jpg")
+    );
+}

@@ -122,6 +122,7 @@ export type ClientCommand =
   | { type: "SetMode"; mode: AppMode }
   | { type: "SetOverlay"; overlay: OverlayKind }
   | { type: "SelectProfile"; profile_id: number }
+  | { type: "SetPresetWallpaper"; profile_id: number; filename: string }
   | { type: "PlaySound"; sound: SoundKind }
   | { type: "PlayMedia"; item: MediaItem; resume: boolean }
   | { type: "SeekRelative"; offset_sec: number }

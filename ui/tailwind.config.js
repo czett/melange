@@ -33,6 +33,9 @@ export default {
       boxShadow: {
         ambient: "0 12px 32px rgba(0, 0, 0, 0.36)"
       },
+      opacity: {
+        92: "0.92"
+      },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.2, 0.9, 0.3, 1)"
       }

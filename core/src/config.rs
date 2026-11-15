@@ -74,6 +74,10 @@ impl AppConfig {
         let mut cfg = Self::for_mode(mode);
         if let Some(port) = port_override {
             cfg.port = port;
+        } else if let Ok(bind_addr) = env::var("MELANGE_BIND_ADDR")
+            && let Ok(parsed) = bind_addr.trim().parse::<std::net::SocketAddr>()
+        {
+            cfg.port = parsed.port();
         }
         Ok(cfg)
     }
@@ -87,6 +91,7 @@ impl AppConfig {
             .ok()
             .filter(|s| !s.is_empty());
         let tvheadend_pass = env::var("MELANGE_TVHEADEND_PASS").ok();
+        let wallpapers_dir = default_wallpapers_dir();
 
         match mode {
             RunMode::Dev => {
@@ -99,7 +104,7 @@ impl AppConfig {
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
                     companion_dist_dir: PathBuf::from("companion").join("dist"),
-                    wallpapers_dir: dev_dir.join("wallpapers"),
+                    wallpapers_dir,
                     port: 9000,
                     piped_url: default_piped_url(),
                     media_dirs: vec![dev_dir.join("media")],
@@ -118,7 +123,7 @@ impl AppConfig {
                     sounds_dir: PathBuf::from("assets").join("sounds"),
                     ui_dist_dir: PathBuf::from("ui").join("dist"),
                     companion_dist_dir: PathBuf::from("companion").join("dist"),
-                    wallpapers_dir: data_dir.join("wallpapers"),
+                    wallpapers_dir,
                     port: 9000,
                     piped_url: default_piped_url(),
                     media_dirs: default_media_dirs(),
@@ -129,6 +134,20 @@ impl AppConfig {
             }
         }
     }
+}
+
+pub fn default_wallpapers_dir() -> PathBuf {
+    for candidate in [
+        "assets/wallpapers",
+        "../assets/wallpapers",
+        "../../assets/wallpapers",
+    ] {
+        let path = PathBuf::from(candidate);
+        if path.is_dir() {
+            return path;
+        }
+    }
+    PathBuf::from("assets").join("wallpapers")
 }
 
 fn xdg_data_dir() -> PathBuf {

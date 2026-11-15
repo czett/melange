@@ -1,4 +1,4 @@
-import { Show, onCleanup, onMount, type JSX } from "solid-js";
+import { Show, createEffect, createSignal, onCleanup, onMount, type JSX } from "solid-js";
 
 export interface ScenicBackdropProps {
   class?: string;
@@ -116,6 +116,12 @@ function renderTwilightSky(canvas: HTMLCanvasElement): void {
 
 export function ScenicBackdrop(props: ScenicBackdropProps) {
   let canvasRef!: HTMLCanvasElement;
+  const [imgFailed, setImgFailed] = createSignal(false);
+
+  createEffect(() => {
+    void props.wallpaperUrl;
+    setImgFailed(false);
+  });
 
   const syncAndDraw = () => {
     if (!canvasRef) return;
@@ -215,19 +221,22 @@ export function ScenicBackdrop(props: ScenicBackdropProps) {
       />
 
       {/* Custom user profile wallpaper (full-bleed with subtle readability scrim) */}
-      <Show when={props.wallpaperUrl}>
-        {(wp) => (
-          <div class="pointer-events-none absolute inset-0 overflow-hidden">
-            <img src={wp()} alt="" class="h-full w-full object-cover" />
-            <div
-              class="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(180deg, rgba(10,12,16,0.28) 0%, rgba(10,12,16,0.12) 45%, rgba(10,12,16,0.72) 100%)"
-              }}
-            />
-          </div>
-        )}
+      <Show when={props.wallpaperUrl && !imgFailed()}>
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+          <img
+            src={props.wallpaperUrl!}
+            alt=""
+            class="h-full w-full object-cover"
+            onError={() => setImgFailed(true)}
+          />
+          <div
+            class="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(8,10,14,0.22) 0%, rgba(8,10,14,0.08) 45%, rgba(8,10,14,0.68) 100%)"
+            }}
+          />
+        </div>
       </Show>
     </div>
   );

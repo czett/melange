@@ -157,8 +157,15 @@ impl Database {
             self.conn
                 .query_row("SELECT COUNT(*) FROM profiles", [], |row| row.get(0))?;
         if profile_count == 0 {
-            self.conn
-                .execute("INSERT INTO profiles (name) VALUES (?1)", params!["Default"])?;
+            self.conn.execute(
+                "INSERT INTO profiles (name, wallpaper_path) VALUES (?1, ?2)",
+                params!["Default", "/wallpapers/1.jpg"],
+            )?;
+        } else {
+            self.conn.execute(
+                "UPDATE profiles SET wallpaper_path = ?1 WHERE wallpaper_path IS NULL",
+                params!["/wallpapers/1.jpg"],
+            )?;
         }
 
         Ok(())
@@ -182,8 +189,8 @@ impl Database {
 
     pub fn create_profile(&self, name: &str, avatar: &str) -> Result<Profile, MelangeError> {
         self.conn.execute(
-            "INSERT INTO profiles (name, avatar) VALUES (?1, ?2)",
-            params![name, avatar],
+            "INSERT INTO profiles (name, avatar, wallpaper_path) VALUES (?1, ?2, ?3)",
+            params![name, avatar, "/wallpapers/1.jpg"],
         )?;
         let id = self.conn.last_insert_rowid();
         self.get_profile(id)

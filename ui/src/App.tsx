@@ -155,7 +155,7 @@ export const App = () => {
       {/* Atmospheric alpine twilight horizon (or full-bleed custom profile wallpaper) */}
       <ScenicBackdrop
         active={showBackdrop()}
-        wallpaperUrl={melangeState().active_profile?.wallpaper_path}
+        wallpaperUrl={melangeState().active_profile?.wallpaper_path ?? "/wallpapers/1.jpg"}
         class="-z-30 transition-opacity duration-500 ease-out"
         style={{ opacity: backdropOpacity() }}
       />

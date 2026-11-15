@@ -21,11 +21,11 @@
 
   /* Authentic Apple / couch-tv Dark Smoke-Glass */
   --glass-surface: rgba(18, 20, 26, 0.66);
-  --glass-heavy: rgba(15, 17, 22, 0.82);
-  --glass-panel-elevated: rgba(16, 18, 24, 0.82);
+  --glass-heavy: rgba(17, 19, 25, 0.95);
+  --glass-panel-elevated: rgba(17, 19, 25, 0.95);
   --glass-dock: rgba(18, 20, 26, 0.75);
   --glass-focus: rgba(28, 31, 40, 0.84);
-  --modal-scrim: rgba(8, 10, 14, 0.62);
+  --modal-scrim: rgba(9, 11, 16, 0.92);
 
   --glass-blur: blur(36px) saturate(165%);
   --glass-blur-heavy: blur(48px) saturate(175%);
@@ -100,10 +100,11 @@
   border-radius: 24px;
 }
 
-.glass-panel--scrim {
+.glass-panel--scrim,
+.modal-scrim {
   background: var(--modal-scrim);
-  backdrop-filter: blur(36px) saturate(160%);
-  -webkit-backdrop-filter: blur(36px) saturate(160%);
+  backdrop-filter: blur(64px) saturate(160%);
+  -webkit-backdrop-filter: blur(64px) saturate(160%);
 }
 
 /* ───────────────────────── Snappy tvOS Haptic Tiles ───────────────────────── */

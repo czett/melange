@@ -88,7 +88,7 @@ export const FullEpg = () => {
       onClick={() => sendCommand({ type: "SetOverlay", overlay: "None" })}
     >
       <div
-        class="flex h-full max-h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white/[0.14] bg-[#101217]/88 shadow-[0_24px_64px_rgba(0,0,0,0.58)] backdrop-blur-3xl"
+        class="flex h-full max-h-[86vh] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white/[0.14] bg-[#111319]/95 shadow-[0_24px_64px_rgba(0,0,0,0.58)] backdrop-blur-3xl"
         onClick={(e: MouseEvent) => e.stopPropagation()}
       >
         <header class="flex flex-wrap items-center justify-between gap-4 border-b border-white/[0.08] px-7 py-5">

@@ -27,6 +27,7 @@ export default function App() {
   const [editingProfileId, setEditingProfileId] = createSignal<number | null>(null);
   const [editingName, setEditingName] = createSignal('');
   const [statusMsg, setStatusMsg] = createSignal('');
+  const [presets, setPresets] = createSignal<string[]>([]);
 
   let toastTimer: number | undefined;
   const flash = (msg: string) => {
@@ -40,13 +41,32 @@ export default function App() {
     let reconnectTimer: number | undefined;
     let disposed = false;
 
+    void (async () => {
+      try {
+        const res = await fetch('/api/wallpapers');
+        if (res.ok) {
+          const list = (await res.json()) as unknown;
+          if (Array.isArray(list)) {
+            setPresets(list.filter((item): item is string => typeof item === 'string'));
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
     const connect = () => {
       if (disposed) return;
-      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${proto}//${location.host}/ws`);
+      if (reconnectTimer !== undefined) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = undefined;
+      }
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
       ws.onopen = () => setConnected(true);
       ws.onclose = () => {
         setConnected(false);
+        ws = null;
         if (!disposed) {
           reconnectTimer = window.setTimeout(connect, 1200);
         }
@@ -150,6 +170,15 @@ export default function App() {
     await fetch(`/api/profiles/${id}/wallpaper`, {
       method: 'POST',
       body: form,
+    });
+    flash('Wallpaper updated');
+  };
+
+  const selectPresetWallpaper = async (id: number, filename: string) => {
+    await fetch(`/api/profiles/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallpaper_path: `/wallpapers/${filename}` }),
     });
     flash('Wallpaper updated');
   };
@@ -458,12 +487,49 @@ export default function App() {
                       </div>
                     </Show>
 
-                    <Show when={p.wallpaper_path}>
+                    <Show when={p.wallpaper_path ?? '/wallpapers/1.jpg'}>
                       <img
-                        src={p.wallpaper_path!}
+                        src={p.wallpaper_path ?? '/wallpapers/1.jpg'}
                         alt="Wallpaper"
                         class="h-28 w-full rounded-[14px] border border-white/10 object-cover"
                       />
+                    </Show>
+
+                    <Show when={presets().length > 0}>
+                      <div class="space-y-1.5">
+                        <div class="text-[11px] font-medium text-white/[0.62]">
+                          Alpine presets
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          <For each={presets()}>
+                            {(file) => {
+                              const isActive = () =>
+                                (p.wallpaper_path ?? '/wallpapers/1.jpg') ===
+                                `/wallpapers/${file}`;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => void selectPresetWallpaper(p.id, file)}
+                                  aria-label={`Select preset ${file}`}
+                                  aria-pressed={isActive()}
+                                  class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white active:scale-95 ${
+                                    isActive()
+                                      ? 'border-white ring-2 ring-white ring-offset-2 ring-offset-[#12141a]'
+                                      : 'border-white/15 hover:border-white/40'
+                                  }`}
+                                >
+                                  <img
+                                    src={`/wallpapers/${file}`}
+                                    alt={`Preset ${file}`}
+                                    class="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                </button>
+                              );
+                            }}
+                          </For>
+                        </div>
+                      </div>
                     </Show>
 
                     <label class="pill pill-secondary w-full cursor-pointer">

@@ -120,12 +120,34 @@ pub enum ClientCommand {
     SetMode { mode: AppMode },
     SetOverlay { overlay: OverlayKind },
     SelectProfile { profile_id: i64 },
+    SetPresetWallpaper {
+        #[serde(deserialize_with = "deserialize_profile_id")]
+        profile_id: i64,
+        filename: String,
+    },
     PlaySound { sound: SoundKind },
     PlayMedia { item: MediaItem, resume: bool },
     SeekRelative { offset_sec: f64 },
     TogglePause,
     ToggleFullscreen,
     QuitApp,
+}
+
+fn deserialize_profile_id<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::Number(n) => n
+            .as_i64()
+            .ok_or_else(|| serde::de::Error::custom("expected integer profile_id")),
+        serde_json::Value::String(s) => s
+            .trim()
+            .parse::<i64>()
+            .map_err(|_| serde::de::Error::custom("expected numeric profile_id string")),
+        _ => Err(serde::de::Error::custom("expected integer or string profile_id")),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -187,7 +209,7 @@ impl StateManager {
             shell_cmd_tx: RwLock::new(None),
             nav_tx: RwLock::new(None),
             db_path: RwLock::new(None),
-            wallpapers_dir: RwLock::new(PathBuf::from("wallpapers")),
+            wallpapers_dir: RwLock::new(crate::config::default_wallpapers_dir()),
             port: RwLock::new(9000),
             audio,
             mediathek: Arc::new(MediathekProvider::new()),
@@ -452,6 +474,55 @@ impl StateManager {
                     self.broadcast_state();
                 }
             }
+            ClientCommand::SetPresetWallpaper {
+                profile_id,
+                filename,
+            } => {
+                let Some(clean_name) = Path::new(&filename)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(str::trim)
+                    .filter(|n| !n.is_empty() && !n.contains('/') && !n.contains('\\'))
+                    .map(ToString::to_string)
+                else {
+                    return;
+                };
+                let public_path = format!("/wallpapers/{clean_name}");
+
+                let db_path = self.db_path.read().ok().and_then(|g| g.clone());
+                let mut updated = false;
+                if let Some(path) = db_path {
+                    if let Ok(db) = crate::db::Database::open(&path)
+                        && db.set_profile_wallpaper(profile_id, &public_path).is_ok()
+                        && let Ok(profiles) = db.list_profiles()
+                    {
+                        self.set_profiles(profiles);
+                        updated = true;
+                    }
+                } else {
+                    {
+                        let mut st = self.state.write().expect("state lock");
+                        let updated_profile =
+                            st.profiles.iter_mut().find(|p| p.id == profile_id).map(|profile| {
+                                profile.wallpaper_path = Some(public_path);
+                                profile.clone()
+                            });
+                        if let Some(profile) = updated_profile {
+                            if st.active_profile.as_ref().map(|a| a.id) == Some(profile_id) {
+                                st.active_profile = Some(profile);
+                            }
+                            updated = true;
+                        }
+                    }
+                    if updated {
+                        self.broadcast_state();
+                    }
+                }
+
+                if updated {
+                    self.audio.play(SoundKind::Select);
+                }
+            }
             ClientCommand::PlaySound { sound } => {
                 self.audio.play(sound);
             }
@@ -592,11 +663,12 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .wallpapers_dir
         .read()
         .map(|g| g.clone())
-        .unwrap_or_else(|_| PathBuf::from("wallpapers"));
+        .unwrap_or_else(|_| crate::config::default_wallpapers_dir());
 
     let api_router = Router::new()
         .route("/api/health", get(health_handler))
         .route("/api/companion/info", get(companion_info_handler))
+        .route("/api/wallpapers", get(wallpapers_list_handler))
         .route("/api/channels", get(channels_handler))
         .route("/api/channels/reorder", post(reorder_channels_handler))
         .route("/api/channels/{id}/favorite", post(toggle_favorite_handler))
@@ -616,6 +688,7 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
 
     api_router
         .route("/companion", get(companion_index_handler))
+        .route("/companion/", get(companion_index_handler))
         .route("/companion/{*path}", get(companion_asset_handler))
         .nest_service("/wallpapers", wallpapers_service)
         .fallback(move |uri: axum::http::Uri| {
@@ -625,20 +698,26 @@ pub fn build_router(state: Arc<StateManager>, ui_dist_dir: &Path) -> Router {
         .layer(CorsLayer::permissive())
 }
 
+fn resolve_companion_dist_dir() -> Option<PathBuf> {
+    for candidate in ["companion/dist", "../companion/dist", "../../companion/dist"] {
+        let path = PathBuf::from(candidate);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+    None
+}
+
 async fn companion_index_handler() -> impl IntoResponse {
-    serve_embedded_or_disk::<EmbeddedCompanion>(
-        Some(Path::new("companion/dist")),
-        "index.html",
-        true,
-    )
-    .await
+    let dir = resolve_companion_dist_dir();
+    serve_embedded_or_disk::<EmbeddedCompanion>(dir.as_deref(), "index.html", true).await
 }
 
 async fn companion_asset_handler(
     axum::extract::Path(path): axum::extract::Path<String>,
 ) -> impl IntoResponse {
-    serve_embedded_or_disk::<EmbeddedCompanion>(Some(Path::new("companion/dist")), &path, true)
-        .await
+    let dir = resolve_companion_dist_dir();
+    serve_embedded_or_disk::<EmbeddedCompanion>(dir.as_deref(), &path, true).await
 }
 
 pub async fn serve_on_listener(
@@ -674,7 +753,17 @@ pub fn spawn_server_thread(
             };
 
             rt.block_on(async move {
-                let addr = SocketAddr::from(([127, 0, 0, 1], port));
+                let addr = match std::env::var("MELANGE_BIND_ADDR") {
+                    Ok(raw) if !raw.trim().is_empty() => match raw.trim().parse::<SocketAddr>() {
+                        Ok(parsed) => SocketAddr::new(parsed.ip(), port),
+                        Err(err) => {
+                            let _ = ready_tx
+                                .send(Err(format!("invalid MELANGE_BIND_ADDR '{raw}': {err}")));
+                            return;
+                        }
+                    },
+                    _ => SocketAddr::from(([127, 0, 0, 1], port)),
+                };
                 let listener = match TcpListener::bind(addr).await {
                     Ok(l) => l,
                     Err(err) => {
@@ -683,6 +772,7 @@ pub fn spawn_server_thread(
                     }
                 };
                 let bound_addr = listener.local_addr().unwrap_or(addr);
+                state.set_port(bound_addr.port());
                 info!(addr = %bound_addr, "melange axum server listening");
                 let _ = ready_tx.send(Ok(bound_addr));
 
@@ -703,6 +793,57 @@ pub fn spawn_server_thread(
 
 async fn health_handler() -> impl IntoResponse {
     Json(serde_json::json!({ "status": "ok", "service": "melange-core" }))
+}
+
+async fn wallpapers_list_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {
+    let wallpapers_dir = state
+        .wallpapers_dir
+        .read()
+        .map(|g| g.clone())
+        .unwrap_or_else(|_| crate::config::default_wallpapers_dir());
+
+    let mut files: Vec<String> = Vec::new();
+    if let Ok(mut entries) = tokio::fs::read_dir(&wallpapers_dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            if name.starts_with("profile_") {
+                continue;
+            }
+            let is_image = path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_ascii_lowercase())
+                .is_some_and(|e| matches!(e.as_str(), "jpg" | "jpeg" | "png" | "webp"));
+            if is_image {
+                files.push(name.to_string());
+            }
+        }
+    }
+
+    files.sort_by(|a, b| {
+        let num_a = Path::new(a)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.parse::<u64>().ok());
+        let num_b = Path::new(b)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.parse::<u64>().ok());
+        match (num_a, num_b) {
+            (Some(na), Some(nb)) => na.cmp(&nb).then_with(|| a.cmp(b)),
+            (Some(_), None) => std::cmp::Ordering::Less,
+            (None, Some(_)) => std::cmp::Ordering::Greater,
+            (None, None) => a.cmp(b),
+        }
+    });
+
+    Json(files)
 }
 
 async fn channels_handler(State(state): State<Arc<StateManager>>) -> impl IntoResponse {

@@ -14,7 +14,7 @@ dev:
     ./scripts/seed_dev.sh
     @if [ ! -d ui/dist ]; then cd ui && npm install && npm run build; fi
     @if [ ! -d companion/dist ]; then cd companion && npm install && npm run build; fi
-    cargo run -p melange-shell -- --dev
+    MELANGE_BIND_ADDR=0.0.0.0:9000 cargo run -p melange-shell -- --dev
 
 # Run all workspace unit and integration tests
 test:

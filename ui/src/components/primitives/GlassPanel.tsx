@@ -22,7 +22,16 @@ export function GlassPanel(props: GlassPanelProps) {
     "onClick"
   ]);
   const tag = () => local.as ?? "div";
-  const variantClass = () => `glass-panel glass-panel--${local.variant ?? "surface"}`;
+  const variantClass = () => {
+    const variant = local.variant ?? "surface";
+    const extra =
+      variant === "scrim"
+        ? "modal-scrim bg-[#090B10]/92 backdrop-blur-3xl"
+        : variant === "heavy"
+          ? "bg-[#111319]/95"
+          : "";
+    return `glass-panel glass-panel--${variant} ${extra}`.trim();
+  };
 
   return (
     <Dynamic
