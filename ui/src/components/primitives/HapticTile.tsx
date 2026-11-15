@@ -1,4 +1,4 @@
-import { createEffect, onCleanup, onMount, type JSX } from "solid-js";
+import { onCleanup, onMount, type JSX } from "solid-js";
 import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
 
 export type HapticTileVariant =
@@ -40,15 +40,8 @@ export function HapticTile(props: HapticTileProps) {
     });
   });
 
-  createEffect(() => {
-    if (!btnRef) return;
-    if (props.active) {
-      btnRef.setAttribute("data-active", "true");
-    } else {
-      btnRef.removeAttribute("data-active");
-    }
-  });
-
+  // Pointer hover uses native CSS :hover without reactive focus churn or audio ticks;
+  // click updates the spatial focus target cleanly for subsequent D-Pad/Arrow input.
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
     setInputModality("pointer");

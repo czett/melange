@@ -209,7 +209,18 @@
   --shadow-ambient: 0 8px 24px rgba(0, 0, 0, 0.24);
   --shadow-focus: 0 12px 32px rgba(0, 0, 0, 0.34);
   --ease-focus: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-geometry: 160ms;
+  --dur-geometry: 260ms;
+  --frosted-offwhite: rgba(242, 244, 248, 0.84);
+  --frosted-offwhite-active: rgba(242, 244, 248, 0.9);
+  --frosted-offwhite-border: rgba(255, 255, 255, 0.45);
+  --frosted-offwhite-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --card-focus-bg: rgba(255, 255, 255, 0.16);
+  --card-focus-border: rgba(255, 255, 255, 0.32);
+  --card-focus-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
 body {
@@ -281,9 +292,12 @@ textarea {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.11);
   transition:
-    transform var(--dur-geometry) var(--ease-focus),
-    border-color 140ms ease,
-    background-color 140ms ease;
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms ease;
+  will-change: transform;
 }
 
 .glass-inner:focus-visible {
@@ -293,6 +307,18 @@ textarea {
 }
 
 /* ───────────────────────── Pills & Buttons ───────────────────────── */
+
+.pill,
+.circle-btn,
+.segmented-item {
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms ease;
+  will-change: transform;
+}
 
 .pill {
   position: relative;
@@ -306,33 +332,32 @@ textarea {
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  transition:
-    transform var(--dur-geometry) var(--ease-focus),
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    box-shadow 180ms ease;
 }
 
 .pill-primary {
   padding: 0 1.25rem;
-  background: #ffffff;
+  background-color: var(--frosted-offwhite-active);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   color: var(--melange-ink);
-  border: 1px solid #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.55);
   font-weight: 600;
   letter-spacing: -0.01em;
-  box-shadow: var(--shadow-ambient);
+  box-shadow: var(--frosted-offwhite-shadow);
 }
 
 .pill-primary:hover,
 .pill-primary:focus-visible {
-  transform: scale(1.02);
-  box-shadow: var(--shadow-focus);
+  transform: scale(1.016);
+  background-color: rgba(242, 244, 248, 0.96);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
 .pill-secondary {
   padding: 0 1rem;
-  background: var(--glass-surface);
+  background-color: var(--glass-surface);
   color: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
@@ -343,22 +368,19 @@ textarea {
 
 .pill-secondary:hover,
 .pill-secondary:focus-visible {
-  transform: scale(1.03);
-  background: var(--glass-focus);
-  border-color: var(--hairline-focus);
-  color: #ffffff;
-  box-shadow: var(--shadow-focus);
+  transform: scale(1.016);
+  background-color: var(--frosted-offwhite);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-color: var(--frosted-offwhite-border);
+  color: var(--melange-ink);
+  box-shadow: var(--frosted-offwhite-shadow);
 }
 
 .pill-secondary[data-active='true'] {
-  background: #ffffff;
+  background-color: var(--frosted-offwhite-active);
   color: var(--melange-ink);
-  border-color: #ffffff;
-}
-
-.pill:active,
-.circle-btn:active {
-  transform: scale(0.96);
+  border-color: rgba(255, 255, 255, 0.55);
 }
 
 .circle-btn {
@@ -366,25 +388,26 @@ textarea {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  background: var(--glass-surface);
+  background-color: var(--glass-surface);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
   color: rgba(255, 255, 255, 0.92);
-  transition:
-    transform var(--dur-geometry) var(--ease-focus),
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
 }
 
 .circle-btn:hover,
 .circle-btn:focus-visible {
-  transform: scale(1.03);
-  background: var(--glass-focus);
-  border-color: var(--hairline-focus);
+  transform: scale(1.035);
+  background-color: var(--card-focus-bg);
+  border-color: var(--card-focus-border);
+  box-shadow: var(--card-focus-shadow);
   color: #ffffff;
+}
+
+.pill.pill:active,
+.circle-btn.circle-btn:active {
+  transform: scale(0.985);
 }
 
 /* ───────────────────────── Couch TV Segmented Pills ───────────────────────── */
@@ -425,31 +448,38 @@ textarea {
   line-height: 1;
   white-space: nowrap;
   color: rgba(255, 255, 255, 0.8);
-  background: transparent;
-  transition:
-    transform var(--dur-geometry) var(--ease-focus),
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
+  background-color: transparent;
 }
 
 .segmented-item[data-active='true'] {
-  background: #ffffff;
+  background-color: var(--frosted-offwhite-active);
   color: var(--melange-ink);
-  border-color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.55);
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
-.segmented-item:not([data-active='true']):hover,
-.segmented-item:not([data-active='true']):focus-visible {
-  background: var(--glass-focus);
-  border-color: var(--hairline-focus);
-  color: #ffffff;
+.segmented-item:hover,
+.segmented-item:focus-visible {
+  transform: scale(1.016);
+  background-color: var(--frosted-offwhite);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-color: var(--frosted-offwhite-border);
+  color: var(--melange-ink);
+  box-shadow: var(--frosted-offwhite-shadow);
+  z-index: 3;
 }
 
-.segmented-item:active {
-  transform: scale(0.96);
+.segmented-item[data-active='true']:hover,
+.segmented-item[data-active='true']:focus-visible {
+  background-color: rgba(242, 244, 248, 0.94);
+}
+
+.segmented-pill .segmented-item:active {
+  transform: scale(0.985);
 }
 
 .live-dot {

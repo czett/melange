@@ -232,7 +232,7 @@ export const HomeView = () => {
             <div class="mb-1.5 px-1 text-[15px] font-semibold tracking-[-0.015em] text-white/95">
               Keep watching
             </div>
-            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-1">
+            <div class="no-scrollbar -mx-3 flex gap-3.5 overflow-x-auto px-3 py-2">
               <For each={keepWatchingItems()}>
                 {(cw) => {
                   const pct = () =>
@@ -263,7 +263,7 @@ export const HomeView = () => {
                   return (
                     <HapticTile
                       id={`home-cw-${cw.item_id}`}
-                      variant="row"
+                      variant="card"
                       radius="16px"
                       onSelect={resumeItem}
                       class="flex h-[76px] w-[288px] shrink-0 items-center gap-3 rounded-[16px] p-2 text-left"
@@ -341,7 +341,7 @@ export const HomeView = () => {
               </GlassPanel>
             }
           >
-            <div class="no-scrollbar -mx-2 flex gap-3.5 overflow-x-auto px-2 py-1">
+            <div class="no-scrollbar -mx-3 flex gap-3.5 overflow-x-auto px-3 py-2">
               <For each={liveChannels()}>
                 {(ch) => {
                   const nn = () => melangeState().epg_now_next[ch.tvg_id];
@@ -363,7 +363,7 @@ export const HomeView = () => {
                   return (
                     <HapticTile
                       id={`home-ch-${ch.id}`}
-                      variant="row"
+                      variant="card"
                       radius="16px"
                       active={isActive()}
                       onSelect={() => sendCommand({ type: "SelectChannel", channel_id: ch.id })}

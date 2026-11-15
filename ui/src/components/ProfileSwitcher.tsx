@@ -49,7 +49,7 @@ export const ProfileSwitcher = () => {
           </HapticTile>
         </div>
 
-        <div class="-mx-2 mt-6 grid grid-cols-1 gap-2.5 px-2 py-1">
+        <div class="-mx-3 mt-6 grid grid-cols-1 gap-2.5 px-3 py-2">
           <For each={melangeState().profiles}>
             {(profile) => {
               const isActive = () => melangeState().active_profile?.id === profile.id;

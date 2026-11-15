@@ -23,15 +23,19 @@ const [focusRect, setFocusRect] = createSignal<{
   visible: boolean;
 }>({ x: 0, y: 0, width: 0, height: 0, radius: "16px", visible: false });
 
+let domFocusedEl: HTMLElement | null = null;
+
 function syncFocusedAttribute(activeId: string | null): void {
   const effectiveId = inputModality() === "spatial" ? activeId : null;
-  for (const [id, target] of targets.entries()) {
-    if (id === effectiveId) {
-      target.el.setAttribute("data-focused", "true");
-    } else {
-      target.el.removeAttribute("data-focused");
-    }
+  const nextEl = effectiveId ? (targets.get(effectiveId)?.el ?? null) : null;
+  if (domFocusedEl === nextEl) return;
+  if (domFocusedEl) {
+    domFocusedEl.removeAttribute("data-focused");
   }
+  if (nextEl) {
+    nextEl.setAttribute("data-focused", "true");
+  }
+  domFocusedEl = nextEl;
 }
 
 export function setInputModality(mode: InputModality): void {
@@ -59,16 +63,17 @@ export function registerFocusable(
   if (!focusedId()) {
     setFocus(id, false);
   } else if (focusedId() === id) {
+    syncFocusedAttribute(id);
     if (inputModality() === "spatial") {
-      el.setAttribute("data-focused", "true");
       measureFocused();
-    } else {
-      el.removeAttribute("data-focused");
     }
   }
   return () => {
     el.removeAttribute("data-focused");
     el.removeAttribute("data-pressed");
+    if (domFocusedEl === el) {
+      domFocusedEl = null;
+    }
     targets.delete(id);
     if (focusedId() === id) {
       const next = targets.keys().next().value ?? null;
@@ -126,7 +131,7 @@ export function ensureValidFocus(preferredId?: string): void {
     }
   }
   syncFocusedAttribute(null);
-  setFocusRect((r) => ({ ...r, visible: false }));
+  setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
 }
 
 const SELF_FOCUS_SELECTOR = ".haptic-tile, .segmented-item";
@@ -148,12 +153,12 @@ export function measureFocused(): void {
   }
   const id = focusedId();
   if (!id) {
-    setFocusRect((r) => ({ ...r, visible: false }));
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
     return;
   }
   const target = targets.get(id);
   if (!target || !target.el.isConnected) {
-    setFocusRect((r) => ({ ...r, visible: false }));
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
     return;
   }
   if (usesSelfFocus(target.el)) {
@@ -162,7 +167,7 @@ export function measureFocused(): void {
   }
   const rect = target.el.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) {
-    setFocusRect((r) => ({ ...r, visible: false }));
+    setFocusRect((r) => (r.visible ? { ...r, visible: false } : r));
     return;
   }
   const computed = window.getComputedStyle(target.el);
@@ -187,7 +192,7 @@ export function handleSpatialNav(ev: NavEvent): boolean {
         target.el.setAttribute("data-pressed", "true");
         window.setTimeout(() => {
           target.el.removeAttribute("data-pressed");
-        }, 130);
+        }, 140);
         target.onSelect();
         requestAnimationFrame(measureFocused);
         return true;

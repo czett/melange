@@ -1,4 +1,4 @@
-import { For, Show, createEffect, onCleanup, onMount } from "solid-js";
+import { For, Show, onCleanup, onMount } from "solid-js";
 import { registerFocusable, setFocus, setInputModality } from "../../spatial/nav";
 
 export interface SegmentedItem {
@@ -22,35 +22,41 @@ export interface SegmentedPillProps {
   class?: string;
 }
 
+function createPressHelper() {
+  let timer: number | undefined;
+  const trigger = (el: HTMLElement | undefined) => {
+    if (!el) return;
+    el.setAttribute("data-pressed", "true");
+    if (timer !== undefined) window.clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      el.removeAttribute("data-pressed");
+    }, 140);
+  };
+  const clear = () => {
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      timer = undefined;
+    }
+  };
+  return { trigger, clear };
+}
+
 function SegmentButton(props: { item: SegmentedItem }) {
   let btnRef!: HTMLButtonElement;
-  let pressTimer: number | undefined;
+  const press = createPressHelper();
 
   onMount(() => {
     const cleanup = registerFocusable(props.item.focusId, btnRef, () => props.item.onSelect());
     onCleanup(() => {
       cleanup();
-      if (pressTimer !== undefined) window.clearTimeout(pressTimer);
+      press.clear();
     });
-  });
-
-  createEffect(() => {
-    if (!btnRef) return;
-    if (props.item.active) {
-      btnRef.setAttribute("data-active", "true");
-    } else {
-      btnRef.removeAttribute("data-active");
-    }
   });
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
     setInputModality("pointer");
-    btnRef.setAttribute("data-pressed", "true");
-    if (pressTimer !== undefined) window.clearTimeout(pressTimer);
-    pressTimer = window.setTimeout(() => {
-      btnRef?.removeAttribute("data-pressed");
-    }, 130);
+    press.trigger(btnRef);
     setFocus(props.item.focusId, false);
     props.item.onSelect();
   };
@@ -69,13 +75,7 @@ function SegmentButton(props: { item: SegmentedItem }) {
       <span>{props.item.label}</span>
       <Show when={props.item.badge}>
         {(badge) => (
-          <span
-            class={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none ${
-              props.item.active
-                ? "bg-[#111318]/12 text-[#111318]"
-                : "bg-white/10 text-white/80"
-            }`}
-          >
+          <span class="segmented-badge rounded-full px-1.5 py-0.5 text-[10px] font-semibold leading-none">
             {badge()}
           </span>
         )}
@@ -92,7 +92,7 @@ export function SegmentedPill(props: SegmentedPillProps) {
       <Show when={props.trailingAction}>
         {(action) => {
           let actionRef!: HTMLButtonElement;
-          let pressTimer: number | undefined;
+          const press = createPressHelper();
 
           onMount(() => {
             const cleanup = registerFocusable(action().focusId, actionRef, () =>
@@ -100,7 +100,7 @@ export function SegmentedPill(props: SegmentedPillProps) {
             );
             onCleanup(() => {
               cleanup();
-              if (pressTimer !== undefined) window.clearTimeout(pressTimer);
+              press.clear();
             });
           });
 
@@ -116,15 +116,11 @@ export function SegmentedPill(props: SegmentedPillProps) {
               onClick={(e) => {
                 e.stopPropagation();
                 setInputModality("pointer");
-                actionRef.setAttribute("data-pressed", "true");
-                if (pressTimer !== undefined) window.clearTimeout(pressTimer);
-                pressTimer = window.setTimeout(() => {
-                  actionRef?.removeAttribute("data-pressed");
-                }, 130);
+                press.trigger(actionRef);
                 setFocus(action().focusId, false);
                 action().onSelect();
               }}
-              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[15px] font-semibold text-white/90"
+              class="segmented-item h-[1.875rem] w-[1.875rem] px-0 text-[15px] font-semibold"
             >
               {action().label}
             </button>

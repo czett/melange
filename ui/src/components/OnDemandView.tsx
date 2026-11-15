@@ -212,7 +212,7 @@ export function OnDemandView(props: OnDemandViewProps) {
               </svg>
               <span class="truncate">{query() ? query() : "Search"}</span>
             </span>
-            <span class="text-[11px] font-medium text-white/80">OK</span>
+            <span class="text-[11px] font-medium opacity-75">OK</span>
           </HapticTile>
 
           <HapticTile
@@ -235,7 +235,7 @@ export function OnDemandView(props: OnDemandViewProps) {
         </div>
       </header>
 
-      <div class="no-scrollbar -mx-4 flex-1 overflow-y-auto p-4">
+      <div class="no-scrollbar -mx-3 flex-1 overflow-y-auto px-3 py-2">
         <Show when={loading()}>
           <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
             <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>

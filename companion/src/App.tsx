@@ -758,10 +758,10 @@ export default function App() {
                           sendCommand({ type: 'SelectChannel', channel_id: ch.id });
                           flash(`Tuning ${ch.name}`);
                         }}
-                        class={`flex h-14 w-full items-center justify-between rounded-[16px] border px-3.5 text-left transition-all active:scale-[0.99] ${
+                        class={`flex h-14 w-full items-center justify-between rounded-[16px] border px-3.5 text-left transition-all duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.985] ${
                           isActive()
-                            ? 'border-white bg-white text-[#111318]'
-                            : 'border-white/[0.11] bg-[rgba(16,18,22,0.44)] text-white hover:border-white/[0.24] hover:bg-white/[0.10]'
+                            ? 'border-white/50 bg-[#f2f4f8]/90 text-[#111318] shadow-[0_10px_28px_rgba(0,0,0,0.28)]'
+                            : 'border-white/[0.11] bg-[rgba(16,18,22,0.44)] text-white hover:scale-[1.016] hover:border-white/[0.32] hover:bg-white/[0.16]'
                         }`}
                       >
                         <div class="flex min-w-0 items-center gap-3">

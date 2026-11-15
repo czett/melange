@@ -125,7 +125,7 @@ export const FullEpg = () => {
         </header>
 
         {/* Slot header ruler */}
-        <div class="flex shrink-0 items-center gap-2 border-b border-white/[0.08] bg-white/[0.04] px-2 py-2.5">
+        <div class="flex shrink-0 items-center gap-2 border-b border-white/[0.08] bg-white/[0.04] px-3 py-2.5">
           <div class="w-60 shrink-0 px-4 text-[12px] font-semibold text-white/75">
             Channel
           </div>
@@ -143,8 +143,8 @@ export const FullEpg = () => {
           </div>
         </div>
 
-        {/* Unclipped scale(1) cells with padded scroll container */}
-        <div class="no-scrollbar flex-1 space-y-1.5 overflow-y-auto px-2 py-1.5">
+        {/* Unclipped 1.016x cells with padded scroll container */}
+        <div class="no-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
           <For each={visibleChannels()}>
             {(ch) => {
               const isPlaying = () => melangeState().playback.channel_id === ch.id;

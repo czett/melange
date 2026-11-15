@@ -169,7 +169,7 @@ export function SettingsView(props: SettingsViewProps) {
               </HapticTile>
             </div>
 
-            <nav class="flex flex-col gap-1.5 px-2 py-1" aria-label="Settings categories">
+            <nav class="flex flex-col gap-1.5 px-3 py-2" aria-label="Settings categories">
               <For each={categories}>
                 {(cat) => {
                   const isActive = () => category() === cat.id;
@@ -191,7 +191,7 @@ export function SettingsView(props: SettingsViewProps) {
             </nav>
           </div>
 
-          <div class="px-2 pt-6 pb-1">
+          <div class="px-3 pt-6 pb-2">
             <HapticTile
               id="settings-profile-footer"
               variant="grouped"
@@ -216,7 +216,7 @@ export function SettingsView(props: SettingsViewProps) {
         </aside>
 
         {/* Right Content Pane */}
-        <main class="no-scrollbar min-w-0 flex-1 overflow-y-auto px-2 py-1">
+        <main class="no-scrollbar min-w-0 flex-1 overflow-y-auto px-3 py-2">
           <div class="mb-6 flex items-center justify-between">
             <div>
               <div class="text-[12px] font-medium uppercase tracking-wider text-white/50">
