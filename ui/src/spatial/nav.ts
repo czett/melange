@@ -107,8 +107,7 @@ export function ensureValidFocus(preferredId?: string): void {
   setFocusRect((r) => ({ ...r, visible: false }));
 }
 
-const SELF_FOCUS_SELECTOR =
-  ".haptic-tile, .segmented-item, .pill, .nav-link, .text-link, .glass-card-interactive, .glass-inner, .strip-item, .key";
+const SELF_FOCUS_SELECTOR = ".haptic-tile, .segmented-item";
 
 function usesSelfFocus(el: HTMLElement): boolean {
   if (el.dataset.focusSelf === "false" || el.dataset.focusRing === "reticle") {

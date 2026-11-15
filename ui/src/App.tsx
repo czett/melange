@@ -167,10 +167,8 @@ export const App = () => {
         style={{ opacity: backdropOpacity() }}
       />
 
-      {/* Optional profile wallpaper, smoked into the glass when idle */}
-      <Show
-        when={showBackdrop() && !isVideoActive() && melangeState().active_profile?.wallpaper_path}
-      >
+      {/* Optional profile wallpaper, smoked into the obsidian-garnet backdrop */}
+      <Show when={showBackdrop() && melangeState().active_profile?.wallpaper_path}>
         {(wp) => (
           <div class="pointer-events-none fixed inset-0 -z-20 overflow-hidden">
             <img
@@ -182,7 +180,7 @@ export const App = () => {
               class="absolute inset-0"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(61,7,6,0.6) 0%, rgba(38,5,5,0.35) 55%, rgba(22,3,3,0.7) 100%)"
+                  "linear-gradient(160deg, rgba(10,1,2,0.72) 0%, rgba(18,3,4,0.58) 55%, rgba(8,1,1,0.82) 100%)"
               }}
             />
           </div>

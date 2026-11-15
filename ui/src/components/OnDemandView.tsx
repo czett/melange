@@ -1,8 +1,9 @@
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import type { MediaItem } from "../bridge/types";
 import { melangeState, sendCommand } from "../bridge/ws";
-import { ensureValidFocus, registerFocusable } from "../spatial/nav";
+import { ensureValidFocus } from "../spatial/nav";
 import { OnScreenKeyboard } from "./OnScreenKeyboard";
+import { GlassPanel, HapticTile, SegmentedPill, type SegmentedItem } from "./primitives";
 
 interface OnDemandViewProps {
   provider: "mediathek" | "youtube" | "local";
@@ -22,7 +23,11 @@ function formatDuration(sec: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function categoryBadge(item: MediaItem, provider: OnDemandViewProps["provider"], fallback: string): string {
+function categoryBadge(
+  item: MediaItem,
+  provider: OnDemandViewProps["provider"],
+  fallback: string
+): string {
   const raw = (item.channel_or_author || "").trim();
   if (raw.length > 0) return raw;
   return provider === "local" ? "LOCAL MEDIA" : fallback;
@@ -87,7 +92,7 @@ export function OnDemandView(props: OnDemandViewProps) {
     setErrorMsg(null);
     try {
       const res = await fetch(
-        `/api/ondemand/search?provider=${encodeURIComponent(props.provider)}&q=${encodeURIComponent(trimmed)}`,
+        `/api/ondemand/search?provider=${encodeURIComponent(props.provider)}&q=${encodeURIComponent(trimmed)}`
       );
       if (res.ok) {
         const data = (await res.json()) as MediaItem[];
@@ -128,31 +133,56 @@ export function OnDemandView(props: OnDemandViewProps) {
     sendCommand({ type: "PlayMedia", item, resume: true });
   };
 
+  const providerTabs = createMemo<SegmentedItem[]>(() => [
+    {
+      id: "mediathek",
+      focusId: "od-tab-mediathek",
+      label: "Mediathek",
+      active: props.provider === "mediathek",
+      onSelect: () => sendCommand({ type: "SetMode", mode: "Mediathek" })
+    },
+    {
+      id: "youtube",
+      focusId: "od-tab-youtube",
+      label: "YouTube",
+      active: props.provider === "youtube",
+      onSelect: () => sendCommand({ type: "SetMode", mode: "YouTube" })
+    },
+    {
+      id: "local",
+      focusId: "od-tab-local",
+      label: "Media",
+      active: props.provider === "local",
+      onSelect: () => sendCommand({ type: "SetMode", mode: "Media" })
+    }
+  ]);
+
   return (
-    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden px-14 py-10 text-white">
-      <header class="mb-9 flex items-end justify-between gap-6">
-        <div>
-          <div class="eyebrow">{props.subtitle}</div>
-          <h1 class="mt-2 pb-0.5 text-[40px] font-medium leading-[1.12] tracking-[-0.035em] text-white">
-            {props.title}
-          </h1>
+    <div class="relative z-20 flex h-full w-full flex-col overflow-hidden px-10 py-8 text-white xl:px-14 xl:py-10">
+      <header class="mb-7 flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-col gap-3">
+          <div class="flex items-center gap-3">
+            <div class="eyebrow">{props.subtitle}</div>
+            <SegmentedPill items={providerTabs()} />
+          </div>
+          <h1 class="view-title">{props.title}</h1>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button
-            ref={(el) => onCleanup(registerFocusable("od-search", el, openKeyboard))}
-            type="button"
-            data-focus-radius="9999px"
-            onClick={openKeyboard}
-            class="pill pill-secondary min-w-[15rem] justify-between"
+        <div class="flex items-center gap-2.5">
+          <HapticTile
+            id="od-search"
+            variant="pill"
+            radius="9999px"
+            onSelect={openKeyboard}
+            class="min-w-[15rem] justify-between text-white"
           >
             <span class="flex min-w-0 items-center gap-2">
               <svg
-                class="h-3.5 w-3.5 shrink-0 opacity-70"
+                class="h-3.5 w-3.5 shrink-0 opacity-80"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.6"
+                stroke-width="2"
                 stroke-linecap="round"
               >
                 <circle cx="11" cy="11" r="6.5" />
@@ -160,45 +190,45 @@ export function OnDemandView(props: OnDemandViewProps) {
               </svg>
               <span class="truncate">{query() ? query() : "Search"}</span>
             </span>
-            <span class="text-[10px] uppercase tracking-[0.14em] opacity-50">OK</span>
-          </button>
+            <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/60">
+              OK
+            </span>
+          </HapticTile>
 
-          <button
-            ref={(el) =>
-              onCleanup(registerFocusable("od-refresh", el, () => void loadFeed(props.provider)))
-            }
-            type="button"
-            data-focus-radius="9999px"
-            onClick={() => void loadFeed(props.provider)}
-            class="pill pill-secondary"
+          <HapticTile
+            id="od-refresh"
+            variant="pill"
+            radius="9999px"
+            onSelect={() => void loadFeed(props.provider)}
+            class="text-white"
           >
             Refresh
-          </button>
+          </HapticTile>
 
-          <button
-            ref={(el) => onCleanup(registerFocusable("od-back", el, props.onBack))}
-            type="button"
-            data-focus-radius="9999px"
-            onClick={props.onBack}
-            class="pill pill-secondary"
+          <HapticTile
+            id="od-back"
+            variant="pill"
+            radius="9999px"
+            onSelect={props.onBack}
+            class="text-white"
           >
-            ← Back
-          </button>
+            ← Home
+          </HapticTile>
         </div>
       </header>
 
-      <div class="no-scrollbar flex-1 overflow-y-auto px-1 py-1">
+      <div class="no-scrollbar flex-1 overflow-y-auto px-1 py-1.5">
         <Show when={loading()}>
           <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
             <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>
               {() => (
-                <div class="glass-card animate-pulse overflow-hidden rounded-[18px]">
+                <GlassPanel variant="heavy" class="animate-pulse overflow-hidden rounded-[20px]">
                   <div class="aspect-video w-full bg-white/[0.04]" />
                   <div class="space-y-2.5 p-4">
                     <div class="h-2.5 w-20 rounded-full bg-white/10" />
-                    <div class="h-3 w-4/5 rounded-full bg-white/[0.14]" />
+                    <div class="h-3.5 w-4/5 rounded-full bg-white/[0.14]" />
                   </div>
-                </div>
+                </GlassPanel>
               )}
             </For>
           </div>
@@ -206,83 +236,80 @@ export function OnDemandView(props: OnDemandViewProps) {
 
         <Show when={!loading() && errorMsg()}>
           {(err) => (
-            <div class="glass-card max-w-xl rounded-[22px] p-7">
+            <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
               <div class="flex items-center gap-2">
                 <span class="live-dot" />
                 <span class="eyebrow">Feed unavailable</span>
               </div>
-              <div class="mt-3 text-lg font-normal tracking-[-0.02em] text-white">
+              <div class="mt-3 text-lg font-semibold tracking-[-0.02em] text-white">
                 Failed to load {props.title}
               </div>
-              <div class="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-white/65">{err()}</div>
-            </div>
+              <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.74]">
+                {err()}
+              </div>
+            </GlassPanel>
           )}
         </Show>
 
         <Show when={!loading() && !errorMsg() && items().length === 0}>
-          <div class="glass-card max-w-xl rounded-[22px] p-7">
-            <div class="text-lg font-normal tracking-[-0.02em] text-white">No items available</div>
-            <div class="mt-1.5 max-w-[44ch] text-[13px] leading-relaxed text-white/65">
+          <GlassPanel variant="heavy" class="max-w-xl rounded-[24px] p-7">
+            <div class="text-lg font-semibold tracking-[-0.02em] text-white">
+              No items available
+            </div>
+            <div class="mt-1.5 max-w-[44ch] text-[13px] font-medium leading-relaxed text-white/[0.74]">
               {props.provider === "local"
                 ? "Add video files (.mp4, .mkv, .webm) to your media directory or run ./scripts/seed_dev.sh."
                 : "No results returned. Check your network connection or try a different search."}
             </div>
-          </div>
+          </GlassPanel>
         </Show>
 
         <Show when={!loading() && items().length > 0}>
           <div class="grid grid-cols-2 gap-5 pb-8 md:grid-cols-3 lg:grid-cols-4">
             <For each={items()}>
               {(item) => (
-                <button
-                  ref={(el) =>
-                    onCleanup(registerFocusable(`od-item-${item.id}`, el, () => playItem(item)))
-                  }
-                  type="button"
-                  data-focus-radius="18px"
-                  onClick={() => playItem(item)}
-                  class="glass-card glass-card-interactive flex h-full flex-col overflow-hidden rounded-[18px] text-left"
+                <HapticTile
+                  id={`od-item-${item.id}`}
+                  variant="card"
+                  radius="20px"
+                  onSelect={() => playItem(item)}
+                  class="flex h-full flex-col overflow-hidden rounded-[20px] text-left"
                 >
                   <Show
                     when={item.thumbnail_url}
                     fallback={
-                      <div
-                        class="relative flex min-h-[192px] w-full flex-1 flex-col justify-between overflow-hidden p-5"
-                        style={{ background: "rgba(15, 2, 2, 0.78)" }}
-                      >
-                        {/* Subtle diagonal #831613 / #E13A26 editorial light accent */}
+                      <div class="flex h-full w-full flex-col justify-between overflow-hidden">
                         <div
-                          class="pointer-events-none absolute inset-0"
+                          class="relative flex aspect-video w-full flex-col justify-between overflow-hidden p-4"
                           style={{
                             background:
-                              "linear-gradient(132deg, rgba(225, 58, 38, 0.2) 0%, rgba(131, 22, 19, 0.16) 28%, rgba(15, 2, 2, 0) 62%)"
+                              "linear-gradient(138deg, rgba(131,22,19,0.58) 0%, rgba(28,4,5,0.92) 55%, rgba(10,1,2,0.98) 100%)"
                           }}
-                        />
-                        <div
-                          class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full"
-                          style={{
-                            background:
-                              "radial-gradient(circle, rgba(225, 58, 38, 0.16) 0%, transparent 72%)"
-                          }}
-                        />
-
-                        <div class="relative flex items-center justify-between gap-2">
-                          <span class="chip max-w-[68%] truncate uppercase tracking-[0.12em] text-white/85">
-                            {categoryBadge(item, props.provider, props.subtitle)}
-                          </span>
-                          <Show when={item.duration_sec > 0}>
-                            <span class="chip shrink-0 tabular-nums text-white/75">
-                              {formatDuration(item.duration_sec)}
+                        >
+                          <div class="flex items-center justify-between gap-2">
+                            <span class="chip max-w-[68%] truncate font-semibold uppercase tracking-[0.12em] text-white/90">
+                              {categoryBadge(item, props.provider, props.subtitle)}
                             </span>
-                          </Show>
+                            <Show when={item.duration_sec > 0}>
+                              <span class="chip shrink-0 font-semibold tabular-nums text-white/85">
+                                {formatDuration(item.duration_sec)}
+                              </span>
+                            </Show>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <span class="h-[3px] w-10 rounded-full bg-[#E13A26]" />
+                            <span class="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                              {props.provider}
+                            </span>
+                          </div>
                         </div>
 
-                        <div class="relative mt-6 space-y-2">
-                          <div class="line-clamp-3 pb-0.5 text-[15px] font-medium leading-[1.3] tracking-[-0.015em] text-white">
+                        <div class="flex flex-1 flex-col justify-between gap-1.5 px-4 py-3.5">
+                          <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
                             {item.title}
                           </div>
                           <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-2 text-[12px] font-normal leading-relaxed text-white/[0.80]">
+                            <div class="line-clamp-1 text-[12px] font-medium text-white/[0.74]">
                               {item.subtitle || item.description}
                             </div>
                           </Show>
@@ -292,7 +319,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                   >
                     {(thumb) => (
                       <>
-                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[rgba(10,1,1,0.62)]">
+                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#0E0202]">
                           <img
                             src={thumb()}
                             alt={item.title}
@@ -303,31 +330,31 @@ export function OnDemandView(props: OnDemandViewProps) {
                             class="pointer-events-none absolute inset-0"
                             style={{
                               background:
-                                "linear-gradient(180deg, transparent 55%, rgba(15,2,2,0.7) 100%)"
+                                "linear-gradient(180deg, transparent 52%, rgba(10,1,2,0.78) 100%)"
                             }}
                           />
                           <Show when={item.duration_sec > 0}>
-                            <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(15,2,2,0.78)] tabular-nums text-white/85 backdrop-blur-md">
+                            <span class="chip absolute bottom-2.5 right-2.5 bg-[rgba(10,1,2,0.84)] font-semibold tabular-nums text-white backdrop-blur-md">
                               {formatDuration(item.duration_sec)}
                             </span>
                           </Show>
                         </div>
 
                         <div class="flex flex-col gap-1 px-4 py-3.5">
-                          <div class="truncate text-[12px] font-normal text-white/[0.78]">
+                          <div class="truncate text-[12px] font-medium text-white/[0.74]">
                             {item.channel_or_author}
                             <Show when={item.subtitle}>
                               <span> · {item.subtitle}</span>
                             </Show>
                           </div>
-                          <div class="line-clamp-2 pb-0.5 text-[13px] font-medium leading-snug tracking-[-0.01em] text-white">
+                          <div class="line-clamp-2 text-[14px] font-semibold leading-snug tracking-[-0.015em] text-white">
                             {item.title}
                           </div>
                         </div>
                       </>
                     )}
                   </Show>
-                </button>
+                </HapticTile>
               )}
             </For>
           </div>

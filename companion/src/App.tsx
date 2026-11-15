@@ -183,7 +183,7 @@ export default function App() {
             >
               <path d="M8.5 15.5c-3 0-5.5-2.4-5.5-5.5S5.5 4.5 8.5 4.5c4.2 0 6.8 11 11 11 3 0 5.5-2.4 5.5-5.5s-2.5-5.5-5.5-5.5c-4.2 0-6.8 11-11 11z" />
             </svg>
-            <span class="text-sm font-medium tracking-[-0.02em] text-white">melange</span>
+            <span class="text-sm font-semibold tracking-[-0.02em] text-white">melange</span>
             <span
               class={connected() ? 'live-dot ml-0.5' : 'ml-0.5 h-1.5 w-1.5 rounded-full bg-white/30'}
               title={connected() ? 'Connected' : 'Reconnecting'}
@@ -194,7 +194,7 @@ export default function App() {
             when={statusMsg()}
             fallback={<span class="eyebrow">Companion</span>}
           >
-            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium tracking-[-0.01em] text-[#160303]">
+            <span class="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold tracking-[-0.01em] text-[#120202]">
               {statusMsg()}
             </span>
           </Show>
@@ -204,7 +204,7 @@ export default function App() {
       <main class="flex-1 overflow-y-auto px-4 pb-24 pt-5">
         <div class="mb-5 px-1">
           <div class="eyebrow">{pageHeading().eyebrow}</div>
-          <h1 class="mt-1 text-[28px] font-normal leading-[1.08] tracking-[-0.035em] text-white">
+          <h1 class="mt-1 text-[28px] font-semibold leading-[1.08] tracking-[-0.03em] text-white">
             {pageHeading().title}
           </h1>
         </div>
@@ -239,7 +239,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-medium tracking-[-0.01em] text-[#160303] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#160303]/60 active:scale-95"
+                  class="flex h-12 items-center justify-center rounded-2xl bg-white text-xs font-bold tracking-[-0.01em] text-[#120202] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-offset-2 focus-visible:ring-offset-[#120202]/60 active:scale-95"
                 >
                   OK
                 </button>
@@ -343,24 +343,24 @@ export default function App() {
         </Show>
 
         <Show when={tab() === 'channels'}>
-          <div class="space-y-2">
+          <div class="space-y-2.5">
             <For
               each={channels()}
               fallback={
-                <div class="glass-card rounded-[18px] p-6 text-center text-[13px] text-white/55">
+                <div class="glass-card rounded-[20px] p-6 text-center text-[13px] font-medium text-white/[0.74]">
                   No channels synced yet.
                 </div>
               }
             >
               {(ch, idx) => (
-                <div class="glass-card flex items-center justify-between rounded-[16px] px-3.5 py-3">
+                <div class="glass-card flex items-center justify-between rounded-[20px] px-3.5 py-3">
                   <div class="flex min-w-0 items-center gap-3 pr-2">
-                    <span class="glass-inner flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-medium tabular-nums text-white/80">
+                    <span class="glass-inner flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold tabular-nums text-white">
                       {ch.number}
                     </span>
                     <div class="min-w-0">
-                      <div class="truncate text-[13px] font-medium text-white">{ch.name}</div>
-                      <div class="truncate text-[11px] text-white/45">{ch.group_title}</div>
+                      <div class="truncate text-[14px] font-semibold text-white">{ch.name}</div>
+                      <div class="truncate text-[12px] font-medium text-white/[0.74]">{ch.group_title}</div>
                     </div>
                   </div>
                   <div class="flex shrink-0 items-center gap-1.5">
@@ -407,7 +407,7 @@ export default function App() {
                 value={newProfileName()}
                 onInput={(e) => setNewProfileName(e.currentTarget.value)}
                 placeholder="New profile name..."
-                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] text-white placeholder:text-white/40"
+                class="glass-inner h-9 flex-1 rounded-full px-4 text-[13px] font-medium text-white placeholder:text-white/50"
               />
               <button type="submit" class="pill pill-primary">
                 Add
@@ -417,18 +417,18 @@ export default function App() {
             <div class="space-y-2.5">
               <For each={profiles()}>
                 {(p) => (
-                  <div class="glass-card space-y-3 rounded-[20px] p-4">
+                  <div class="glass-card space-y-3 rounded-[22px] p-4">
                     <Show
                       when={editingProfileId() === p.id}
                       fallback={
                         <div class="flex items-center justify-between gap-3">
                           <div class="flex items-center gap-3">
-                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-medium text-[#160303]">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-xs font-bold text-[#120202]">
                               {p.name.slice(0, 1).toUpperCase()}
                             </span>
                             <div>
-                              <div class="text-[13px] font-medium text-white">{p.name}</div>
-                              <div class="text-[11px] text-white/45">Local profile</div>
+                              <div class="text-[14px] font-semibold text-white">{p.name}</div>
+                              <div class="text-[12px] font-medium text-white/[0.74]">Local profile</div>
                             </div>
                           </div>
                           <button
@@ -446,7 +446,7 @@ export default function App() {
                           type="text"
                           value={editingName()}
                           onInput={(e) => setEditingName(e.currentTarget.value)}
-                          class="glass-inner h-9 flex-1 rounded-full px-3.5 text-[13px] text-white"
+                          class="glass-inner h-9 flex-1 rounded-full px-3.5 text-[13px] font-medium text-white"
                         />
                         <button
                           type="button"
@@ -501,9 +501,6 @@ export default function App() {
             onClick={() => setTab('remote')}
             class="nav-link"
           >
-            <Show when={tab() === 'remote'}>
-              <span class="nav-dot" />
-            </Show>
             <span>Remote</span>
           </button>
           <button
@@ -512,9 +509,6 @@ export default function App() {
             onClick={() => setTab('channels')}
             class="nav-link"
           >
-            <Show when={tab() === 'channels'}>
-              <span class="nav-dot" />
-            </Show>
             <span>Channels</span>
           </button>
           <button
@@ -523,9 +517,6 @@ export default function App() {
             onClick={() => setTab('profiles')}
             class="nav-link"
           >
-            <Show when={tab() === 'profiles'}>
-              <span class="nav-dot" />
-            </Show>
             <span>Profiles</span>
           </button>
         </div>

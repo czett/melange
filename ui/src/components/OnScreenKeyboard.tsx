@@ -1,5 +1,6 @@
 import { For, onCleanup, onMount } from "solid-js";
-import { ensureValidFocus, registerFocusable, setFocus } from "../spatial/nav";
+import { ensureValidFocus, setFocus } from "../spatial/nav";
+import { GlassPanel, HapticTile } from "./primitives";
 
 interface OnScreenKeyboardProps {
   value: string;
@@ -12,7 +13,7 @@ const KEY_ROWS: string[][] = [
   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
   ["Q", "W", "E", "R", "T", "Z", "U", "I", "O", "P"],
   ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-  ["Y", "X", "C", "V", "B", "N", "M"],
+  ["Y", "X", "C", "V", "B", "N", "M"]
 ];
 
 export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
@@ -50,21 +51,29 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
   });
 
   return (
-    <div class="modal-scrim fixed inset-0 z-40 flex items-center justify-center p-6">
-      <div class="glass-card flex w-full max-w-3xl flex-col gap-5 rounded-[24px] p-7">
+    <GlassPanel
+      variant="scrim"
+      class="fixed inset-0 z-40 flex items-center justify-center p-6"
+      onClick={props.onClose}
+    >
+      <GlassPanel
+        variant="heavy"
+        class="flex w-full max-w-3xl flex-col gap-5 rounded-[26px] p-7"
+        onClick={(e: MouseEvent) => e.stopPropagation()}
+      >
         <div class="flex items-center justify-between gap-4">
           <div class="eyebrow">Search</div>
-          <div class="chip">Type or D-pad + OK</div>
+          <div class="chip font-semibold">Type or D-pad + OK</div>
         </div>
 
-        <div class="glass-inner flex min-h-[3.25rem] items-center justify-between rounded-2xl px-5 py-3 text-lg font-normal tracking-[-0.02em] text-white">
+        <div class="flex min-h-[3.25rem] items-center justify-between rounded-2xl border border-white/15 bg-[rgba(10,1,2,0.7)] px-5 py-3 text-lg font-semibold tracking-[-0.02em] text-white">
           <div class="flex items-center gap-1 truncate">
             {props.value ? (
               <span>{props.value}</span>
             ) : (
-              <span class="text-white/45">Type to search...</span>
+              <span class="font-medium text-white/50">Type to search...</span>
             )}
-            <span class="inline-block h-5 w-px animate-pulse bg-white/80" />
+            <span class="inline-block h-5 w-0.5 animate-pulse bg-white/85" />
           </div>
         </div>
 
@@ -74,78 +83,70 @@ export function OnScreenKeyboard(props: OnScreenKeyboardProps) {
               <div class="flex justify-center gap-2">
                 <For each={row}>
                   {(key) => (
-                    <button
-                      ref={(el) =>
-                        onCleanup(registerFocusable(`osk-key-${key}`, el, () => appendChar(key)))
-                      }
-                      type="button"
-                      data-focus-radius="12px"
-                      onClick={() => appendChar(key)}
-                      class="key flex h-11 w-11 items-center justify-center rounded-xl text-[13px] font-medium"
+                    <HapticTile
+                      id={`osk-key-${key}`}
+                      variant="key"
+                      radius="12px"
+                      onSelect={() => appendChar(key)}
+                      class="flex h-11 w-11 items-center justify-center rounded-xl text-[14px] font-semibold"
                     >
                       {key}
-                    </button>
+                    </HapticTile>
                   )}
                 </For>
               </div>
             )}
           </For>
 
-          <div class="flex justify-center gap-2 pt-3">
-            <button
-              ref={(el) =>
-                onCleanup(
-                  registerFocusable("osk-space", el, () => props.onChange(props.value + " "))
-                )
-              }
-              type="button"
-              data-focus-radius="9999px"
-              onClick={() => props.onChange(props.value + " ")}
-              class="pill pill-secondary"
+          <div class="flex justify-center gap-2.5 pt-3">
+            <HapticTile
+              id="osk-space"
+              variant="pill"
+              radius="9999px"
+              onSelect={() => props.onChange(props.value + " ")}
+              class="text-white"
             >
               Space
-            </button>
-            <button
-              ref={(el) => onCleanup(registerFocusable("osk-backspace", el, backspace))}
-              type="button"
-              data-focus-radius="9999px"
-              onClick={backspace}
-              class="pill pill-secondary"
+            </HapticTile>
+            <HapticTile
+              id="osk-backspace"
+              variant="pill"
+              radius="9999px"
+              onSelect={backspace}
+              class="text-white"
             >
               Backspace
-            </button>
-            <button
-              ref={(el) => onCleanup(registerFocusable("osk-clear", el, clear))}
-              type="button"
-              data-focus-radius="9999px"
-              onClick={clear}
-              class="pill pill-secondary"
+            </HapticTile>
+            <HapticTile
+              id="osk-clear"
+              variant="pill"
+              radius="9999px"
+              onSelect={clear}
+              class="text-white"
             >
               Clear
-            </button>
-            <button
-              ref={(el) =>
-                onCleanup(registerFocusable("osk-submit", el, () => props.onSubmit(props.value)))
-              }
-              type="button"
-              data-focus-radius="9999px"
-              onClick={() => props.onSubmit(props.value)}
-              class="pill pill-primary"
+            </HapticTile>
+            <HapticTile
+              id="osk-submit"
+              variant="pill"
+              radius="9999px"
+              active={true}
+              onSelect={() => props.onSubmit(props.value)}
             >
               Search
-            </button>
-            <button
-              ref={(el) => onCleanup(registerFocusable("osk-cancel", el, props.onClose))}
-              type="button"
-              data-focus-radius="9999px"
-              onClick={props.onClose}
-              class="pill pill-secondary"
+            </HapticTile>
+            <HapticTile
+              id="osk-cancel"
+              variant="pill"
+              radius="9999px"
+              onSelect={props.onClose}
+              class="text-white"
             >
               Cancel
-            </button>
+            </HapticTile>
           </div>
         </div>
-      </div>
-    </div>
+      </GlassPanel>
+    </GlassPanel>
   );
 }
