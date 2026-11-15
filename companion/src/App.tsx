@@ -199,7 +199,7 @@ export default function App() {
       <ScenicBackdrop class="-z-10" />
 
       <header class="sticky top-0 z-20 px-4 pt-3.5">
-        <div class="flex h-11 items-center justify-between rounded-full border border-white/[0.11] bg-black/45 px-4 shadow-[0_12px_32px_rgba(0,0,0,0.36)] backdrop-blur-2xl">
+        <div class="glass-card flex h-11 items-center justify-between rounded-full px-4">
           <div class="flex items-center gap-2">
             <span class="text-[14px] font-semibold tracking-[-0.02em] text-white">melange</span>
             <span
@@ -257,7 +257,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => void sendNav('Select')}
-                  class="flex h-12 items-center justify-center rounded-[14px] bg-white text-[13px] font-semibold tracking-[-0.01em] text-[#111318] shadow-[0_8px_20px_rgba(0,0,0,0.35)] transition-transform duration-150 focus-visible:outline-none active:scale-95"
+                  class="pill pill-primary h-12 rounded-[14px] text-[13px]"
                 >
                   OK
                 </button>
@@ -512,10 +512,10 @@ export default function App() {
                                   onClick={() => void selectPresetWallpaper(p.id, file)}
                                   aria-label={`Select preset ${file}`}
                                   aria-pressed={isActive()}
-                                  class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white active:scale-95 ${
+                                  class={`relative aspect-video w-full overflow-hidden rounded-[10px] border transition-transform duration-200 ease-spring hover:scale-[1.045] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white active:scale-[0.96] ${
                                     isActive()
-                                      ? 'border-white ring-2 ring-white ring-offset-2 ring-offset-[#12141a]'
-                                      : 'border-white/15 hover:border-white/40'
+                                      ? 'border-white ring-2 ring-white ring-offset-2 ring-offset-black/40'
+                                      : 'border-white/20 hover:border-white/45'
                                   }`}
                                 >
                                   <img

@@ -1,13 +1,13 @@
 /*
- * melange — Authentic couch-tv × Apple tvOS Dark Smoke-Glass design system
+ * melange — iOS 26 Liquid Glass × couch-tv × WhiteSur/tvOS design system
  *
  * Principles:
- *  - Crisp dark smoke-glass surfaces over an atmospheric alpine twilight horizon.
- *  - Zero fluted stripes, zero muddy reddish/pinkish light-gray blur, zero floating
- *    focus reticles.
- *  - Single-layer snappy tvOS focus physics (130ms spring, scale(1.045), crisp
- *    2px solid #FFFFFF focus rim, scale(0.965) press feedback).
- *  - Inter grotesk typography with SF-Pro-style open numerals (cv02/cv03/cv04/cv11/ss01).
+ *  - True translucent dark-tinted Liquid Glass (rgba(16, 19, 26, 0.48)) with heavy
+ *    optical blur (48px saturate(185%)) and 1px specular rim gradients.
+ *  - Snappy Apple spring physics (220ms cubic-bezier(0.34, 1.56, 0.64, 1)),
+ *    scale(1.045) + specular sheen sweep on hover/focus, scale(0.96) press detent.
+ *  - Inter grotesk typography with SF-Pro-style open numerals + condensed architectural
+ *    Liquid-Glass lockscreen timepiece.
  */
 :root {
   /* Semantic Accents & Ink */
@@ -16,32 +16,40 @@
 
   /* Typography Ink */
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.62);
-  --text-muted: rgba(255, 255, 255, 0.48);
+  --text-secondary: rgba(255, 255, 255, 0.68);
+  --text-muted: rgba(255, 255, 255, 0.5);
 
-  /* Authentic Apple / couch-tv Dark Smoke-Glass */
-  --glass-surface: rgba(18, 20, 26, 0.66);
-  --glass-heavy: rgba(17, 19, 25, 0.95);
-  --glass-panel-elevated: rgba(17, 19, 25, 0.95);
-  --glass-dock: rgba(18, 20, 26, 0.75);
-  --glass-focus: rgba(28, 31, 40, 0.84);
-  --modal-scrim: rgba(9, 11, 16, 0.92);
+  /* Authentic Apple Liquid Glass */
+  --glass-surface: rgba(16, 19, 26, 0.46);
+  --glass-heavy: rgba(16, 19, 26, 0.48);
+  --glass-panel-elevated: rgba(16, 19, 26, 0.54);
+  --glass-dock: rgba(16, 19, 26, 0.48);
+  --glass-focus: rgba(28, 34, 46, 0.66);
+  --modal-scrim: rgba(8, 10, 16, 0.54);
 
-  --glass-blur: blur(36px) saturate(165%);
-  --glass-blur-heavy: blur(48px) saturate(175%);
+  --glass-blur: blur(42px) saturate(185%);
+  --glass-blur-heavy: blur(48px) saturate(185%);
 
-  --hairline: rgba(255, 255, 255, 0.11);
-  --hairline-heavy: rgba(255, 255, 255, 0.14);
+  --hairline: rgba(255, 255, 255, 0.18);
+  --hairline-heavy: rgba(255, 255, 255, 0.18);
   --hairline-focus: #ffffff;
 
-  --shadow-ambient: 0 12px 32px rgba(0, 0, 0, 0.36);
-  --shadow-heavy: 0 24px 64px rgba(0, 0, 0, 0.56);
-  --shadow-dock: 0 20px 48px rgba(0, 0, 0, 0.5);
-  --shadow-focus: 0 20px 44px rgba(0, 0, 0, 0.55);
+  --shadow-ambient:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
+    0 20px 50px rgba(0, 0, 0, 0.38);
+  --shadow-heavy:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.26),
+    0 24px 60px rgba(0, 0, 0, 0.42);
+  --shadow-dock:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
+    0 24px 60px rgba(0, 0, 0, 0.46);
+  --shadow-focus:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
+    0 24px 56px rgba(0, 0, 0, 0.52);
 
-  /* Snappy tvOS Motion */
-  --ease-spring: cubic-bezier(0.2, 0.9, 0.3, 1);
-  --dur-geometry: 130ms;
+  /* Snappy Apple Spring Motion */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-geometry: 220ms;
 }
 
 /* ───────────────────────── Atmospheric Scenic Backdrop ───────────────────────── */
@@ -67,7 +75,7 @@
   );
 }
 
-/* ───────────────────────── Dark Smoke-Glass Panels ───────────────────────── */
+/* ───────────────────────── True Apple Liquid Glass Panels ───────────────────────── */
 
 .glass-panel {
   position: relative;
@@ -95,19 +103,59 @@
   background: var(--glass-dock);
   backdrop-filter: var(--glass-blur-heavy);
   -webkit-backdrop-filter: var(--glass-blur-heavy);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: var(--shadow-dock);
   border-radius: 24px;
+}
+
+/* 1px specular rim gradient on Liquid Glass containers */
+.glass-panel--surface::before,
+.glass-panel--heavy::before,
+.glass-panel--dock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.36) 0%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.03) 70%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 .glass-panel--scrim,
 .modal-scrim {
   background: var(--modal-scrim);
-  backdrop-filter: blur(64px) saturate(160%);
-  -webkit-backdrop-filter: blur(64px) saturate(160%);
+  backdrop-filter: blur(56px) saturate(175%);
+  -webkit-backdrop-filter: blur(56px) saturate(175%);
 }
 
-/* ───────────────────────── Snappy tvOS Haptic Tiles ───────────────────────── */
+/* ───────────────────────── Specular Sheen Sweep ───────────────────────── */
+
+@keyframes specularSheen {
+  0% {
+    opacity: 0;
+    transform: translate3d(-135%, 0, 0) skewX(-20deg);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(155%, 0, 0) skewX(-20deg);
+  }
+}
+
+/* ───────────────────────── Snappy Apple Spring Haptic Tiles ───────────────────────── */
 
 .haptic-tile {
   position: relative;
@@ -117,17 +165,47 @@
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-ambient);
   transition:
-    transform 130ms cubic-bezier(0.2, 0.9, 0.3, 1),
-    border-color 100ms ease,
-    background-color 100ms ease,
-    box-shadow 120ms ease,
-    color 100ms ease;
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 200ms ease,
+    color 150ms ease;
   will-change: transform;
 }
 
+.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg) {
+  overflow: hidden;
+}
+
+.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 55%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: translate3d(-135%, 0, 0) skewX(-20deg);
+  pointer-events: none;
+}
+
+.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg):hover::after,
+.haptic-tile:not(.haptic-tile--dock):not(.haptic-tile--epg)[data-focused="true"]::after {
+  animation: specularSheen 560ms cubic-bezier(0.22, 1, 0.36, 1) 1;
+}
+
 .haptic-tile:not([data-focused="true"]):hover {
-  background: rgba(24, 27, 35, 0.76);
-  border-color: rgba(255, 255, 255, 0.22);
+  transform: scale(1.045);
+  background: rgba(24, 29, 40, 0.6);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    0 20px 44px rgba(0, 0, 0, 0.44);
+  z-index: 3;
 }
 
 .haptic-tile[data-focused="true"] {
@@ -140,7 +218,7 @@
 
 .haptic-tile[data-pressed="true"],
 .haptic-tile:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
 }
 
 /* Pill buttons */
@@ -152,9 +230,14 @@
   height: 2.25rem;
   padding: 0 1rem;
   border-radius: 9999px;
-  background: rgba(18, 20, 26, 0.66);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.92);
+  background: rgba(16, 19, 26, 0.48);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
+    0 12px 28px rgba(0, 0, 0, 0.34);
+  color: rgba(255, 255, 255, 0.94);
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
@@ -165,63 +248,86 @@
   background: #ffffff;
   color: var(--melange-ink);
   border-color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+    0 12px 30px rgba(0, 0, 0, 0.36);
 }
 
 .haptic-tile--pill:not([data-active="true"]):not([data-focused="true"]):hover {
-  background: rgba(26, 29, 38, 0.78);
-  border-color: rgba(255, 255, 255, 0.24);
+  transform: scale(1.045);
+  background: rgba(28, 34, 46, 0.64);
+  border-color: rgba(255, 255, 255, 0.32);
   color: #ffffff;
 }
 
 .haptic-tile--pill[data-focused="true"] {
   transform: scale(1.045);
-  background: rgba(28, 31, 40, 0.88);
+  background: rgba(30, 36, 48, 0.72);
   border: 2px solid #ffffff;
   color: #ffffff;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.52);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.36),
+    0 16px 36px rgba(0, 0, 0, 0.48);
 }
 
 .haptic-tile--pill[data-active="true"][data-focused="true"] {
-  transform: scale(1.055);
+  transform: scale(1.045);
   background: #ffffff;
   color: var(--melange-ink);
   border: 2px solid #ffffff;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.62);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.56);
 }
 
 .haptic-tile--pill[data-pressed="true"],
 .haptic-tile--pill:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
 }
 
-/* Top-bar circular dark-glass utility buttons */
+/* WhiteSur frosted glass top-bar circular utility buttons */
 .haptic-tile--icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 100%),
+    rgba(16, 19, 26, 0.44);
+  backdrop-filter: blur(32px) saturate(185%);
+  -webkit-backdrop-filter: blur(32px) saturate(185%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.06),
+    0 10px 26px rgba(0, 0, 0, 0.34);
 }
 
 .haptic-tile--icon:not([data-focused="true"]):hover {
-  background: rgba(24, 27, 35, 0.72);
-  border-color: rgba(255, 255, 255, 0.24);
+  transform: scale(1.045);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(26, 31, 42, 0.58);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5),
+    0 14px 32px rgba(0, 0, 0, 0.42);
 }
 
 .haptic-tile--icon[data-focused="true"] {
-  transform: scale(1.06);
-  background: rgba(28, 31, 40, 0.86);
+  transform: scale(1.045);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.08) 100%),
+    rgba(28, 34, 46, 0.68);
   border: 2px solid #ffffff;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.52),
+    0 18px 38px rgba(0, 0, 0, 0.52);
 }
 
 .haptic-tile--icon[data-pressed="true"],
 .haptic-tile--icon:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
 }
 
-/* Full-bleed 82x50 rounded-[13px] couch-tv dock tiles */
+/* Full-bleed 82x50 rounded-[13px] WhiteSur × couch-tv dock tiles */
 .haptic-tile--dock {
   width: 82px;
   height: 50px;
@@ -230,29 +336,49 @@
   background: transparent;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
 }
 
 .haptic-tile--dock:not([data-focused="true"]):hover {
-  transform: scale(1.04);
+  transform: scale(1.045);
   background: transparent;
-  border-color: rgba(255, 255, 255, 0.45);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.46);
+  border-color: rgba(255, 255, 255, 0.52);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.48);
   z-index: 4;
 }
 
 .haptic-tile--dock[data-focused="true"] {
-  transform: scale(1.075);
+  transform: scale(1.045);
   background: transparent;
   border: 2px solid #ffffff;
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.58);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.56);
   z-index: 6;
 }
 
 .haptic-tile--dock[data-pressed="true"],
 .haptic-tile--dock:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
+}
+
+.squircle-sheen {
+  position: absolute;
+  inset: 0;
+  width: 60%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.34) 50%,
+    transparent 100%
+  );
+  opacity: 0;
+  transform: translate3d(-140%, 0, 0) skewX(-20deg);
+  pointer-events: none;
+}
+
+.haptic-tile--dock:hover .squircle-sheen,
+.haptic-tile--dock[data-focused="true"] .squircle-sheen {
+  animation: specularSheen 560ms cubic-bezier(0.22, 1, 0.36, 1) 1;
 }
 
 /* EPG cells (zero layout-shift 2px solid #FFFFFF focus border) */
@@ -265,12 +391,15 @@
 }
 
 .haptic-tile--epg:not([data-focused="true"]):hover {
-  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: none;
 }
 
 .haptic-tile--epg[data-focused="true"] {
   transform: none;
-  background: rgba(28, 31, 40, 0.92);
+  background: rgba(32, 38, 50, 0.78);
   border: 2px solid #ffffff;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.48);
   z-index: 4;
@@ -278,7 +407,7 @@
 
 .haptic-tile--epg[data-pressed="true"],
 .haptic-tile--epg:active {
-  transform: scale(0.985);
+  transform: scale(0.96);
 }
 
 /* Grouped list rows (Settings) */
@@ -291,48 +420,58 @@
 }
 
 .haptic-tile--grouped:not([data-focused="true"]):hover {
-  background: rgba(255, 255, 255, 0.05);
+  transform: scale(1.045);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2), 0 14px 32px rgba(0, 0, 0, 0.38);
 }
 
 .haptic-tile--grouped[data-focused="true"] {
-  transform: scale(1.012);
-  background: rgba(28, 31, 40, 0.88);
+  transform: scale(1.045);
+  background: rgba(28, 34, 46, 0.72);
   border: 2px solid #ffffff;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.48);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    0 18px 36px rgba(0, 0, 0, 0.48);
   z-index: 4;
 }
 
 .haptic-tile--grouped[data-pressed="true"],
 .haptic-tile--grouped:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
 /* On-screen keyboard keys */
 .haptic-tile--key {
-  background: rgba(22, 25, 33, 0.76);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  background: rgba(20, 24, 34, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    0 8px 18px rgba(0, 0, 0, 0.3);
   color: #ffffff;
   font-weight: 600;
 }
 
 .haptic-tile--key:not([data-focused="true"]):hover {
-  background: rgba(30, 34, 44, 0.86);
-  border-color: rgba(255, 255, 255, 0.24);
+  transform: scale(1.045);
+  background: rgba(30, 36, 48, 0.72);
+  border-color: rgba(255, 255, 255, 0.32);
 }
 
 .haptic-tile--key[data-focused="true"] {
-  transform: scale(1.06);
-  background: rgba(34, 38, 49, 0.94);
+  transform: scale(1.045);
+  background: rgba(34, 40, 54, 0.84);
   border: 2px solid #ffffff;
   color: #ffffff;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.52);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.36),
+    0 14px 30px rgba(0, 0, 0, 0.52);
   z-index: 4;
 }
 
 .haptic-tile--key[data-pressed="true"],
 .haptic-tile--key:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
 }
 
 /* ───────────────────────── couch-tv Segmented Capsule Switcher ───────────────────────── */
@@ -343,14 +482,18 @@
   gap: 0.25rem;
   padding: 0.25rem;
   border-radius: 9999px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(36px) saturate(165%);
-  -webkit-backdrop-filter: blur(36px) saturate(165%);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+  background: rgba(16, 19, 26, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(42px) saturate(185%);
+  -webkit-backdrop-filter: blur(42px) saturate(185%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.24),
+    0 14px 34px rgba(0, 0, 0, 0.38);
 }
 
 .segmented-item {
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -363,42 +506,44 @@
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
   background: transparent;
   transition:
-    transform 130ms cubic-bezier(0.2, 0.9, 0.3, 1),
-    background-color 100ms ease,
-    border-color 100ms ease,
-    color 100ms ease,
-    box-shadow 120ms ease;
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 200ms ease;
 }
 
 .segmented-item[data-active="true"] {
   background: #ffffff;
   color: var(--melange-ink);
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
 }
 
 .segmented-item:not([data-active="true"]):hover {
-  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.045);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
 .segmented-item[data-focused="true"] {
   border-color: #ffffff;
   transform: scale(1.045);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
   z-index: 3;
 }
 
 .segmented-item:not([data-active="true"])[data-focused="true"] {
-  background: rgba(28, 31, 40, 0.88);
+  background: rgba(28, 34, 46, 0.76);
   color: #ffffff;
 }
 
 .segmented-item[data-pressed="true"],
 .segmented-item:active {
-  transform: scale(0.965);
+  transform: scale(0.96);
 }
 
 /* Static metadata chip */
@@ -409,9 +554,12 @@
   height: 1.5rem;
   padding: 0 0.625rem;
   border-radius: 9999px;
-  background: rgba(18, 20, 26, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(16, 19, 26, 0.54);
+  backdrop-filter: blur(24px) saturate(175%);
+  -webkit-backdrop-filter: blur(24px) saturate(175%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.92);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.005em;
@@ -469,12 +617,27 @@
   color: rgba(255, 255, 255, 0.95);
 }
 
+/* Monumental iOS 26 / couch-tv Liquid-Glass Timepiece */
 .lockscreen-clock {
-  font-weight: 500;
-  line-height: 0.92;
-  letter-spacing: -0.045em;
+  font-family: "Barlow Condensed", "Antonio", "Inter", system-ui, sans-serif;
+  font-weight: 700;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+  font-feature-settings: "tnum" 1, "cv02", "cv03", "cv04", "cv11";
+}
+
+.lockscreen-clock-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.34) 0%,
+    rgba(255, 255, 255, 0.24) 48%,
+    rgba(255, 255, 255, 0.14) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%) brightness(1.12);
+  -webkit-backdrop-filter: blur(20px) saturate(180%) brightness(1.12);
+  clip-path: url(#lockscreen-clock-clip);
+  -webkit-clip-path: url(#lockscreen-clock-clip);
 }
 
 .view-title {
@@ -492,5 +655,9 @@
 @media (prefers-reduced-motion: reduce) {
   .live-dot {
     animation: none;
+  }
+  .haptic-tile::after,
+  .squircle-sheen {
+    animation: none !important;
   }
 }

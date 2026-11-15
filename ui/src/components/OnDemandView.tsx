@@ -33,6 +33,28 @@ function categoryBadge(
   return provider === "local" ? "Local Media" : fallback;
 }
 
+function fallbackCoverBackground(provider: OnDemandViewProps["provider"]): string {
+  switch (provider) {
+    case "mediathek":
+      return "radial-gradient(90% 95% at 18% 12%, rgba(56, 189, 248, 0.44) 0%, rgba(10, 132, 255, 0.24) 48%, rgba(12, 22, 46, 0.62) 100%), linear-gradient(155deg, rgba(18, 48, 96, 0.72) 0%, rgba(12, 18, 34, 0.82) 100%)";
+    case "youtube":
+      return "radial-gradient(90% 95% at 18% 12%, rgba(255, 69, 58, 0.42) 0%, rgba(255, 0, 51, 0.24) 48%, rgba(38, 12, 22, 0.64) 100%), linear-gradient(155deg, rgba(72, 16, 28, 0.72) 0%, rgba(16, 12, 18, 0.82) 100%)";
+    case "local":
+      return "radial-gradient(90% 95% at 18% 12%, rgba(255, 159, 10, 0.44) 0%, rgba(255, 55, 95, 0.26) 48%, rgba(28, 16, 40, 0.64) 100%), linear-gradient(155deg, rgba(76, 28, 52, 0.72) 0%, rgba(16, 14, 28, 0.82) 100%)";
+  }
+}
+
+function fallbackBadgeAccent(provider: OnDemandViewProps["provider"]): string {
+  switch (provider) {
+    case "mediathek":
+      return "linear-gradient(160deg, rgba(56, 189, 248, 0.36) 0%, rgba(10, 132, 255, 0.22) 100%)";
+    case "youtube":
+      return "linear-gradient(160deg, rgba(255, 69, 58, 0.38) 0%, rgba(255, 0, 51, 0.22) 100%)";
+    case "local":
+      return "linear-gradient(160deg, rgba(255, 159, 10, 0.38) 0%, rgba(255, 55, 95, 0.24) 100%)";
+  }
+}
+
 export function OnDemandView(props: OnDemandViewProps) {
   const [items, setItems] = createSignal<MediaItem[]>([]);
   const [loading, setLoading] = createSignal(false);
@@ -275,26 +297,58 @@ export function OnDemandView(props: OnDemandViewProps) {
                     when={item.thumbnail_url}
                     fallback={
                       <div class="flex h-full w-full flex-col justify-between overflow-hidden">
-                        <div class="relative flex aspect-video w-full flex-col justify-between overflow-hidden border-b border-white/[0.08] bg-gradient-to-br from-[#1C2331] via-[#151A25] to-[#0E1118] p-4">
-                          <div class="flex items-center justify-between gap-2">
-                            <span class="rounded-[6px] bg-white/[0.10] px-2 py-0.5 text-[11px] font-semibold text-white/90 truncate max-w-[70%]">
+                        <div
+                          class="relative flex aspect-video w-full flex-col justify-between overflow-hidden border-b border-white/[0.14] p-3.5"
+                          style={{ background: fallbackCoverBackground(props.provider) }}
+                        >
+                          {/* Subtle diagonal light reflection across glossy cover */}
+                          <div
+                            class="pointer-events-none absolute inset-0"
+                            style={{
+                              background:
+                                "linear-gradient(132deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.07) 34%, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0.05) 100%)"
+                            }}
+                          />
+                          {/* Crisp inner top rim highlight */}
+                          <div
+                            class="pointer-events-none absolute inset-x-0 top-0 h-px"
+                            style={{
+                              background:
+                                "linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.42), rgba(255,255,255,0.08))"
+                            }}
+                          />
+
+                          {/* Top metadata chips */}
+                          <div class="relative z-10 flex items-center justify-between gap-2">
+                            <span class="max-w-[70%] truncate rounded-full border border-white/20 bg-white/[0.12] px-2.5 py-0.5 text-[10.5px] font-semibold text-white/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md">
                               {categoryBadge(item, props.provider, props.subtitle)}
                             </span>
                             <Show when={item.duration_sec > 0}>
-                              <span class="rounded-[6px] bg-black/45 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white/90">
+                              <span class="rounded-full border border-white/20 bg-black/35 px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-white/95 backdrop-blur-md">
                                 {formatDuration(item.duration_sec)}
                               </span>
                             </Show>
                           </div>
-                          <div class="flex items-center justify-between">
-                            <span class="text-[12px] font-medium capitalize text-white/[0.62]">
-                              {props.title}
-                            </span>
-                            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.12] text-white">
-                              <svg class="h-3.5 w-3.5 translate-x-[0.5px]" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="8,6 18,12 8,18" />
+
+                          {/* Crisp glossy center broadcast / media badge */}
+                          <div class="relative z-10 my-auto flex items-center justify-center">
+                            <div
+                              class="flex h-12 w-12 items-center justify-center rounded-[15px] border border-white/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.52),0_12px_26px_rgba(0,0,0,0.42)] backdrop-blur-xl"
+                              style={{ background: fallbackBadgeAccent(props.provider) }}
+                            >
+                              <svg
+                                class="h-5 w-5 translate-x-[0.5px] text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M8.5 6.8C8.5 5.98 9.4 5.48 10.1 5.92L18.6 11.12C19.26 11.52 19.26 12.48 18.6 12.88L10.1 18.08C9.4 18.52 8.5 18.02 8.5 17.2V6.8Z" />
                               </svg>
-                            </span>
+                            </div>
+                          </div>
+
+                          <div class="relative z-10 flex items-center justify-between text-[11px] font-semibold tracking-[-0.01em] text-white/75">
+                            <span>{props.title}</span>
+                            <span class="text-white/60">Play</span>
                           </div>
                         </div>
 
@@ -303,7 +357,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                             {item.title}
                           </div>
                           <Show when={item.subtitle || item.description}>
-                            <div class="line-clamp-1 text-[12px] font-medium text-white/[0.62]">
+                            <div class="line-clamp-1 text-[12px] font-medium text-white/[0.64]">
                               {item.subtitle || item.description}
                             </div>
                           </Show>
@@ -313,7 +367,7 @@ export function OnDemandView(props: OnDemandViewProps) {
                   >
                     {(thumb) => (
                       <>
-                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.08] bg-[#0D1016]">
+                        <div class="relative flex aspect-video w-full items-center justify-center overflow-hidden border-b border-white/[0.14] bg-black/25">
                           <img
                             src={thumb()}
                             alt={item.title}
@@ -324,11 +378,11 @@ export function OnDemandView(props: OnDemandViewProps) {
                             class="pointer-events-none absolute inset-0"
                             style={{
                               background:
-                                "linear-gradient(180deg, transparent 56%, rgba(8, 10, 14, 0.58) 100%)"
+                                "linear-gradient(180deg, transparent 56%, rgba(8, 10, 14, 0.54) 100%)"
                             }}
                           />
                           <Show when={item.duration_sec > 0}>
-                            <span class="absolute bottom-2.5 right-2.5 rounded-[6px] border border-white/[0.12] bg-[#101218]/85 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-md">
+                            <span class="absolute bottom-2.5 right-2.5 rounded-full border border-white/20 bg-black/45 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl">
                               {formatDuration(item.duration_sec)}
                             </span>
                           </Show>

@@ -36,16 +36,37 @@ function formatRemaining(positionSec: number, durationSec: number): string {
 
 export const HomeView = () => {
   const [now, setNow] = createSignal(new Date());
+  const [clockBox, setClockBox] = createSignal({ w: 580, h: 248 });
+  let clockStageRef!: HTMLDivElement;
 
   const clockTimer = window.setInterval(() => setNow(new Date()), 1000);
   onCleanup(() => window.clearInterval(clockTimer));
 
   onMount(() => {
+    const syncClockBox = () => {
+      if (!clockStageRef) return;
+      const rect = clockStageRef.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setClockBox({ w: Math.round(rect.width), h: Math.round(rect.height) });
+      }
+    };
+    syncClockBox();
+    const ro = new ResizeObserver(syncClockBox);
+    ro.observe(clockStageRef);
+    onCleanup(() => ro.disconnect());
+
     requestAnimationFrame(() => {
       setFocus("dock-livetv", false);
       ensureValidFocus("dock-livetv");
     });
   });
+
+  const clockCenterX = () => clockBox().w / 2;
+  const clockCenterY = () => clockBox().h / 2;
+  const clockFontSize = () =>
+    String(Math.min(Math.round(clockBox().h * 0.88), Math.round(clockBox().w * 0.42)));
+  const clockTransform = () =>
+    `translate(${clockCenterX()}, ${clockCenterY()}) scale(1, 1.32)`;
 
   const formattedTime = () =>
     now().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -104,7 +125,7 @@ export const HomeView = () => {
 
   return (
     <div class="relative flex h-full w-full flex-col justify-between overflow-hidden px-10 py-6 xl:px-14 xl:py-8">
-      {/* Top Bar: Left couch-tv segmented profile pill · Right minimal circular dark-glass utility buttons */}
+      {/* Top Bar: Left couch-tv Liquid Glass profile pill · Right WhiteSur frosted glass utility circles */}
       <header class="flex items-center justify-between gap-4">
         <SegmentedPill
           items={profileItems()}
@@ -115,7 +136,6 @@ export const HomeView = () => {
             title: "Switch or manage profiles",
             onSelect: () => sendCommand({ type: "SetOverlay", overlay: "ProfileSwitcher" })
           }}
-          class="bg-black/40 border-white/10 p-1 backdrop-blur-2xl"
         />
 
         <div class="flex items-center gap-2.5">
@@ -126,17 +146,17 @@ export const HomeView = () => {
             ariaLabel={melangeState().is_fullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             title={melangeState().is_fullscreen ? "Exit Fullscreen (F11)" : "Fullscreen (F11)"}
             onSelect={() => sendCommand({ type: "ToggleFullscreen" })}
-            class="h-10 w-10 rounded-full text-white/85 backdrop-blur-2xl"
+            class="h-10 w-10 rounded-full text-white/90"
           >
             <Show
               when={melangeState().is_fullscreen}
               fallback={
                 <svg
-                  class="h-4 w-4"
+                  class="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.8"
+                  stroke-width="1.9"
                   stroke-linecap="round"
                   stroke-linejoin="round"
                 >
@@ -148,11 +168,11 @@ export const HomeView = () => {
               }
             >
               <svg
-                class="h-4 w-4"
+                class="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="1.8"
+                stroke-width="1.9"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
@@ -171,14 +191,14 @@ export const HomeView = () => {
             ariaLabel="Settings"
             title="Settings"
             onSelect={() => sendCommand({ type: "SetMode", mode: "Settings" })}
-            class="h-10 w-10 rounded-full text-white/85 backdrop-blur-2xl"
+            class="h-10 w-10 rounded-full text-white/90"
           >
             <svg
-              class="h-4 w-4"
+              class="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.8"
+              stroke-width="1.9"
               stroke-linecap="round"
               stroke-linejoin="round"
             >
@@ -194,14 +214,14 @@ export const HomeView = () => {
             ariaLabel="Leave Menu"
             title="Leave Melange (Esc)"
             onSelect={() => sendCommand({ type: "SetOverlay", overlay: "LeaveMenu" })}
-            class="h-10 w-10 rounded-full text-white/85 backdrop-blur-2xl"
+            class="h-10 w-10 rounded-full text-white/90"
           >
             <svg
-              class="h-4 w-4"
+              class="h-4 w-4 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="1.85"
+              stroke-width="1.9"
               stroke-linecap="round"
               stroke-linejoin="round"
             >
@@ -212,13 +232,156 @@ export const HomeView = () => {
         </div>
       </header>
 
-      {/* Center Stage: Date + Monumental Lockscreen Clock sitting directly above the alpine horizon */}
-      <section class="my-auto flex flex-col items-center justify-center py-2 text-center">
-        <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
+      {/* Center Stage: Date + Monumental iOS 26 / couch-tv Liquid-Glass Timepiece */}
+      <section class="my-auto flex flex-col items-center justify-center py-1 text-center">
+        <div class="hero-text-shadow text-[15px] font-semibold tracking-[-0.01em] text-white/95 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/55 bg-clip-text text-[136px] font-medium leading-[0.92] tracking-[-0.045em] text-transparent tabular-nums xl:text-[156px]">
-          {formattedTime()}
+
+        <div
+          ref={clockStageRef}
+          class="relative mt-1 flex select-none items-center justify-center"
+          style={{
+            width: "min(680px, 84vw)",
+            height: "clamp(220px, 32vh, 270px)"
+          }}
+        >
+          <span class="sr-only">{formattedTime()}</span>
+
+          {/* SVG clipPath definition in exact stage coordinates for backdrop-filter refraction */}
+          <svg
+            width="0"
+            height="0"
+            class="pointer-events-none absolute"
+            aria-hidden="true"
+          >
+            <defs>
+              <clipPath id="lockscreen-clock-clip" clipPathUnits="userSpaceOnUse">
+                <text
+                  x="0"
+                  y="0"
+                  dy="0.345em"
+                  text-anchor="middle"
+                  transform={clockTransform()}
+                  font-size={clockFontSize()}
+                  class="lockscreen-clock"
+                >
+                  {formattedTime()}
+                </text>
+              </clipPath>
+            </defs>
+          </svg>
+
+          {/* Soft outer ambient drop shadow behind the glass digits */}
+          <svg
+            width={clockBox().w}
+            height={clockBox().h}
+            viewBox={`0 0 ${clockBox().w} ${clockBox().h}`}
+            class="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            aria-hidden="true"
+          >
+            <defs>
+              <filter id="clock-outer-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow
+                  dx="0"
+                  dy="12"
+                  stdDeviation="16"
+                  flood-color="#04070E"
+                  flood-opacity="0.42"
+                />
+              </filter>
+            </defs>
+            <text
+              x="0"
+              y="0"
+              dy="0.345em"
+              text-anchor="middle"
+              transform={clockTransform()}
+              font-size={clockFontSize()}
+              fill="rgba(5, 8, 15, 0.22)"
+              filter="url(#clock-outer-shadow)"
+              class="lockscreen-clock"
+            >
+              {formattedTime()}
+            </text>
+          </svg>
+
+          {/* True Liquid-Glass refracting digit layer (alpine peaks & sky blur through) */}
+          <div class="lockscreen-clock-glass pointer-events-none absolute inset-0" aria-hidden="true" />
+
+          {/* Specular glass sheen, subtle inner drop shadow & crisp white rim highlight */}
+          <svg
+            width={clockBox().w}
+            height={clockBox().h}
+            viewBox={`0 0 ${clockBox().w} ${clockBox().h}`}
+            class="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="clock-glass-sheen" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.36" />
+                <stop offset="46%" stop-color="#FFFFFF" stop-opacity="0.06" />
+                <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.16" />
+              </linearGradient>
+
+              <linearGradient id="clock-specular-rim" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+                <stop offset="42%" stop-color="#FFFFFF" stop-opacity="0.4" />
+                <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.72" />
+              </linearGradient>
+
+              <filter id="clock-inner-shadow" x="-15%" y="-15%" width="130%" height="130%">
+                <feOffset dx="0" dy="4" />
+                <feGaussianBlur stdDeviation="5" result="offset-blur" />
+                <feComposite operator="out" in="SourceGraphic" in2="offset-blur" result="inverse" />
+                <feFlood flood-color="#050810" flood-opacity="0.34" result="color" />
+                <feComposite operator="in" in="color" in2="inverse" />
+              </filter>
+            </defs>
+
+            <text
+              x="0"
+              y="0"
+              dy="0.345em"
+              text-anchor="middle"
+              transform={clockTransform()}
+              font-size={clockFontSize()}
+              fill="url(#clock-glass-sheen)"
+              class="lockscreen-clock"
+            >
+              {formattedTime()}
+            </text>
+
+            <text
+              x="0"
+              y="0"
+              dy="0.345em"
+              text-anchor="middle"
+              transform={clockTransform()}
+              font-size={clockFontSize()}
+              fill="#FFFFFF"
+              filter="url(#clock-inner-shadow)"
+              class="lockscreen-clock"
+            >
+              {formattedTime()}
+            </text>
+
+            <text
+              x="0"
+              y="0"
+              dy="0.345em"
+              text-anchor="middle"
+              transform={clockTransform()}
+              font-size={clockFontSize()}
+              fill="none"
+              stroke="url(#clock-specular-rim)"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+              class="lockscreen-clock"
+            >
+              {formattedTime()}
+            </text>
+          </svg>
         </div>
       </section>
 
@@ -428,9 +591,9 @@ export const HomeView = () => {
         </div>
       </section>
 
-      {/* Bottom centered couch-tv App Dock */}
+      {/* Bottom centered WhiteSur × couch-tv Liquid Glass App Dock */}
       <footer class="flex justify-center pt-4">
-        <nav class="flex items-center gap-2.5 rounded-[24px] border border-white/[0.14] bg-[#12141A]/75 p-2 shadow-[0_20px_48px_rgba(0,0,0,0.5)] backdrop-blur-3xl">
+        <GlassPanel as="nav" variant="dock" class="flex items-center gap-2.5 rounded-[24px] p-2">
           <HapticTile
             id="dock-livetv"
             variant="dock"
@@ -506,7 +669,7 @@ export const HomeView = () => {
           >
             <SquircleIcon app="Settings" label="Settings" focusId="dock-settings" />
           </HapticTile>
-        </nav>
+        </GlassPanel>
       </footer>
     </div>
   );

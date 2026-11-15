@@ -34,7 +34,7 @@ export default {
         ambient: '0 12px 32px rgba(0, 0, 0, 0.36)',
       },
       transitionTimingFunction: {
-        spring: 'cubic-bezier(0.2, 0.9, 0.3, 1)',
+        spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
     },
   },
