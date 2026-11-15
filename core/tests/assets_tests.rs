@@ -11,9 +11,11 @@ async fn embedded_ui_companion_and_sounds_fallback_when_disk_absent() {
     // 1. Sounds fall back to embedded assets when disk directory is absent
     let audio = Arc::new(AudioEngine::new(Path::new("/nonexistent/melange/sounds")));
     assert!(audio.has_sample(SoundKind::Focus));
+    assert!(audio.has_sample(SoundKind::Nav));
     assert!(audio.has_sample(SoundKind::Select));
     assert!(audio.has_sample(SoundKind::Back));
     assert!(audio.has_sample(SoundKind::Zap));
+    assert!(audio.has_sample(SoundKind::Error));
 
     // 2. Router serves embedded UI (/) and SPA fallback (/some/client/route)
     let state = StateManager::new(vec![], vec![], vec![], audio);

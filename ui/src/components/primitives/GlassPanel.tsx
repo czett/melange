@@ -31,7 +31,7 @@ export function GlassPanel(props: GlassPanelProps) {
   return (
     <Dynamic
       component={tag()}
-      class={`${variantClass()} ${local.class ?? ""}`}
+      class={`${variantClass()} ${local.class ?? ""}`.trim()}
       style={local.style}
       onClick={local.onClick}
       {...rest}

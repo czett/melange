@@ -212,11 +212,15 @@ export const HomeView = () => {
       </header>
 
       {/* Center Stage: Date + Clean tvOS Lockscreen Clock */}
-      <section class="my-auto flex flex-col items-center justify-center py-2 text-center">
+      <section
+        class={`my-auto flex flex-col items-center justify-center py-2 text-center transition-opacity duration-150 ${
+          melangeState().overlay !== "None" ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+      >
         <div class="hero-text-shadow text-[15px] font-medium tracking-[-0.01em] text-white/90">
           {formattedDate()}
         </div>
-        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/50 bg-clip-text text-[148px] font-medium leading-none tracking-[-0.04em] text-transparent tabular-nums">
+        <div class="lockscreen-clock mt-1.5 select-none bg-gradient-to-b from-white via-white/95 to-white/55 bg-clip-text text-[156px] font-semibold leading-[0.9] tracking-[-0.04em] text-transparent tabular-nums xl:text-[172px]">
           {formattedTime()}
         </div>
       </section>

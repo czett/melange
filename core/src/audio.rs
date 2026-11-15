@@ -15,18 +15,31 @@ use tracing::{debug, warn};
 #[serde(rename_all = "lowercase")]
 pub enum SoundKind {
     Focus,
+    Nav,
     Select,
     Back,
     Zap,
+    Error,
 }
 
 impl SoundKind {
+    pub const ALL: [Self; 6] = [
+        Self::Focus,
+        Self::Nav,
+        Self::Select,
+        Self::Back,
+        Self::Zap,
+        Self::Error,
+    ];
+
     pub fn filename(self) -> &'static str {
         match self {
             Self::Focus => "focus.wav",
+            Self::Nav => "nav.wav",
             Self::Select => "select.wav",
             Self::Back => "back.wav",
             Self::Zap => "zap.wav",
+            Self::Error => "error.wav",
         }
     }
 }
@@ -39,12 +52,7 @@ pub struct AudioEngine {
 impl AudioEngine {
     pub fn new(sounds_dir: &Path) -> Self {
         let mut samples = HashMap::new();
-        for kind in [
-            SoundKind::Focus,
-            SoundKind::Select,
-            SoundKind::Back,
-            SoundKind::Zap,
-        ] {
+        for kind in SoundKind::ALL {
             let path = sounds_dir.join(kind.filename());
             match std::fs::read(&path) {
                 Ok(bytes) => {

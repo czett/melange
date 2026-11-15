@@ -187,47 +187,99 @@ import wave
 
 sounds_dir = sys.argv[1]
 sample_rate = 44100
+# Normalize all micro-clicks to -16 dBFS (~0.1585 full scale)
+target_peak = 10.0 ** (-16.0 / 20.0)
 
-specs = {
-    "focus.wav":  (680.0, 820.0, 0.032, 0.22),
-    "select.wav": (520.0, 960.0, 0.055, 0.28),
-    "back.wav":   (640.0, 380.0, 0.055, 0.25),
-    "zap.wav":    (420.0, 740.0, 0.045, 0.26),
-}
 
-for name, (f0, f1, dur, amp) in specs.items():
-    path = os.path.join(sounds_dir, name)
-    if os.path.exists(path):
-        continue
-    n_samples = int(sample_rate * dur)
-    frames = bytearray()
+def lowpass(samples, cutoff_hz):
+    rc = 1.0 / (2.0 * math.pi * cutoff_hz)
+    dt = 1.0 / sample_rate
+    alpha = dt / (rc + dt)
+    out = []
+    y = 0.0
+    for x in samples:
+        y = y + alpha * (x - y)
+        out.append(y)
+    return out
+
+
+def damped_pop(dur_s, f0, f1, tau_s, cutoff_hz, harmonic_mix=0.22):
+    n_samples = int(sample_rate * dur_s)
+    attack_n = max(1, int(sample_rate * 0.0003))
+    release_n = max(1, int(sample_rate * 0.0012))
+    phase = 0.0
+    raw = []
     for i in range(n_samples):
         t = i / sample_rate
         progress = i / max(1, n_samples - 1)
         freq = f0 + (f1 - f0) * progress
-        env = math.sin(math.pi * progress) ** 0.7
-        val = int(32767 * amp * env * math.sin(2.0 * math.pi * freq * t))
+        phase += 2.0 * math.pi * freq / sample_rate
+        env = math.exp(-t / tau_s)
+        if i < attack_n:
+            env *= 0.5 * (1.0 - math.cos(math.pi * i / attack_n))
+        if i >= n_samples - release_n:
+            rem = (n_samples - 1 - i) / max(1, release_n)
+            env *= 0.5 * (1.0 - math.cos(math.pi * rem))
+        sig = math.sin(phase) + harmonic_mix * math.sin(2.0 * phase)
+        raw.append(env * sig)
+    return lowpass(raw, cutoff_hz)
+
+
+def double_tap(dur_s, f_first, f_second, tap2_delay_s, cutoff_hz):
+    n_samples = int(sample_rate * dur_s)
+    tap1 = damped_pop(dur_s, f_first, f_first * 1.08, 0.0015, cutoff_hz, 0.20)
+    tap2_offset = int(sample_rate * tap2_delay_s)
+    tap2_dur = max(0.004, dur_s - tap2_delay_s)
+    tap2 = damped_pop(tap2_dur, f_second, f_second * 1.04, 0.0018, cutoff_hz, 0.18)
+    out = list(tap1)
+    for idx, val in enumerate(tap2):
+        pos = tap2_offset + idx
+        if pos < n_samples:
+            out[pos] += 0.88 * val
+    return out
+
+
+def write_wav(name, samples):
+    peak = max((abs(s) for s in samples), default=0.0)
+    scale = (32767.0 * target_peak / peak) if peak > 1e-9 else 0.0
+    frames = bytearray()
+    for s in samples:
+        val = max(-32768, min(32767, int(round(s * scale))))
         frames.extend(struct.pack("<h", val))
+    path = os.path.join(sounds_dir, name)
     with wave.open(path, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
         wf.writeframes(bytes(frames))
-    print(f"[seed] generated {path}")
+    print(f"[seed] generated {path} ({len(samples) / sample_rate * 1000:.1f} ms, -16 dBFS)")
+
+
+# Crisp, dry Apple-style tactile micro-clicks
+nav_click = damped_pop(0.009, 1100.0, 960.0, 0.0018, 2400.0, 0.22)
+select_click = double_tap(0.014, 820.0, 1250.0, 0.0055, 2600.0)
+back_click = damped_pop(0.012, 640.0, 420.0, 0.0028, 1700.0, 0.16)
+zap_click = damped_pop(0.014, 740.0, 1120.0, 0.0024, 2400.0, 0.20)
+error_click = damped_pop(0.024, 260.0, 235.0, 0.0055, 1050.0, 0.18)
+
+write_wav("nav.wav", nav_click)
+write_wav("focus.wav", nav_click)
+write_wav("select.wav", select_click)
+write_wav("back.wav", back_click)
+write_wav("zap.wav", zap_click)
+write_wav("error.wav", error_click)
 PYEOF
 }
 
 if command -v python3 >/dev/null 2>&1; then
   generate_sounds_python
 elif command -v ffmpeg >/dev/null 2>&1; then
-  for pair in "focus.wav:720:0.03" "select.wav:880:0.05" "back.wav:420:0.05" "zap.wav:600:0.045"; do
+  for pair in "nav.wav:1100:0.009" "focus.wav:1100:0.009" "select.wav:1040:0.014" "back.wav:520:0.012" "zap.wav:880:0.014" "error.wav:260:0.024"; do
     IFS=: read -r fname freq dur <<< "${pair}"
-    if [ ! -f "${SOUNDS_DIR}/${fname}" ]; then
-      echo "[seed] generating ${SOUNDS_DIR}/${fname} via ffmpeg"
-      ffmpeg -y -loglevel error -f lavfi -i "sine=frequency=${freq}:duration=${dur}" \
-        -af "afade=t=in:ss=0:d=0.005,afade=t=out:st=0.015:d=0.015,volume=0.25" \
-        "${SOUNDS_DIR}/${fname}"
-    fi
+    echo "[seed] generating ${SOUNDS_DIR}/${fname} via ffmpeg"
+    ffmpeg -y -loglevel error -f lavfi -i "sine=frequency=${freq}:duration=${dur}" \
+      -af "lowpass=f=2200,afade=t=in:ss=0:d=0.001,afade=t=out:st=0.002:d=${dur},volume=0.16" \
+      "${SOUNDS_DIR}/${fname}"
   done
 else
   echo "[seed] warning: neither python3 nor ffmpeg found; cannot generate assets/sounds/*.wav" >&2

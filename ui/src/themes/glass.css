@@ -1,12 +1,12 @@
 /*
- * melange — Apple tvOS / visionOS dark frosted glass design system
+ * melange — Apple tvOS / visionOS multi-layer Liquid Glass design system
  *
  * Principles:
- *  - Translucent frosted smoke-glass surfaces (rgba(22, 25, 32, 0.52), blur(44px) saturate(180%),
- *    1px solid rgba(255, 255, 255, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.18)).
+ *  - Rich multi-layer frosted smoke-glass surfaces with top/bottom specular edge highlights,
+ *    deep ambient grounding shadows, and saturated backdrop refraction.
  *  - Specular glass elevation on spatial focus and pointer hover (scale(1.045), deep ambient shadow,
  *    top specular highlight, subtle glass brightening — zero harsh outline boxes).
- *  - Bundled Inter typography with open numerals and a refined vertical-fade lockscreen clock.
+ *  - Bundled Inter UI typography paired with geometric Plus Jakarta Sans lockscreen numerals.
  */
 :root {
   /* Semantic Accents & Ink */
@@ -18,33 +18,57 @@
   --text-secondary: rgba(255, 255, 255, 0.68);
   --text-muted: rgba(255, 255, 255, 0.5);
 
-  /* Unified Apple visionOS / tvOS Frosted Glass */
-  --glass-surface: rgba(22, 25, 32, 0.52);
-  --glass-heavy: rgba(22, 25, 32, 0.52);
-  --glass-panel-elevated: rgba(22, 25, 32, 0.58);
-  --glass-dock: rgba(22, 25, 32, 0.52);
-  --glass-focus: rgba(255, 255, 255, 0.16);
-  --modal-scrim: rgba(8, 10, 16, 0.54);
+  /* Multi-Layer Apple Liquid Glass */
+  --glass-surface: linear-gradient(
+    180deg,
+    rgba(38, 42, 52, 0.72) 0%,
+    rgba(20, 22, 28, 0.80) 100%
+  );
+  --glass-heavy: linear-gradient(
+    180deg,
+    rgba(28, 31, 39, 0.88) 0%,
+    rgba(16, 18, 24, 0.93) 100%
+  );
+  --glass-panel-elevated: linear-gradient(
+    180deg,
+    rgba(46, 51, 63, 0.82) 0%,
+    rgba(24, 27, 34, 0.88) 100%
+  );
+  --glass-dock: linear-gradient(
+    180deg,
+    rgba(38, 42, 52, 0.72) 0%,
+    rgba(20, 22, 28, 0.80) 100%
+  );
+  --glass-focus: linear-gradient(
+    180deg,
+    rgba(64, 70, 86, 0.84) 0%,
+    rgba(34, 38, 48, 0.90) 100%
+  );
+  --modal-scrim: rgba(8, 10, 16, 0.62);
 
-  --glass-blur: blur(44px) saturate(180%);
-  --glass-blur-heavy: blur(44px) saturate(180%);
+  --glass-blur: blur(56px) saturate(200%) brightness(1.06);
+  --glass-blur-heavy: blur(64px) saturate(210%);
 
-  --hairline: rgba(255, 255, 255, 0.14);
-  --hairline-heavy: rgba(255, 255, 255, 0.14);
-  --hairline-focus: rgba(255, 255, 255, 0.28);
+  --hairline: rgba(255, 255, 255, 0.22);
+  --hairline-heavy: rgba(255, 255, 255, 0.22);
+  --hairline-focus: rgba(255, 255, 255, 0.36);
 
   --shadow-ambient:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 20px 50px rgba(0, 0, 0, 0.38);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 24px 56px rgba(0, 0, 0, 0.48);
   --shadow-heavy:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 60px rgba(0, 0, 0, 0.44);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 28px 68px rgba(0, 0, 0, 0.56);
   --shadow-dock:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 60px rgba(0, 0, 0, 0.46);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 24px 56px rgba(0, 0, 0, 0.48);
   --shadow-focus:
-    0 20px 44px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    0 20px 44px rgba(0, 0, 0, 0.54),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.10);
 
   /* Smooth Specular Elevation Motion */
   --ease-focus: cubic-bezier(0.22, 1, 0.36, 1);
@@ -78,6 +102,7 @@
 
 .glass-panel {
   position: relative;
+  isolation: isolate;
 }
 
 .glass-panel--surface {
@@ -100,8 +125,8 @@
 
 .glass-panel--dock {
   background: var(--glass-dock);
-  backdrop-filter: var(--glass-blur-heavy);
-  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--hairline);
   box-shadow: var(--shadow-dock);
   border-radius: 24px;
@@ -503,12 +528,18 @@
 
 /* Clean tvOS Lockscreen Clock */
 .lockscreen-clock {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
-  font-weight: 500;
-  line-height: 1;
+  font-family:
+    "Plus Jakarta Sans",
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    system-ui,
+    sans-serif;
+  font-weight: 600;
+  line-height: 0.9;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1, "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "tnum" 1;
 }
 
 .view-title {

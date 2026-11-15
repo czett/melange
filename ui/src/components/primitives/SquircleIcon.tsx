@@ -16,12 +16,12 @@ export interface SquircleIconProps {
 }
 
 const APP_BACKGROUNDS: Record<SquircleApp, string> = {
-  LiveTv: "#181A20",
-  FullEpg: "#1E222B",
-  Mediathek: "#0077C8",
-  YouTube: "#E62117",
-  Media: "#4338CA",
-  Settings: "#23262F"
+  LiveTv: "linear-gradient(135deg, #FF5E62 0%, #E11D48 100%)",
+  FullEpg: "linear-gradient(135deg, #38BDF8 0%, #0284C7 100%)",
+  Mediathek: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
+  YouTube: "linear-gradient(135deg, #FA586A 0%, #FA233B 100%)",
+  Media: "linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)",
+  Settings: "linear-gradient(135deg, #52525B 0%, #27272A 100%)"
 };
 
 function AppGlyph(props: { app: SquircleApp }) {
@@ -29,90 +29,81 @@ function AppGlyph(props: { app: SquircleApp }) {
     case "LiveTv":
       return (
         <svg
-          class="h-6 w-6 text-white"
+          class="h-[26px] w-[26px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
+          fill-rule="evenodd"
         >
-          <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" />
-          <path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
-          <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
-          <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" />
-          <path d="M19.1 4.9c3.9 3.9 3.9 10.3 0 14.2" />
+          {/* Solid rounded widescreen display with bold play cutout + solid base */}
+          <path d="M5.6 4h12.8A2.6 2.6 0 0 1 21 6.6v7.8a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 14.4V6.6A2.6 2.6 0 0 1 5.6 4Zm4.6 3.7a.55.55 0 0 0-.84.47v4.66a.55.55 0 0 0 .84.47l3.9-2.33a.55.55 0 0 0 0-.94l-3.9-2.33Z" />
+          <rect x="7.5" y="18.4" width="9" height="2.1" rx="1.05" />
         </svg>
       );
 
     case "FullEpg":
       return (
         <svg
-          class="h-[22px] w-[22px] text-white"
+          class="h-6 w-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
         >
-          <rect x="3" y="4.5" width="18" height="15" rx="3" />
-          <path d="M7.5 9.5h9M7.5 13h6M7.5 16.5h4" />
+          {/* Bold filled 3-row EPG schedule grid */}
+          <rect x="3" y="4.5" width="5" height="3.8" rx="1.4" />
+          <rect x="9.5" y="4.5" width="11.5" height="3.8" rx="1.4" />
+          <rect x="3" y="10.1" width="5" height="3.8" rx="1.4" />
+          <rect x="9.5" y="10.1" width="6.2" height="3.8" rx="1.4" />
+          <rect x="17" y="10.1" width="4" height="3.8" rx="1.4" />
+          <rect x="3" y="15.7" width="5" height="3.8" rx="1.4" />
+          <rect x="9.5" y="15.7" width="8.5" height="3.8" rx="1.4" />
         </svg>
       );
 
     case "Mediathek":
       return (
-        <svg class="h-[22px] w-[22px] text-white" viewBox="0 0 24 24" fill="none">
-          <rect
-            x="3.5"
-            y="4.5"
-            width="17"
-            height="15"
-            rx="3.5"
-            stroke="currentColor"
-            stroke-width="2"
-          />
-          <polygon points="10.2,8.8 16,12 10.2,15.2" fill="currentColor" />
+        <svg
+          class="h-[25px] w-[25px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          fill-rule="evenodd"
+        >
+          {/* Bold filled play-prism emblem */}
+          <path d="M6.4 4h11.2A3.4 3.4 0 0 1 21 7.4v9.2a3.4 3.4 0 0 1-3.4 3.4H6.4A3.4 3.4 0 0 1 3 16.6V7.4A3.4 3.4 0 0 1 6.4 4Zm3.8 4.4a.65.65 0 0 0-.98.56v6.08a.65.65 0 0 0 .98.56l5.2-3.04a.65.65 0 0 0 0-1.12l-5.2-3.04Z" />
         </svg>
       );
 
     case "YouTube":
       return (
-        <svg class="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M8.5 6.8a1 1 0 0 1 1.52-.85l8.4 5.2a1 1 0 0 1 0 1.7l-8.4 5.2A1 1 0 0 1 8.5 17.2V6.8Z" />
+        <svg
+          class="h-[26px] w-[26px] translate-x-[0.5px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M7.8 6.15c0-.96 1.05-1.55 1.88-1.05l9.3 5.58a1.22 1.22 0 0 1 0 2.1l-9.3 5.58c-.83.5-1.88-.09-1.88-1.05V6.15Z" />
         </svg>
       );
 
     case "Media":
       return (
         <svg
-          class="h-[22px] w-[22px] text-white"
+          class="h-[25px] w-[25px] text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.22)]"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
+          fill-rule="evenodd"
         >
-          <path d="M3.5 7.5a2.2 2.2 0 0 1 2.2-2.2h4l2 2h6.6a2.2 2.2 0 0 1 2.2 2.2v7.3a2.2 2.2 0 0 1-2.2 2.2H5.7a2.2 2.2 0 0 1-2.2-2.2V7.5Z" />
-          <polygon points="10.5,10.8 15.2,13.4 10.5,16" fill="currentColor" stroke="none" />
+          {/* Bold filled filmstrip frame with sprocket cutouts and center play emblem */}
+          <path d="M5.6 4.2h12.8A2.6 2.6 0 0 1 21 6.8v10.4a2.6 2.6 0 0 1-2.6 2.6H5.6A2.6 2.6 0 0 1 3 17.2V6.8a2.6 2.6 0 0 1 2.6-2.6Zm-.9 2.7v2.1h2V6.9h-2Zm0 4.05v2.1h2v-2.1h-2Zm0 4.05v2.1h2V15h-2Zm12.6-8.1v2.1h2V6.9h-2Zm0 4.05v2.1h2v-2.1h-2Zm0 4.05v2.1h2V15h-2ZM9.4 7.4a1.2 1.2 0 0 0-1.2 1.2v6.8a1.2 1.2 0 0 0 1.2 1.2h5.2a1.2 1.2 0 0 0 1.2-1.2V8.6a1.2 1.2 0 0 0-1.2-1.2H9.4Zm1.4 2.45a.45.45 0 0 1 .68-.39l2.9 1.74a.45.45 0 0 1 0 .78l-2.9 1.74a.45.45 0 0 1-.68-.39V9.85Z" />
         </svg>
       );
 
     case "Settings":
       return (
         <svg
-          class="h-[22px] w-[22px] text-white"
+          class="h-6 w-6 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.24)]"
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+          fill="currentColor"
+          fill-rule="evenodd"
         >
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          <path d="M 19.03 10.43 L 21.61 10.71 Q 22.05 12.00 21.61 13.29 L 19.03 13.57 Q 18.51 14.70 18.08 15.86 L 19.71 17.88 Q 19.11 19.11 17.88 19.71 L 15.86 18.08 Q 14.70 18.51 13.57 19.03 L 13.29 21.61 Q 12.00 22.05 10.71 21.61 L 10.43 19.03 Q 9.30 18.51 8.14 18.08 L 6.12 19.71 Q 4.89 19.11 4.29 17.88 L 5.92 15.86 Q 5.49 14.70 4.97 13.57 L 2.39 13.29 Q 1.95 12.00 2.39 10.71 L 4.97 10.43 Q 5.49 9.30 5.92 8.14 L 4.29 6.12 Q 4.89 4.89 6.12 4.29 L 8.14 5.92 Q 9.30 5.49 10.43 4.97 L 10.71 2.39 Q 12.00 1.95 13.29 2.39 L 13.57 4.97 Q 14.70 5.49 15.86 5.92 L 17.88 4.29 Q 19.11 4.89 19.71 6.12 L 18.08 8.14 Q 18.51 9.30 19.03 10.43 Z M 15.30 12.00 A 3.3 3.3 0 1 0 8.70 12.00 A 3.3 3.3 0 1 0 15.30 12.00 Z" />
         </svg>
       );
   }
@@ -121,13 +112,20 @@ function AppGlyph(props: { app: SquircleApp }) {
 export function SquircleIcon(props: SquircleIconProps) {
   return (
     <div
-      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]"
+      class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.34),inset_0_-1px_0_rgba(0,0,0,0.18)]"
       style={{ background: APP_BACKGROUNDS[props.app] }}
     >
+      <div
+        class="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 48%, rgba(0, 0, 0, 0.10) 100%)"
+        }}
+      />
       <AppGlyph app={props.app} />
 
       <Show when={props.active}>
-        <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/90" />
+        <span class="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white/95 shadow-[0_0_4px_rgba(0,0,0,0.4)]" />
       </Show>
     </div>
   );

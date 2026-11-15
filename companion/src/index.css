@@ -38,19 +38,33 @@
   --live-red: #ef4444;
   --melange-ink: #111318;
 
-  --glass-surface: rgba(22, 25, 32, 0.52);
-  --glass-heavy: rgba(22, 25, 32, 0.52);
-  --glass-focus: rgba(255, 255, 255, 0.16);
-  --glass-blur: blur(44px) saturate(180%);
-  --glass-blur-heavy: blur(44px) saturate(180%);
-  --hairline: rgba(255, 255, 255, 0.14);
-  --hairline-focus: rgba(255, 255, 255, 0.28);
+  --glass-surface: linear-gradient(
+    180deg,
+    rgba(38, 42, 52, 0.72) 0%,
+    rgba(20, 22, 28, 0.80) 100%
+  );
+  --glass-heavy: linear-gradient(
+    180deg,
+    rgba(28, 31, 39, 0.88) 0%,
+    rgba(16, 18, 24, 0.93) 100%
+  );
+  --glass-focus: linear-gradient(
+    180deg,
+    rgba(64, 70, 86, 0.84) 0%,
+    rgba(34, 38, 48, 0.90) 100%
+  );
+  --glass-blur: blur(56px) saturate(200%) brightness(1.06);
+  --glass-blur-heavy: blur(64px) saturate(210%);
+  --hairline: rgba(255, 255, 255, 0.22);
+  --hairline-focus: rgba(255, 255, 255, 0.36);
   --shadow-ambient:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 24px 60px rgba(0, 0, 0, 0.42);
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 24px 56px rgba(0, 0, 0, 0.48);
   --shadow-focus:
-    0 20px 44px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    0 20px 44px rgba(0, 0, 0, 0.54),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.42),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.10);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-geometry: 220ms;
 }

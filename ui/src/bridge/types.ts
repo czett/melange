@@ -12,7 +12,7 @@ export type OverlayKind =
 
 export type PlaybackState = "Idle" | "Buffering" | "Playing" | "Paused";
 
-export type SoundKind = "focus" | "select" | "back" | "zap";
+export type SoundKind = "focus" | "nav" | "select" | "back" | "zap" | "error";
 
 export interface Profile {
   id: number;
